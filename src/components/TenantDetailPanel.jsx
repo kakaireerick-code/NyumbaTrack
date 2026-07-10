@@ -9,6 +9,8 @@ import {
   downloadText,
 } from '../utils/helpers'
 import { Badge, LoadingButton } from './UI'
+import { buildReceiptData } from '../utils/receipts'
+import ReceiptViewerModal from './ReceiptViewerModal'
 
 const TABS = ['Profile', 'Lease', 'Payments', 'Balance', 'Documents', 'Notes']
 
@@ -158,33 +160,6 @@ ${settings?.stampText || ''}
 `
 }
 
-function buildReceiptText(tenant, unit, building, settings, payment, balance) {
-  const latest = payment || {}
-  return `=====================================
-OFFICIAL RENT RECEIPT
-${settings?.companyName || building?.name || 'RentTrack Uganda'}
-${building?.address || ''}
-=====================================
-
-Receipt No: ${latest?.receiptNo || 'N/A'}
-Date: ${fmtDate(latest?.date || new Date().toISOString())}
-
-Received from: ${tenant?.firstName || ''} ${tenant?.lastName || ''}
-Unit: ${unit?.unitNumber || ''}
-Period: ${latest?.period || '—'}
-
-Amount Received: ${fmtUGX(latest?.amount || 0)}
-Payment Method: ${latest?.method || '—'}
-Reference: ${latest?.reference || '—'}
-
-Running Balance: ${fmtUGX(balance)}
-${balance <= 0 ? '(FULLY PAID)' : ''}
-
-Issued by: ${settings?.managerName || 'Property Manager'}
-${settings?.stampText || ''}
-=====================================`
-}
-
 export default function TenantDetailPanel({
   tenant,
   unit,
@@ -207,6 +182,7 @@ export default function TenantDetailPanel({
   const [noteText, setNoteText] = useState('')
   const [blacklistReason, setBlacklistReason] = useState(tenant?.blacklistReason || '')
   const [loadingAction, setLoadingAction] = useState(null)
+  const [viewingReceipt, setViewingReceipt] = useState(null)
 
   const balanceInfo = useMemo(
     () => getTenantBalance(tenant?.id, tenant ? [tenant] : [], payments),
@@ -278,6 +254,13 @@ export default function TenantDetailPanel({
     setLoadingAction(filename)
     downloadText(filename, content)
     setTimeout(() => setLoadingAction(null), 500)
+  }
+
+  const viewReceipt = (payment) => {
+    if (!payment) return
+    setViewingReceipt(
+      buildReceiptData(payment, tenant, unit, building, settings, balanceInfo?.balance),
+    )
   }
 
   const handleSaveNote = () => {
@@ -642,16 +625,15 @@ export default function TenantDetailPanel({
                     <p className="text-xs text-gray-500">{latestPayment.receiptNo}</p>
                   </div>
                   <LoadingButton
-                    loading={loadingAction === 'receipt-dl'}
+                    loading={loadingAction === 'receipt-view'}
                     className="px-3 py-1.5 text-xs bg-[#2d6a4f] text-white rounded"
-                    onClick={() =>
-                      handleDownload(
-                        `receipt-${latestPayment.receiptNo}.txt`,
-                        buildReceiptText(tenant, unit, building, settings, latestPayment, balanceInfo?.balance),
-                      )
-                    }
+                    onClick={() => {
+                      setLoadingAction('receipt-view')
+                      viewReceipt(latestPayment)
+                      setTimeout(() => setLoadingAction(null), 300)
+                    }}
                   >
-                    Download
+                    View receipt
                   </LoadingButton>
                 </div>
               )}
@@ -725,18 +707,17 @@ export default function TenantDetailPanel({
             >
               Send Reminder
             </button>
-            {showFinancial && (
+            {showFinancial && latestPayment?.receiptNo && (
               <LoadingButton
                 loading={loadingAction === 'receipt-gen'}
                 className="px-3 py-2 text-sm border rounded hover:bg-gray-50 dark:hover:bg-gray-700"
-                onClick={() =>
-                  handleDownload(
-                    `receipt-${tenant?.id}.txt`,
-                    buildReceiptText(tenant, unit, building, settings, latestPayment, balanceInfo?.balance),
-                  )
-                }
+                onClick={() => {
+                  setLoadingAction('receipt-gen')
+                  viewReceipt(latestPayment)
+                  setTimeout(() => setLoadingAction(null), 300)
+                }}
               >
-                Generate Receipt
+                View receipt
               </LoadingButton>
             )}
             {showFinancial && (
@@ -779,6 +760,11 @@ export default function TenantDetailPanel({
           </div>
         </div>
       </aside>
+      <ReceiptViewerModal
+        open={!!viewingReceipt}
+        onClose={() => setViewingReceipt(null)}
+        receiptData={viewingReceipt}
+      />
     </div>
   )
 }

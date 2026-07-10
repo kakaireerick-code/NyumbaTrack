@@ -42,7 +42,7 @@ import SubscriptionPage from './pages/SubscriptionPage'
 import SubscriptionBanner from './components/SubscriptionBanner'
 import TenantBottomNav from './components/TenantBottomNav'
 import { usePersistedState } from './utils/storage'
-import { buildReceiptText } from './utils/receipts'
+import { buildReceiptData, buildReceiptText } from './utils/receipts'
 import { getTenantBalance } from './utils/helpers'
 import { isSubscriptionActive, startFreeTrial, needsSubscription } from './utils/subscription'
 import { canAccessPage, defaultPageForRole, normalizeRole, TENANT_BLOCKED_PAGES } from './lib/permissions'
@@ -126,7 +126,7 @@ function AppContent() {
 
   const [showTour, setShowTour] = useState(false)
   const [agreementTenantId, setAgreementTenantId] = useState(null)
-  const [receiptModal, setReceiptModal] = useState({ open: false, text: '', whatsapp: '' })
+  const [receiptModal, setReceiptModal] = useState({ open: false, receiptData: null, whatsapp: '' })
   const [paymentFormOpen, setPaymentFormOpen] = useState(false)
 
   useEffect(() => {
@@ -364,11 +364,12 @@ function AppContent() {
 
   const showReceipt = useCallback((payment, tenant, unit, building) => {
     const bal = getTenantBalance(tenant?.id, tenants, payments)
+    const receiptData = buildReceiptData(payment, tenant, unit, building, settings, bal.balance)
     const text = buildReceiptText(payment, tenant, unit, building, settings, bal.balance)
     const wa = tenant?.whatsapp
       ? `https://wa.me/${tenant.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(text.slice(0, 500))}`
       : ''
-    setReceiptModal({ open: true, text, whatsapp: wa })
+    setReceiptModal({ open: true, receiptData, whatsapp: wa })
   }, [tenants, payments, settings])
 
   const sharedProps = {
@@ -828,10 +829,9 @@ function AppContent() {
       />
       <ReceiptModal
         open={receiptModal.open}
-        onClose={() => setReceiptModal({ open: false, text: '', whatsapp: '' })}
-        receiptText={receiptModal.text}
+        onClose={() => setReceiptModal({ open: false, receiptData: null, whatsapp: '' })}
+        receiptData={receiptModal.receiptData}
         whatsappUrl={receiptModal.whatsapp}
-        onPrint={() => window.print()}
       />
     </div>
   )

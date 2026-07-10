@@ -3,8 +3,8 @@ import { formatDate, nextDueDate } from '../lib/dates'
 import { computeArrears, formatCurrency } from '../lib/rentLedger'
 import { getTenantSafeBuilding, getTenantSafeUnit, getTenantSafeTenantRecord } from '../lib/propertyViews'
 import { Badge, EmptyState, LoadingButton } from '../components/UI'
-import { buildReceiptText } from '../utils/receipts'
-import { downloadText } from '../utils/helpers'
+import { buildReceiptData } from '../utils/receipts'
+import ReceiptViewerModal from '../components/ReceiptViewerModal'
 import GuidancePanel from '../components/GuidancePanel'
 import { getPageGuidance } from '../lib/actionGuidance'
 import { Smartphone, Copy, MessageCircle, Send } from 'lucide-react'
@@ -31,6 +31,7 @@ export default function TenantPortalPage({
   const [payLoading, setPayLoading] = useState(false)
   const [messageText, setMessageText] = useState('')
   const [msgTick, setMsgTick] = useState(0)
+  const [viewingReceipt, setViewingReceipt] = useState(null)
 
   if (!tenant) return <EmptyState message="Your tenant profile was not found. Contact your landlord." />
 
@@ -84,14 +85,23 @@ export default function TenantPortalPage({
     setTimeout(() => setPayLoading(false), 400)
   }
 
-  const downloadReceipt = (payment) => {
-    const text = buildReceiptText(payment, tenant, unit, building, settings, balance.balance)
-    downloadText(`receipt-${payment.receiptNo || payment.id}.txt`, text)
+  const viewReceipt = (payment) => {
+    const receiptData = buildReceiptData(payment, tenant, unit, building, settings, balance.balance)
+    setViewingReceipt(receiptData)
   }
+
+  const receiptModal = (
+    <ReceiptViewerModal
+      open={!!viewingReceipt}
+      onClose={() => setViewingReceipt(null)}
+      receiptData={viewingReceipt}
+    />
+  )
 
   if (showOnboarding) {
     return (
-      <div className="card p-6 text-center max-w-md mx-auto mt-8">
+      <>
+        <div className="card p-6 text-center max-w-md mx-auto mt-8">
         <h2 className="text-xl font-bold text-[#2d6a4f] mb-2">Welcome to NyumbaTrack</h2>
         <p className="text-gray-600 dark:text-gray-300 mb-4">
           You rent <strong>{safeUnit?.unitNumber}</strong> at <strong>{safeBuilding?.name}</strong>
@@ -100,7 +110,9 @@ export default function TenantPortalPage({
         <button type="button" className="w-full py-3 bg-[#2d6a4f] text-white rounded-lg font-medium" onClick={onDismissOnboarding}>
           Get Started
         </button>
-      </div>
+        </div>
+        {receiptModal}
+      </>
     )
   }
 
@@ -125,6 +137,7 @@ export default function TenantPortalPage({
     }
 
     return (
+      <>
       <div className="space-y-4 pb-24">
         <GuidancePanel guidance={guidance} />
         <h1 className="text-xl font-bold flex items-center gap-2">
@@ -166,6 +179,8 @@ export default function TenantPortalPage({
           </div>
         </div>
       </div>
+      {receiptModal}
+      </>
     )
   }
 
@@ -175,6 +190,7 @@ export default function TenantPortalPage({
 
   if (currentPage === 'my-balance' || !currentPage) {
     return (
+      <>
       <div className="space-y-5 pb-24">
         <GuidancePanel guidance={guidance} />
         <h1 className="text-lg font-bold">
@@ -224,11 +240,14 @@ export default function TenantPortalPage({
           </div>
         </button>
       </div>
+      {receiptModal}
+      </>
     )
   }
 
   if (currentPage === 'my-payments') {
     return (
+      <>
       <div className="space-y-4 pb-24">
         <GuidancePanel guidance={guidance} />
         <h1 className="text-xl font-bold">My Payments</h1>
@@ -280,7 +299,7 @@ export default function TenantPortalPage({
                     <td className="p-2">{p.method}{p.status === 'pending' ? ' (pending)' : ''}</td>
                     <td className="p-2">
                       {p.receiptNo && (
-                        <button type="button" className="text-[#2d6a4f] underline" onClick={() => downloadReceipt(p)}>Download</button>
+                        <button type="button" className="text-[#2d6a4f] underline font-medium" onClick={() => viewReceipt(p)}>View receipt</button>
                       )}
                     </td>
                   </tr>
@@ -290,6 +309,8 @@ export default function TenantPortalPage({
           </div>
         )}
       </div>
+      {receiptModal}
+      </>
     )
   }
 
@@ -297,6 +318,7 @@ export default function TenantPortalPage({
     const depositStatus = safeTenant.depositPaid >= safeTenant.depositAmount ? 'Paid' : safeTenant.depositPaid > 0 ? 'Partial' : 'Not Paid'
     const sharedDoc = safeTenant.sharedAgreement
     return (
+      <>
       <div className="space-y-4 pb-24">
         <GuidancePanel guidance={guidance} />
         <h1 className="text-xl font-bold">My Lease</h1>
@@ -329,12 +351,15 @@ export default function TenantPortalPage({
           <p className="text-sm whitespace-pre-wrap">{settings.houseRulesText}</p>
         </div>
       </div>
+      {receiptModal}
+      </>
     )
   }
 
   if (currentPage === 'my-receipts') {
     const withReceipts = tenantPayments.filter((p) => p.receiptNo)
     return (
+      <>
       <div className="space-y-4 pb-24">
         <h1 className="text-xl font-bold">My Receipts</h1>
         {withReceipts.length === 0 ? <EmptyState message="No receipts yet." /> : (
@@ -342,14 +367,16 @@ export default function TenantPortalPage({
             {withReceipts.map((p) => (
               <div key={p.id} className="card p-3 flex justify-between items-center flex-wrap gap-2">
                 <span className="text-sm">{p.receiptNo} — {formatDate(p.date)} — {formatCurrency(p.amount)}</span>
-                <button type="button" className="px-3 py-2 bg-[#2d6a4f] text-white rounded text-sm min-h-[44px]" onClick={() => downloadReceipt(p)}>Download</button>
+                <button type="button" className="px-3 py-2 bg-[#2d6a4f] text-white rounded text-sm min-h-[44px]" onClick={() => viewReceipt(p)}>View receipt</button>
               </div>
             ))}
           </div>
         )}
       </div>
+      {receiptModal}
+      </>
     )
   }
 
-  return null
+  return receiptModal
 }
