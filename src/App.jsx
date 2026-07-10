@@ -732,6 +732,7 @@ function AppContent() {
             units={units}
             currentUser={currentUser}
             authUser={authUser}
+            settings={settings}
           />
         )
       default:
