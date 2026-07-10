@@ -68,6 +68,7 @@ export const getSubscriptionLabel = (sub) => {
   const plan = getPlanById(sub.planId)
   const name = plan?.name || sub.planId
   if (sub.status === 'trialing') return `${name} (Trial)`
+  if (sub.status === 'pending_verification') return `${name} (Pending verification)`
   if (sub.status === 'active') return `${name} (${sub.billingCycle === 'yearly' ? 'Yearly' : 'Monthly'})`
   return 'Expired'
 }
