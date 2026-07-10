@@ -48,6 +48,9 @@ import { buildReceiptData, buildReceiptText, issueReceipt } from './utils/receip
 import { getTenantBalance } from './utils/helpers'
 import { isSubscriptionActive, startFreeTrial, needsSubscription } from './utils/subscription'
 import { canAccessPage, defaultPageForRole, normalizeRole, TENANT_BLOCKED_PAGES, isCaretakerRole, isTenantRole, filterPaymentsForRole } from './lib/permissions'
+import GuidedWorkflowOverlay from './components/GuidedWorkflowOverlay'
+import { workflowsForRole } from './lib/guidedWorkflows'
+import { getAppMode, setAppMode, appModeLabel } from './lib/appMode'
 import { getTourSteps, isTourComplete } from './lib/rolePrompts'
 import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
 import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
@@ -120,6 +123,7 @@ function AppContent() {
     [DEMO_OWNER_ID]: initialSubscription,
   })
   const [demoMode, setDemoMode] = usePersistedState('rt_demo_mode', false)
+  const [activeWorkflowId, setActiveWorkflowId] = usePersistedState('rt_active_workflow', '')
   const [importHistory, setImportHistory] = usePersistedState('rt_import_history', [])
   const [unreadRefresh, setUnreadRefresh] = useState(0)
 
@@ -225,6 +229,10 @@ function AppContent() {
   const isOwnerRole = normalizeRole(currentRole) === 'property_owner'
   const showDemoData = demoMode && isOwnerRole
 
+  useEffect(() => {
+    setAppMode(demoMode ? 'demo' : 'live')
+  }, [demoMode])
+
   const effectiveBuildings = useMemo(
     () => (showDemoData ? [...ownerBuildings, ...DEMO_BUILDINGS] : ownerBuildings),
     [showDemoData, ownerBuildings],
@@ -258,6 +266,11 @@ function AppContent() {
   const portalTenants = isCaretaker ? caretakerTenants : effectiveTenants
 
   const roleKey = normalizeRole(currentRole)
+
+  const activeWorkflow = useMemo(() => {
+    if (!activeWorkflowId || !isOwnerRole) return null
+    return workflowsForRole(roleKey).find((w) => w.id === activeWorkflowId) || null
+  }, [activeWorkflowId, isOwnerRole, roleKey])
 
   const guidanceContext = useMemo(
     () => ({
@@ -620,6 +633,7 @@ function AppContent() {
           currentRole={currentRole}
           setCurrentPage={setPageSafe}
           guidanceContext={guidanceContext}
+          onStartWorkflow={(id) => setActiveWorkflowId(id)}
         />
       )
     }
@@ -798,6 +812,7 @@ function AppContent() {
           showBrandingBanner={showBrandingBanner}
           demoMode={demoMode}
           onToggleDemoMode={isOwnerRole ? () => setDemoMode((d) => !d) : undefined}
+          appModeLabel={isOwnerRole ? appModeLabel(getAppMode()) : undefined}
           onOpenGuide={() => setPageSafe('help')}
           isTenant={isTenant}
           unreadMessages={!isTenant && activeOwnerId ? countUnreadForOwner(activeOwnerId) : 0}
@@ -921,6 +936,13 @@ function AppContent() {
         receiptData={receiptModal.receiptData}
         whatsappUrl={receiptModal.whatsapp}
       />
+      {isOwnerRole && activeWorkflow && (
+        <GuidedWorkflowOverlay
+          workflow={activeWorkflow}
+          setCurrentPage={setPageSafe}
+          onClose={() => setActiveWorkflowId('')}
+        />
+      )}
     </div>
   )
 }

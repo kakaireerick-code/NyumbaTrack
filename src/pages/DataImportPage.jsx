@@ -7,6 +7,7 @@ import {
   buildImportPreview,
   commitImport,
 } from '../lib/spreadsheetImport'
+import { ACCEPT_IMPORT_TYPES, readImportFileAsText, prepareImportText } from '../lib/fileImport'
 import { downloadText } from '../utils/helpers'
 import { Badge, EmptyState } from '../components/UI'
 
@@ -45,16 +46,16 @@ export default function DataImportPage({
     if (!file) return
     setFileName(file.name)
     setSummary(null)
-    const reader = new FileReader()
-    reader.onload = () => {
-      const text = String(reader.result || '')
-      const built = buildImportPreview(text)
-      setPreview(built)
-      if (built.rows.length === 0) {
-        showToast?.('No data rows found. Check your CSV format.', 'error')
-      }
-    }
-    reader.readAsText(file)
+    readImportFileAsText(file)
+      .then((raw) => {
+        const text = prepareImportText(file.name, raw)
+        const built = buildImportPreview(text)
+        setPreview(built)
+        if (built.rows.length === 0) {
+          showToast?.('No data rows found. Export Excel as CSV/TSV or Word as .txt.', 'error')
+        }
+      })
+      .catch(() => showToast?.('Could not read file.', 'error'))
   }
 
   const handleCommit = () => {
@@ -98,7 +99,7 @@ export default function DataImportPage({
         <FileSpreadsheet className="text-[#2d6a4f]" size={28} />
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Data Import</h1>
-          <p className="text-sm text-gray-500">Upload tenants from Excel or Google Sheets (save as CSV)</p>
+          <p className="text-sm text-gray-500">Upload tenants from Excel (CSV/TSV) or Word (.txt export)</p>
         </div>
       </div>
 
@@ -109,8 +110,8 @@ export default function DataImportPage({
           <Download size={16} /> Download sample template
         </button>
         <label className="flex items-center gap-2 px-4 py-2 bg-[#2d6a4f] text-white rounded text-sm cursor-pointer">
-          <Upload size={16} /> Upload CSV
-          <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
+          <Upload size={16} /> Upload file
+          <input type="file" accept={ACCEPT_IMPORT_TYPES} className="hidden" onChange={handleFile} />
         </label>
       </div>
 

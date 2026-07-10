@@ -13,6 +13,7 @@ import {
   getActiveEndDate,
 } from '../utils/subscription'
 import { ADMIN_MOMO_LINE, ADMIN_MOMO_DISPLAY, subscriptionPaymentReference } from '../lib/billing'
+import { verifyMomoReference, collectSubscriptionReferences } from '../lib/momoVerification'
 import { buildSubscriptionInvoice, queueInvoiceEmail, downloadInvoice } from '../lib/subscriptionInvoice'
 import { Badge, LoadingButton } from '../components/UI'
 import SubscriptionInvoiceModal from '../components/SubscriptionInvoiceModal'
@@ -79,8 +80,9 @@ export default function SubscriptionPage({
   const subscribe = (plan) => {
     const amount = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice
     const ref = momoReference.trim()
-    if (!ref || ref.length < 4) {
-      showToast('Enter your MTN MoMo transaction reference after paying.', 'error')
+    const verify = verifyMomoReference(ref, collectSubscriptionReferences(subscription.paymentHistory || []))
+    if (!verify.ok) {
+      showToast(verify.error, 'error')
       return
     }
     if (!customerEmail) {

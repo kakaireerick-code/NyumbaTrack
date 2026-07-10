@@ -4,7 +4,7 @@ import GuidedWorkflowPanel from '../components/GuidedWorkflowPanel'
 import { workflowsForRole } from '../lib/guidedWorkflows'
 import { getPageGuidance } from '../lib/actionGuidance'
 
-export default function GuidedWorkflowsPage({ currentRole, setCurrentPage, guidanceContext }) {
+export default function GuidedWorkflowsPage({ currentRole, setCurrentPage, guidanceContext, onStartWorkflow }) {
   const workflows = workflowsForRole(currentRole)
   const [activeId, setActiveId] = useState(null)
   const active = workflows.find((w) => w.id === activeId)
@@ -30,7 +30,10 @@ export default function GuidedWorkflowsPage({ currentRole, setCurrentPage, guida
           <button
             key={w.id}
             type="button"
-            onClick={() => setActiveId(w.id)}
+            onClick={() => {
+              setActiveId(w.id)
+              onStartWorkflow?.(w.id)
+            }}
             className={`card p-4 text-left hover:ring-2 hover:ring-[#2d6a4f]/40 transition-all ${activeId === w.id ? 'ring-2 ring-[#2d6a4f]' : ''}`}
           >
             <h3 className="font-semibold">{w.title}</h3>

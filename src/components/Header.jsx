@@ -13,6 +13,7 @@ export default function Header({
   showBrandingBanner,
   demoMode,
   onToggleDemoMode,
+  appModeLabel: modeLabel,
   onOpenGuide,
   isTenant,
   unreadMessages,
@@ -28,7 +29,7 @@ export default function Header({
     <>
       {demoMode && isOwner && (
         <div className="bg-yellow-400 text-yellow-900 text-center text-sm py-1.5 px-4 font-medium">
-          Training mode — sample property &quot;Sample Apartments&quot; is visible. Toggle Demo Mode off for live data.
+          {modeLabel || 'Training mode'} — sample property visible. Toggle off for live data.
         </div>
       )}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between gap-2">
