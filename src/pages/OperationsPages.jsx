@@ -12,6 +12,7 @@ import { REMINDER_TEMPLATES, getReminderType } from '../utils/reminders'
 import { Modal, Badge, EmptyState, LoadingButton } from '../components/UI'
 import DataQualityBadge from '../components/DataQualityBadge'
 import { computeDataQuality, displayTenantName, DATA_SOURCE_LABELS } from '../lib/tenantData'
+import { canSeeFinancials } from '../lib/permissions'
 
 const inputCls = 'w-full border rounded px-3 py-2 dark:bg-gray-700 dark:border-gray-600'
 const btnPrimary = 'px-4 py-2 bg-[#2d6a4f] text-white rounded hover:opacity-90'
@@ -25,7 +26,8 @@ function lookupBuilding(buildings, id) {
   return buildings.find((b) => b.id === id)
 }
 
-export function TenantsPage({ tenants, payments, units, buildings, setSelectedTenant, importHistory }) {
+export function TenantsPage({ tenants, payments, units, buildings, setSelectedTenant, importHistory, currentRole }) {
+  const showFinancial = canSeeFinancials(currentRole || '')
   const [search, setSearch] = useState('')
   const [sourceFilter, setSourceFilter] = useState('all')
 
@@ -85,8 +87,8 @@ export function TenantsPage({ tenants, payments, units, buildings, setSelectedTe
                 <th className="p-2">Name</th>
                 <th className="p-2">Unit</th>
                 <th className="p-2">Building</th>
-                <th className="p-2">Rent</th>
-                <th className="p-2">Balance</th>
+                {showFinancial && <th className="p-2">Rent</th>}
+                {showFinancial && <th className="p-2">Balance</th>}
                 <th className="p-2">Lease Ends</th>
                 <th className="p-2">Status</th>
                 <th className="p-2">Source</th>
@@ -109,8 +111,8 @@ export function TenantsPage({ tenants, payments, units, buildings, setSelectedTe
                     <td className="p-2 font-medium">{displayTenantName(t)}</td>
                     <td className="p-2">{unit?.unitNumber}</td>
                     <td className="p-2">{building?.name}</td>
-                    <td className="p-2">{fmtUGX(t.rentAmount)}</td>
-                    <td className="p-2">{fmtUGX(bal.balance)}</td>
+                    {showFinancial && <td className="p-2">{fmtUGX(t.rentAmount)}</td>}
+                    {showFinancial && <td className="p-2">{fmtUGX(bal.balance)}</td>}
                     <td className="p-2">{fmtDate(t.leaseEnd)}</td>
                     <td className="p-2"><Badge color={statusColor}>{t.status}</Badge></td>
                     <td className="p-2 text-xs">{DATA_SOURCE_LABELS[t.dataSource] || t.dataSource || '—'}</td>

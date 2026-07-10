@@ -1,15 +1,19 @@
 import React, { useState } from 'react'
 import { Plus } from 'lucide-react'
+import { canSeeFinancials } from '../lib/permissions'
 
-export default function QuickActions({ setCurrentPage, onRecordPayment, onAddTenant, onLogMaintenance, onSendReminder }) {
+export default function QuickActions({ currentRole, setCurrentPage, onRecordPayment, onAddTenant, onLogMaintenance, onSendReminder }) {
   const [open, setOpen] = useState(false)
+  const showFinancial = canSeeFinancials(currentRole || '')
 
   const actions = [
-    { label: 'Record Payment', fn: () => { setCurrentPage('payments'); onRecordPayment?.(); setOpen(false) } },
-    { label: 'Add Tenant', fn: () => { setCurrentPage('tenants'); onAddTenant?.(); setOpen(false) } },
+    showFinancial && { label: 'Record Payment', fn: () => { setCurrentPage('payments'); onRecordPayment?.(); setOpen(false) } },
+    showFinancial && { label: 'Add Tenant', fn: () => { setCurrentPage('tenants'); onAddTenant?.(); setOpen(false) } },
     { label: 'Log Maintenance', fn: () => { setCurrentPage('maintenance'); onLogMaintenance?.(); setOpen(false) } },
-    { label: 'Send Reminder', fn: () => { setCurrentPage('reminders'); onSendReminder?.(); setOpen(false) } },
-  ]
+    showFinancial && { label: 'Send Reminder', fn: () => { setCurrentPage('reminders'); onSendReminder?.(); setOpen(false) } },
+  ].filter(Boolean)
+
+  if (actions.length === 0) return null
 
   return (
     <div className="fixed bottom-6 right-6 z-40">

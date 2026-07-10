@@ -96,3 +96,9 @@ export const canSeeFinancials = (role: string): boolean => {
   const r = normalizeRole(role)
   return r === 'property_owner' || r === 'accountant'
 }
+
+export const isOwnerLoginRole = (role: string): boolean =>
+  normalizeRole(role) === 'property_owner'
+
+export const canManagePortfolio = (role: string): boolean =>
+  normalizeRole(role) === 'property_owner'

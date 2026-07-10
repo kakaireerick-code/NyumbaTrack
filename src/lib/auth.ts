@@ -3,6 +3,11 @@ import {
   validateInviteCode,
   markInviteUsed,
 } from './invites'
+import {
+  validateStaffInviteCode,
+  markStaffInviteUsed,
+  seedDemoStaffInvite,
+} from './staffInvites'
 import { normalizeInviteCode } from './routing'
 
 export type AppUser = {
@@ -124,6 +129,39 @@ export const registerTenant = (
   return { ok: true, user, unit, invite }
 }
 
+export const registerHousekeeper = (
+  email: string,
+  password: string,
+  name: string,
+  inviteCode: string,
+): { ok: boolean; error?: string; user?: AppUser } => {
+  if (!inviteCode?.trim()) return { ok: false, error: 'Invite code is required.' }
+  if (!password || password.length < 4) return { ok: false, error: 'Password must be at least 4 characters.' }
+
+  const code = normalizeInviteCode(inviteCode)
+  const validation = validateStaffInviteCode(code)
+  if (!validation.ok) return { ok: false, error: validation.error }
+
+  const { invite } = validation
+  const users = getUsers()
+  if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
+    return { ok: false, error: 'Email already registered. Try Sign in instead.' }
+  }
+
+  const user: AppUser = {
+    id: `u-${Date.now()}`,
+    email: email.trim().toLowerCase(),
+    passwordHash: simpleHash(password),
+    name: name.trim(),
+    role: 'housekeeper',
+    ownerId: invite.ownerId,
+  }
+
+  saveUsers([...users, user])
+  markStaffInviteUsed(invite.code, user.id)
+  return { ok: true, user }
+}
+
 export const login = (
   email: string,
   password: string,
@@ -217,14 +255,15 @@ export const loginOrRegisterWithGoogle = (
 export const seedDemoUsers = (): void => {
   const users = getUsers()
   if (users.length > 0) return
+  const ownerId = 'u-owner-demo'
   saveUsers([
     {
-      id: 'u-owner-demo',
+      id: ownerId,
       email: 'owner@demo.com',
       passwordHash: simpleHash('owner123'),
       name: 'Demo Owner',
       role: 'property_owner',
-      ownerId: 'u-owner-demo',
+      ownerId,
     },
     {
       id: 'u-house-demo',
@@ -232,7 +271,7 @@ export const seedDemoUsers = (): void => {
       passwordHash: simpleHash('keeper123'),
       name: 'James Okello',
       role: 'housekeeper',
-      ownerId: 'u-owner-demo',
+      ownerId,
     },
     {
       id: 'u-tenant-demo',
@@ -240,10 +279,11 @@ export const seedDemoUsers = (): void => {
       passwordHash: simpleHash('tenant123'),
       name: 'David Ssempijja',
       role: 'tenant',
-      ownerId: 'u-owner-demo',
+      ownerId,
       tenantId: 't1',
       unitId: 'u1',
       buildingId: 'b1',
     },
   ])
+  seedDemoStaffInvite(ownerId)
 }

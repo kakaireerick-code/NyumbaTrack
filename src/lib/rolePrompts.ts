@@ -50,7 +50,7 @@ export const getTourSteps = (role: string): TourStep[] => {
 export const ROLE_LOGIN_HINTS: Record<string, string> = {
   property_owner: 'Set up properties and units, then share join links with tenants.',
   admin: 'Set up properties and units, then share join links with tenants.',
-  tenant: 'Free portal — use the invite code from your landlord at /join.',
+  tenant: 'Use the invite code from your landlord to access your unit.',
   housekeeper: 'View units and maintenance for properties you care for.',
   caretaker: 'View units and maintenance for properties you care for.',
   accountant: 'Track payments, balances, and reports for the owner.',

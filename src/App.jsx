@@ -9,6 +9,7 @@ import ReceiptModal from './components/ReceiptModal'
 import TenantDetailPanel from './components/TenantDetailPanel'
 import LoginPage from './pages/LoginPage'
 import JoinPage from './pages/JoinPage'
+import StaffJoinPage from './pages/StaffJoinPage'
 import DashboardPage from './pages/DashboardPage'
 import MessagesPage from './pages/MessagesPage'
 import HelpPage from './pages/HelpPage'
@@ -50,7 +51,7 @@ import { getTourSteps, isTourComplete } from './lib/rolePrompts'
 import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
 import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
 import { syncInvitesFromUnits } from './lib/invites'
-import { parseEntryPath, getJoinPath } from './lib/routing'
+import { parseEntryPath, getJoinPath, getStaffJoinPath } from './lib/routing'
 import { countUnreadForOwner } from './lib/messages'
 import { getUsers, saveUsers } from './lib/auth'
 import { isoToday } from './lib/dates'
@@ -330,6 +331,9 @@ function AppContent() {
       setCurrentUser({ name: t ? `${t.firstName} ${t.lastName}` : name, building: bName })
     } else if (user.role === 'housekeeper') {
       setCurrentUser({ name, building: buildings[0]?.name || '' })
+      if (entryPath.entry === 'staff-join') {
+        window.history.replaceState({}, '', getStaffJoinPath())
+      }
     } else {
       setCurrentUser({ name, building: 'All Properties', email: user.email })
     }
@@ -689,7 +693,14 @@ function AppContent() {
           units={units}
           buildings={buildings}
           onAuthSuccess={handleAuthSuccess}
-          onGoOwnerLogin={() => { window.location.href = '/' }}
+        />
+      )
+    }
+    if (entryPath.entry === 'staff-join') {
+      return (
+        <StaffJoinPage
+          initialCode={entryPath.inviteCode}
+          onAuthSuccess={handleAuthSuccess}
         />
       )
     }
@@ -758,6 +769,7 @@ function AppContent() {
 
       {currentRole !== 'tenant' && (
         <QuickActions
+          currentRole={currentRole}
           setCurrentPage={setPageSafe}
           onRecordPayment={() => setPaymentFormOpen(true)}
         />

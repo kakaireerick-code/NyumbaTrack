@@ -99,6 +99,9 @@ export const validateInviteCode = (code: string): ValidateInviteResult => {
   if (!norm || norm.length < 6) {
     return { ok: false, error: 'Enter the invite code from your landlord (e.g. KLA-7F2G).' }
   }
+  if (norm.startsWith('STF')) {
+    return { ok: false, error: 'This code is not valid for tenant registration. Check the link your landlord sent.' }
+  }
   const invite = findInvite(norm)
   if (!invite) return { ok: false, error: 'Invalid invite code. Ask your landlord for a new link or code.' }
   if (invite.status === 'revoked') {

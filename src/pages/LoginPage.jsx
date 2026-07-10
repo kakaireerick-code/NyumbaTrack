@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Home, Eye, EyeOff } from 'lucide-react'
 import { seedDemoUsers, registerOwner, login, loginOrRegisterWithGoogle } from '../lib/auth'
 import GoogleSignInButton from '../components/GoogleSignInButton'
-import { ROLE_LOGIN_HINTS } from '../lib/rolePrompts'
-import { getJoinPath } from '../lib/routing'
+import { isOwnerLoginRole } from '../lib/permissions'
 
 export default function LoginPage({ onAuthSuccess }) {
   const [mode, setMode] = useState('signin')
@@ -25,6 +24,10 @@ export default function LoginPage({ onAuthSuccess }) {
       setError(result.error || 'Google sign-in failed')
       return
     }
+    if (!isOwnerLoginRole(result.user?.role || '')) {
+      setError('This sign-in is for property owners only.')
+      return
+    }
     onAuthSuccess(result.user)
   }
 
@@ -41,8 +44,8 @@ export default function LoginPage({ onAuthSuccess }) {
           setLoading(false)
           return
         }
-        if (result.user?.role === 'tenant') {
-          setError('Tenants sign in at the tenant portal (/join), not here.')
+        if (!isOwnerLoginRole(result.user?.role || '')) {
+          setError('This sign-in is for property owners only.')
           setLoading(false)
           return
         }
@@ -60,8 +63,6 @@ export default function LoginPage({ onAuthSuccess }) {
     }, 300)
   }
 
-  const roleHint = ROLE_LOGIN_HINTS.property_owner
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#1a1a2e' }}>
       <div className="card w-full max-w-md p-8">
@@ -69,7 +70,7 @@ export default function LoginPage({ onAuthSuccess }) {
           <Home className="text-[#2d6a4f]" size={32} />
           <h1 className="text-2xl font-bold text-[#2d6a4f]">NyumbaTrack</h1>
         </div>
-        <p className="text-center text-gray-500 mb-4 text-sm">Property owner sign in — manage your portfolio</p>
+        <p className="text-center text-gray-500 mb-4 text-sm">Sign in to manage your rental portfolio</p>
 
         <div className="flex rounded-lg border mb-6 overflow-hidden text-sm">
           {['signin', 'register-owner'].map((m) => (
@@ -83,10 +84,6 @@ export default function LoginPage({ onAuthSuccess }) {
             </button>
           ))}
         </div>
-
-        {roleHint && (
-          <p className="text-sm text-center text-[#2d6a4f] bg-green-50 rounded p-2 mb-4">{roleHint}</p>
-        )}
 
         {error && <p className="text-red-600 text-sm mb-3 bg-red-50 p-2 rounded">{error}</p>}
 
@@ -143,11 +140,6 @@ export default function LoginPage({ onAuthSuccess }) {
 
         <p className="text-xs text-gray-400 mt-4 text-center">
           Demo owner: owner@demo.com / owner123
-        </p>
-        <p className="text-xs text-center mt-2">
-          <a href={getJoinPath()} className="text-[#2d6a4f] underline">
-            Are you a tenant? Go to the free tenant portal
-          </a>
         </p>
       </div>
     </div>

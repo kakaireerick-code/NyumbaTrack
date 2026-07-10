@@ -15,6 +15,7 @@ import { fmtUGX, fmtDate } from '../utils/helpers'
 import { createInviteForUnit } from '../lib/invites'
 import { scopeRecord } from '../lib/scope'
 import { computeDataQuality, displayTenantName } from '../lib/tenantData'
+import { canSeeFinancials, canManagePortfolio } from '../lib/permissions'
 import { Badge, Modal, EmptyState, ProgressBar } from '../components/UI'
 import DataQualityBadge from '../components/DataQualityBadge'
 import InviteTenantPanel from '../components/InviteTenantPanel'
@@ -231,7 +232,10 @@ export function UnitsPage({
   setTenants,
   showToast,
   activeOwnerId,
+  currentRole,
 }) {
+  const showFinancial = canSeeFinancials(currentRole || '')
+  const canManage = canManagePortfolio(currentRole || '')
   const [viewMode, setViewMode] = useState('grid')
   const [statusFilter, setStatusFilter] = useState('all')
   const [modalOpen, setModalOpen] = useState(false)
@@ -321,6 +325,7 @@ export function UnitsPage({
             <p className="text-sm text-gray-500 dark:text-gray-400">{filteredUnits.length} units shown</p>
           </div>
         </div>
+        {canManage && (
         <button
           type="button"
           onClick={() => {
@@ -333,6 +338,7 @@ export function UnitsPage({
           <Plus size={18} />
           Add Unit
         </button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -396,9 +402,9 @@ export function UnitsPage({
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{getBuildingName(unit.buildingId)}</p>
                 <div className="text-sm space-y-1 mb-3">
                   <p>{unit.bedrooms} BR · Floor {unit.floorLevel}</p>
-                  <p className="font-medium">{fmtUGX(unit.monthlyRent)}/mo</p>
+                  {showFinancial && <p className="font-medium">{fmtUGX(unit.monthlyRent)}/mo</p>}
                   {tenantName && <p className="text-xs">Tenant: {tenantName}</p>}
-                  {unit.status === 'vacant' && unit.inviteCode && (
+                  {canManage && unit.status === 'vacant' && unit.inviteCode && (
                     <p className="text-xs font-mono bg-gray-100 dark:bg-gray-800 p-1.5 rounded mt-1">
                       Invite: <strong>{unit.inviteCode}</strong>
                     </p>
@@ -415,7 +421,7 @@ export function UnitsPage({
                   >
                     View history
                   </button>
-                  {unit.status === 'vacant' && !unit.currentTenantId && (
+                  {canManage && unit.status === 'vacant' && !unit.currentTenantId && (
                     <>
                       <button
                         type="button"
@@ -449,7 +455,7 @@ export function UnitsPage({
                 <th className="p-3">Unit</th>
                 <th className="p-3">Building</th>
                 <th className="p-3">Status</th>
-                <th className="p-3">Rent</th>
+                {showFinancial && <th className="p-3">Rent</th>}
                 <th className="p-3">Tenant</th>
                 <th className="p-3">BR</th>
                 <th className="p-3">Actions</th>
@@ -463,7 +469,7 @@ export function UnitsPage({
                   <td className="p-3">
                     <Badge color={STATUS_COLORS[unit.status] || 'gray'}>{STATUS_LABELS[unit.status] || unit.status}</Badge>
                   </td>
-                  <td className="p-3">{fmtUGX(unit.monthlyRent)}</td>
+                  {showFinancial && <td className="p-3">{fmtUGX(unit.monthlyRent)}</td>}
                   <td className="p-3">{getTenantName(unit) || '—'}</td>
                   <td className="p-3">{unit.bedrooms}</td>
                   <td className="p-3">
@@ -618,7 +624,8 @@ export function UnitsPage({
 
 // ─── VacancyBoardPage ────────────────────────────────────────────────────────
 
-export function VacancyBoardPage({ units, buildings, tenants, selectedBuilding, setSelectedBuilding }) {
+export function VacancyBoardPage({ units, buildings, tenants, selectedBuilding, setSelectedBuilding, currentRole }) {
+  const showFinancial = canSeeFinancials(currentRole || '')
   const [detailUnit, setDetailUnit] = useState(null)
 
   const filteredUnits = useMemo(() => {
@@ -736,10 +743,12 @@ export function VacancyBoardPage({ units, buildings, tenants, selectedBuilding, 
               <span className="text-sm text-gray-500 dark:text-gray-400">{detailBuilding?.name}</span>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-gray-500 dark:text-gray-400">Monthly Rent</p>
-                <p className="font-medium">{fmtUGX(detailUnit.monthlyRent)}</p>
-              </div>
+              {showFinancial && (
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Monthly Rent</p>
+                  <p className="font-medium">{fmtUGX(detailUnit.monthlyRent)}</p>
+                </div>
+              )}
               <div>
                 <p className="text-gray-500 dark:text-gray-400">Bedrooms</p>
                 <p className="font-medium">{detailUnit.bedrooms}</p>

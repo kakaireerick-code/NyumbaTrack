@@ -10,6 +10,8 @@ import {
   daysBetween,
 } from '../utils/helpers'
 import { safeSet } from '../utils/storage'
+import InviteStaffPanel from '../components/InviteStaffPanel'
+import { canManagePortfolio } from '../lib/permissions'
 import { Badge, EmptyState, LoadingButton, StatCard } from '../components/UI'
 
 const inputCls = 'w-full border rounded px-3 py-2 dark:bg-gray-700 dark:border-gray-600'
@@ -625,7 +627,7 @@ Date: ${fmtDate(new Date())}` : ''
   )
 }
 
-export function SettingsPage({ settings, setSettings, showToast, onRestartTour }) {
+export function SettingsPage({ settings, setSettings, showToast, onRestartTour, activeOwnerId, currentRole }) {
   const [connectionStatus, setConnectionStatus] = useState(null)
   const [testing, setTesting] = useState(false)
 
@@ -664,6 +666,10 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour }
   return (
     <div className="p-4 space-y-6 max-w-3xl">
       <h1 className="text-2xl font-bold">Settings</h1>
+
+      {canManagePortfolio(currentRole || '') && activeOwnerId && (
+        <InviteStaffPanel ownerId={activeOwnerId} showToast={showToast} />
+      )}
 
       <div className="card p-4 space-y-4">
         <h2 className="font-semibold">Section 1: Building Defaults</h2>
