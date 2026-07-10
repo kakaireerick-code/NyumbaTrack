@@ -18,7 +18,8 @@ There is no generic `/join` picker and no role switcher. Each portal is isolated
 
 ```bash
 npm install
-npm run dev
+npm run dev:ensure   # installs deps if needed → http://localhost:5173
+npm run dev          # vite dev server (port 5173)
 npm run build
 npm test
 ```
