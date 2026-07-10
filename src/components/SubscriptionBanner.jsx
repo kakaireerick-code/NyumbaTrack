@@ -32,7 +32,18 @@ export default function SubscriptionBanner({ subscription, setCurrentPage }) {
     )
   }
 
-  if (!active && subscription.hasUsedTrial) {
+  if (subscription.status === 'pending_verification') {
+    return (
+      <div className="bg-orange-100 text-orange-900 dark:bg-orange-900/40 dark:text-orange-200 px-4 py-2 text-sm flex flex-wrap items-center justify-between gap-2">
+        <span>MoMo payment pending admin verification — plan not active yet.</span>
+        <button type="button" onClick={() => setCurrentPage('subscription')} className="underline font-medium">
+          View status →
+        </button>
+      </div>
+    )
+  }
+
+  if (!active && subscription.hasUsedTrial && subscription.status !== 'pending_verification') {
     return (
       <div className="bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200 px-4 py-2 text-sm flex flex-wrap items-center justify-between gap-2">
         <span>Your subscription has expired. Upgrade to continue managing your properties.</span>

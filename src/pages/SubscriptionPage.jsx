@@ -38,6 +38,7 @@ import {
 import { ADMIN_MOMO_LINE, ADMIN_MOMO_DISPLAY, subscriptionPaymentReference } from '../lib/billing'
 import { verifyMomoReference, collectSubscriptionReferences } from '../lib/momoVerification'
 import { buildSubscriptionInvoice, queueInvoiceEmail, downloadInvoice } from '../lib/subscriptionInvoice'
+import { submitCloudSubscriptionClaim } from '../lib/subscriptionCloud'
 import { inputCls } from '../lib/formStyles'
 import { Badge, LoadingButton } from '../components/UI'
 import SubscriptionInvoiceModal from '../components/SubscriptionInvoiceModal'
@@ -114,7 +115,7 @@ export default function SubscriptionPage({
     }, 600)
   }
 
-  const subscribe = (plan) => {
+  const subscribe = async (plan) => {
     const amount = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice
     const ref = momoReference.trim()
     const verify = verifyMomoReference(ref, collectSubscriptionReferences(paymentHistory))
@@ -128,57 +129,54 @@ export default function SubscriptionPage({
     }
 
     setLoading(plan.id)
-    setTimeout(() => {
-      const now = new Date()
-      const ends = new Date(now)
-      if (billingCycle === 'yearly') ends.setFullYear(ends.getFullYear() + 1)
-      else ends.setMonth(ends.getMonth() + 1)
 
-      const paymentRecord = {
-        id: `sub-${Date.now()}`,
-        planId: plan.id,
-        billingCycle,
-        amount,
-        date: now.toISOString().split('T')[0],
-        method: 'MTN MoMo',
-        reference: ref,
-        paidTo: ADMIN_MOMO_LINE,
-      }
+    const claimResult = await submitCloudSubscriptionClaim({
+      customerEmail,
+      customerName,
+      planId: plan.id,
+      billingCycle,
+      amount,
+      momoReference: ref,
+    })
 
-      const invoice = buildSubscriptionInvoice({
-        customerName,
-        customerEmail,
-        planId: plan.id,
-        billingCycle,
-        amount,
-        momoReference: ref,
-        periodStart: now.toISOString().split('T')[0],
-        periodEnd: ends.toISOString().split('T')[0],
-        existingInvoices: invoices,
-      })
-
-      const nextInbox = queueInvoiceEmail(invoice, emailInbox)
-
-      setSubscription({
-        ...subscription,
-        planId: plan.id,
-        billingCycle,
-        status: 'active',
-        currentPeriodStart: now.toISOString(),
-        currentPeriodEnd: ends.toISOString(),
-        paymentHistory: [...paymentHistory, paymentRecord],
-        invoices: [...invoices, invoice],
-        emailInbox: nextInbox,
-      })
-
-      setLatestInvoice(invoice)
-      setEmailSent(true)
-      setInvoiceModalOpen(true)
-      setConfirmPlan(null)
-      setMomoReference('')
-      showToast(`Subscribed! Invoice sent to ${customerEmail}`, 'success')
+    if (!claimResult.ok) {
+      showToast(claimResult.error, 'error')
       setLoading(null)
-    }, 800)
+      return
+    }
+
+    const now = new Date()
+    const paymentRecord = {
+      id: `sub-${Date.now()}`,
+      planId: plan.id,
+      billingCycle,
+      amount,
+      date: now.toISOString().split('T')[0],
+      method: 'MTN MoMo',
+      reference: ref,
+      paidTo: ADMIN_MOMO_LINE,
+      status: 'pending_verification',
+    }
+
+    setSubscription({
+      ...subscription,
+      planId: plan.id,
+      billingCycle,
+      status: 'pending_verification',
+      pendingClaimId: claimResult.claimId,
+      currentPeriodStart: null,
+      currentPeriodEnd: null,
+      paymentHistory: [...paymentHistory, paymentRecord],
+    })
+
+    setConfirmPlan(null)
+    setMomoReference('')
+    showToast(
+      claimResult.message ||
+        'Payment submitted for verification. Your plan activates after MoMo is confirmed.',
+      'success',
+    )
+    setLoading(null)
   }
 
   const payAmount = confirmPlan
@@ -277,8 +275,11 @@ export default function SubscriptionPage({
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {subscription.status === 'trialing' && <Badge color="green">Free Trial Active</Badge>}
-            {subscription.status === 'active' && <Badge color="blue">Active Plan</Badge>}
+          {subscription.status === 'trialing' && <Badge color="green">Free Trial Active</Badge>}
+          {subscription.status === 'active' && <Badge color="blue">Active Plan</Badge>}
+          {subscription.status === 'pending_verification' && (
+            <Badge color="orange">Pending MoMo verification</Badge>
+          )}
             {!withinUnitLimit && <Badge color="orange">Over unit limit</Badge>}
           </div>
         </div>
@@ -316,7 +317,16 @@ export default function SubscriptionPage({
         </div>
       )}
 
-      {subscription.hasUsedTrial && !active && (
+      {subscription.status === 'pending_verification' && (
+        <div className="card p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+          <p className="font-medium text-orange-800 dark:text-orange-200">
+            Your MoMo payment is <strong>pending verification</strong>. An admin will confirm payment to{' '}
+            {ADMIN_MOMO_DISPLAY} and activate your plan. You will receive an invoice by email once approved.
+          </p>
+        </div>
+      )}
+
+      {subscription.hasUsedTrial && !active && subscription.status !== 'pending_verification' && (
         <div className="card p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
           <p className="font-medium text-orange-800 dark:text-orange-200">
             Your free trial has ended. Pick monthly or yearly below and pay to{' '}
