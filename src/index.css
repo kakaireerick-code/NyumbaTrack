@@ -1,0 +1,70 @@
+@import 'tailwindcss';
+
+:root {
+  --primary: #2d6a4f;
+  --accent: #40916c;
+  --alert: #e07b00;
+  --danger: #d62828;
+  --sidebar: #1a2e1a;
+  --bg: #f8f9fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark body,
+body.dark {
+  --bg: #121212;
+  background: #121212;
+  color: #e5e5e5;
+}
+
+.dark .card,
+body.dark .card {
+  background: #1e1e1e;
+  color: #e5e5e5;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible;
+  }
+  .print-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
