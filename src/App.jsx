@@ -47,13 +47,15 @@ import { usePersistedState } from './utils/storage'
 import { buildReceiptData, buildReceiptText, issueReceipt } from './utils/receipts'
 import { getTenantBalance } from './utils/helpers'
 import { isSubscriptionActive, startFreeTrial, needsSubscription } from './utils/subscription'
-import { canAccessPage, defaultPageForRole, normalizeRole, TENANT_BLOCKED_PAGES } from './lib/permissions'
+import { canAccessPage, defaultPageForRole, normalizeRole, TENANT_BLOCKED_PAGES, isCaretakerRole, isTenantRole, filterPaymentsForRole } from './lib/permissions'
 import { getTourSteps, isTourComplete } from './lib/rolePrompts'
 import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
 import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
 import { syncInvitesFromUnits } from './lib/invites'
 import { parseEntryPath, getTenantJoinPath, getCaretakerJoinPath, getReceiptPath } from './lib/routing'
 import { getCaretakerSafeBuilding, getCaretakerSafeUnit, getCaretakerSafeTenant } from './lib/propertyViews'
+import NotificationInbox from './components/NotificationInbox'
+import { addNotification } from './lib/notifications'
 import { countUnreadForOwner } from './lib/messages'
 import { getUsers, saveUsers } from './lib/auth'
 import { isoToday } from './lib/dates'
@@ -183,6 +185,15 @@ function AppContent() {
   )
 
   useEffect(() => {
+    if (!isLoggedIn) return
+    const rk = normalizeRole(currentRole)
+    if ((entryPath.kind === 'owner-login' || entryPath.kind === 'owner-signup') && rk !== 'property_owner') {
+      const path = rk === 'tenant' ? getTenantJoinPath() : getCaretakerJoinPath()
+      window.history.replaceState({}, '', path)
+    }
+  }, [isLoggedIn, currentRole, entryPath.kind])
+
+  useEffect(() => {
     if (entryPath.kind === 'receipt' && entryPath.receiptId && isLoggedIn) {
       setReceiptViewId(entryPath.receiptId)
       setCurrentPage('receipt-view')
@@ -227,7 +238,7 @@ function AppContent() {
     [showDemoData, ownerTenants],
   )
 
-  const isCaretaker = normalizeRole(currentRole) === 'caretaker'
+  const isCaretaker = isCaretakerRole(currentRole)
 
   const caretakerBuildings = useMemo(
     () => effectiveBuildings.map((b) => getCaretakerSafeBuilding(b) || b),
@@ -402,13 +413,32 @@ function AppContent() {
       ? `https://wa.me/${tenant.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(text.slice(0, 500))}`
       : ''
     setReceiptModal({ open: true, receiptData, whatsapp: wa })
+    if (activeOwnerId) {
+      addNotification({
+        ownerId: activeOwnerId,
+        role: 'property_owner',
+        title: 'Receipt issued',
+        body: `Receipt ${receiptData.receiptNo} for ${receiptData.tenantName}`,
+        kind: 'payment',
+      })
+      if (tenant?.id) {
+        addNotification({
+          ownerId: activeOwnerId,
+          role: 'tenant',
+          userId: tenant.userId,
+          title: 'New receipt available',
+          body: `Your receipt ${receiptData.receiptNo} is ready to view.`,
+          kind: 'payment',
+        })
+      }
+    }
   }, [tenants, payments, settings, activeOwnerId])
 
   const sharedProps = {
     buildings: portalBuildings,
     units: portalUnits,
     tenants: portalTenants,
-    payments: ownerPayments,
+    payments: filterPaymentsForRole(currentRole, ownerPayments),
     maintenance,
     utilities,
     notices,
@@ -743,7 +773,7 @@ function AppContent() {
     )
   }
 
-  const isTenant = normalizeRole(currentRole) === 'tenant'
+  const isTenant = isTenantRole(currentRole)
 
   return (
     <div className={`min-h-screen flex ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-[#f8f9fa]'}`}>
@@ -772,6 +802,16 @@ function AppContent() {
           isTenant={isTenant}
           unreadMessages={!isTenant && activeOwnerId ? countUnreadForOwner(activeOwnerId) : 0}
           onOpenMessages={!isTenant ? () => setPageSafe('messages') : undefined}
+          notificationInbox={
+            (activeOwnerId || authUser?.id) ? (
+              <NotificationInbox
+                role={currentRole}
+                ownerId={activeOwnerId || authUser?.ownerId}
+                userId={authUser?.id}
+                showToast={showToast}
+              />
+            ) : null
+          }
         />
         <div className="flex items-center justify-between px-4 py-1 border-b dark:border-gray-700">
           <span className="text-xs text-gray-500 capitalize">{currentRole} portal</span>
@@ -803,7 +843,7 @@ function AppContent() {
 
       {isTenant && <TenantBottomNav currentPage={currentPage} setCurrentPage={setPageSafe} />}
 
-      {currentRole !== 'tenant' && (
+      {currentRole !== 'tenant' && !isTenantRole(currentRole) && (
         <QuickActions
           currentRole={currentRole}
           setCurrentPage={setPageSafe}
@@ -811,7 +851,7 @@ function AppContent() {
         />
       )}
 
-      {detailTenant && currentRole !== 'tenant' && currentRole !== 'caretaker' && (
+      {detailTenant && !isTenantRole(currentRole) && !isCaretakerRole(currentRole) && (
         <TenantDetailPanel
           tenant={detailTenant}
           unit={detailUnit}
@@ -821,7 +861,7 @@ function AppContent() {
           currentUser={currentUser}
           tenantNotes={tenantNotes[detailTenant.id] || []}
           utilities={utilities.filter((u) => u.unitId === detailTenant.unitId)}
-          showFinancial={currentRole !== 'caretaker'}
+          showFinancial={!isCaretakerRole(currentRole)}
           onClose={() => setSelectedTenant(null)}
           onRecordPayment={() => { setCurrentPage('payments'); setPaymentFormOpen(true) }}
           onSendReminder={() => setCurrentPage('reminders')}

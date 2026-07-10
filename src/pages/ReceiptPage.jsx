@@ -2,7 +2,7 @@ import React from 'react'
 import PaymentReceipt from '../components/PaymentReceipt'
 import { getReceiptById } from '../lib/receiptStore'
 import { buildReceiptHtmlDocument, downloadReceiptDocument } from '../utils/receipts'
-import { canViewField, normalizeRole } from '../lib/permissions'
+import { canViewField, normalizeRole, canAccessPage } from '../lib/permissions'
 
 export default function ReceiptPage({ receiptId, currentRole, authUser, onClose }) {
   const role = normalizeRole(currentRole || '')
@@ -24,17 +24,7 @@ export default function ReceiptPage({ receiptId, currentRole, authUser, onClose 
     )
   }
 
-  if (role === 'caretaker') {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-gray-100">
-        <div className="card p-8 text-center max-w-md">
-          <p className="text-sm text-gray-600">You do not have access to this document.</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (role === 'tenant' && authUser?.tenantId && snapshot.tenantId !== authUser.tenantId) {
+  if (normalizeRole(role) === 'tenant' && authUser?.tenantId && snapshot.tenantId !== authUser.tenantId) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-gray-100">
         <div className="card p-8 text-center max-w-md">
@@ -44,7 +34,7 @@ export default function ReceiptPage({ receiptId, currentRole, authUser, onClose 
     )
   }
 
-  if (!canViewField(role, 'receipt.amount')) {
+  if (!canAccessPage(role, 'receipt-view') || !canViewField(role, 'receipt.amount')) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-gray-100">
         <div className="card p-8 text-center max-w-md">

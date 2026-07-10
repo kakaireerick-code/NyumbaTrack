@@ -26,15 +26,28 @@ const TENANT_PREFIXES = ['KLA', 'NTD', 'WKO', 'JIN', 'MBR', 'GUL', 'ENT']
 const CARETAKER_PREFIX = 'CTR'
 
 const randomSuffix = (len = 4): string => {
+  const bytes = new Uint8Array(len)
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes)
+  } else {
+    for (let i = 0; i < len; i++) bytes[i] = Math.floor(Math.random() * 256)
+  }
   let s = ''
-  for (let i = 0; i < len; i++) s += CHARS[Math.floor(Math.random() * CHARS.length)]
+  for (let i = 0; i < len; i++) s += CHARS[bytes[i] % CHARS.length]
   return s
+}
+
+const randomPrefix = (): string => {
+  const bytes = new Uint8Array(1)
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes)
+  }
+  return TENANT_PREFIXES[bytes[0] % TENANT_PREFIXES.length]
 }
 
 export const generateInviteCode = (role: InviteRole): string => {
   if (role === 'caretaker') return `${CARETAKER_PREFIX}-${randomSuffix()}`
-  const prefix = TENANT_PREFIXES[Math.floor(Math.random() * TENANT_PREFIXES.length)]
-  return `${prefix}-${randomSuffix()}`
+  return `${randomPrefix()}-${randomSuffix()}`
 }
 
 export const getInvites = (): InviteRecord[] => {

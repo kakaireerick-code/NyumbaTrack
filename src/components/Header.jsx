@@ -17,6 +17,7 @@ export default function Header({
   isTenant,
   unreadMessages,
   onOpenMessages,
+  notificationInbox,
 }) {
   const roleKey = normalizeRole(currentRole)
   const roleLabel = ROLE_LABELS[roleKey] || 'User'
@@ -44,6 +45,7 @@ export default function Header({
           </span>
         </div>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {notificationInbox}
           {onOpenMessages && unreadMessages > 0 && (
             <button
               type="button"

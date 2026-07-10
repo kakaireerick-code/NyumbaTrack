@@ -157,6 +157,30 @@ export const canViewField = (role: string, fieldKey: FieldKey): boolean => {
 export const canSeeFinancials = (role: string): boolean =>
   normalizeRole(role) === 'property_owner'
 
+export const isCaretakerRole = (role: string): boolean =>
+  normalizeRole(role) === 'caretaker'
+
+export const isTenantRole = (role: string): boolean =>
+  normalizeRole(role) === 'tenant'
+
+export const canViewMaintenanceCost = (role: string): boolean =>
+  canSeeFinancials(role)
+
+export const canAccessOwnerEntry = (role: string): boolean =>
+  normalizeRole(role) === 'property_owner'
+
+/** Caretakers must not receive payment records in portal props or session views */
+export const filterPaymentsForRole = <T>(role: string, payments: T[]): T[] =>
+  isCaretakerRole(role) ? [] : payments
+
+export const filterMaintenanceForRole = <T extends { status?: string }>(
+  role: string,
+  rows: T[],
+): T[] => {
+  if (!isCaretakerRole(role)) return rows
+  return rows.filter((m) => m.status === 'open' || m.status === 'in_progress')
+}
+
 export const isOwnerLoginRole = (role: string): boolean =>
   normalizeRole(role) === 'property_owner'
 

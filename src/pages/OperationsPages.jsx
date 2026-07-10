@@ -12,7 +12,7 @@ import { REMINDER_TEMPLATES, getReminderType } from '../utils/reminders'
 import { Modal, Badge, EmptyState, LoadingButton } from '../components/UI'
 import DataQualityBadge from '../components/DataQualityBadge'
 import { computeDataQuality, displayTenantName, DATA_SOURCE_LABELS } from '../lib/tenantData'
-import { canSeeFinancials, normalizeRole } from '../lib/permissions'
+import { canSeeFinancials, canViewMaintenanceCost, filterMaintenanceForRole } from '../lib/permissions'
 
 const inputCls = 'w-full border rounded px-3 py-2 dark:bg-gray-700 dark:border-gray-600'
 const btnPrimary = 'px-4 py-2 bg-[#2d6a4f] text-white rounded hover:opacity-90'
@@ -568,7 +568,6 @@ export function MaintenancePage({
   showToast,
   currentRole,
 }) {
-  const isCaretaker = normalizeRole(currentRole || '') === 'caretaker'
   const [showForm, setShowForm] = useState(false)
   const [filterBuilding, setFilterBuilding] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
@@ -576,14 +575,14 @@ export function MaintenancePage({
   const [form, setForm] = useState({ unitId: '', issue: '', reportedBy: 'Caretaker', priority: 'Medium' })
   const [updateRow, setUpdateRow] = useState(null)
 
+  const showMaintenanceCost = canViewMaintenanceCost(currentRole || '')
   const visibleMaintenance = useMemo(() => {
-    let rows = [...maintenance]
-    if (isCaretaker) rows = rows.filter((m) => m.status === 'open' || m.status === 'in_progress')
+    let rows = filterMaintenanceForRole(currentRole || '', [...maintenance])
     if (filterBuilding) rows = rows.filter((m) => m.buildingId === filterBuilding)
     if (filterStatus) rows = rows.filter((m) => m.status === filterStatus)
     if (filterPriority) rows = rows.filter((m) => m.priority === filterPriority)
     return rows
-  }, [maintenance, isCaretaker, filterBuilding, filterStatus, filterPriority])
+  }, [maintenance, currentRole, filterBuilding, filterStatus, filterPriority])
 
   const monthCost = useMemo(() => {
     const now = new Date()
@@ -647,9 +646,7 @@ export function MaintenancePage({
     <div className="p-4 space-y-6">
       <div className="flex flex-wrap gap-2 items-center justify-between">
         <h1 className="text-2xl font-bold">Maintenance</h1>
-        {!isCaretaker && (
-          <button type="button" className={btnPrimary} onClick={() => setShowForm(true)}>Log Issue</button>
-        )}
+        <button type="button" className={btnPrimary} onClick={() => setShowForm(true)}>Log Issue</button>
       </div>
 
       <div className="grid sm:grid-cols-3 gap-2">
@@ -685,7 +682,7 @@ export function MaintenancePage({
                 <th className="p-2">Reported</th>
                 <th className="p-2">Status</th>
                 <th className="p-2">Priority</th>
-                {!isCaretaker && <th className="p-2">Cost</th>}
+                {showMaintenanceCost && <th className="p-2">Cost</th>}
                 <th className="p-2">Days Open</th>
                 <th className="p-2">Actions</th>
               </tr>
@@ -703,7 +700,7 @@ export function MaintenancePage({
                     <td className="p-2">{fmtDate(m.reportedDate)}</td>
                     <td className="p-2">{statusBadge(m.status)}</td>
                     <td className="p-2">{m.priority}</td>
-                    {!isCaretaker && <td className="p-2">{fmtUGX(m.cost)}</td>}
+                    {showMaintenanceCost && <td className="p-2">{fmtUGX(m.cost)}</td>}
                     <td className="p-2">
                       {openDays}
                       {openDays >= 14 && m.status !== 'resolved' && <Badge color="darkred">OVERDUE</Badge>}
@@ -719,7 +716,7 @@ export function MaintenancePage({
         </div>
       )}
 
-      {!isCaretaker && (
+      {showMaintenanceCost && (
         <p className="text-sm font-medium">Total maintenance costs this month: {fmtUGX(monthCost)}</p>
       )}
 
@@ -759,7 +756,7 @@ export function MaintenancePage({
               <option value="in_progress">In Progress</option>
               <option value="resolved">Resolved</option>
             </select>
-            {!isCaretaker && (
+            {showMaintenanceCost && (
               <input type="number" className={inputCls} placeholder="Cost (UGX)" value={updateRow.cost || ''} onChange={(e) => setUpdateRow((r) => ({ ...r, cost: Number(e.target.value) }))} />
             )}
             <textarea className={inputCls} placeholder="Notes" value={updateRow.notes || ''} onChange={(e) => setUpdateRow((r) => ({ ...r, notes: e.target.value }))} />

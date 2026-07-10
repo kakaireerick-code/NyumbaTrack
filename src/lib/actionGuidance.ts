@@ -18,7 +18,7 @@ export const getPageGuidance = (
   const tenants = (ctx.tenants as unknown[]) || []
   const demoMode = !!ctx.demoMode
 
-  if (r === 'property_owner' || r === 'accountant') {
+  if (r === 'property_owner') {
     if (pageId === 'dashboard' && buildings.length === 0 && units.length === 0) {
       return {
         variant: 'info',

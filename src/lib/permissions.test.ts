@@ -6,6 +6,7 @@ import {
   assertOwnerOnly,
   PermissionDeniedError,
   normalizeRole,
+  filterPaymentsForRole,
 } from './permissions'
 
 describe('permissions', () => {
@@ -54,6 +55,11 @@ describe('permissions', () => {
     expect(() => assertOwnerOnly('tenant', 'issue_receipt')).toThrow(PermissionDeniedError)
     expect(() => assertOwnerOnly('caretaker', 'record_payment')).toThrow(PermissionDeniedError)
     expect(() => assertOwnerOnly('property_owner', 'issue_receipt')).not.toThrow()
+  })
+
+  it('filterPaymentsForRole strips payment data for caretakers', () => {
+    const payments = [{ id: 'p1', amount: 800000 }]
+    expect(filterPaymentsForRole('caretaker', payments)).toEqual([])
   })
 
   it('owner portal pages exclude tenant-preview and role switcher', () => {

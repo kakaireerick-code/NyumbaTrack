@@ -19,7 +19,7 @@ export const WORKFLOWS: Workflow[] = [
     id: 'add_property',
     title: 'Add a property',
     description: 'Create your first building and units with rent.',
-    roles: ['property_owner', 'accountant'],
+    roles: ['property_owner'],
     steps: [
       { title: 'Open Properties', instructions: 'Go to the Properties page from the sidebar.', targetPage: 'buildings' },
       { title: 'Add building', instructions: 'Click Add Building. Enter name, address, and caretaker contact.', targetPage: 'buildings' },
@@ -36,7 +36,7 @@ export const WORKFLOWS: Workflow[] = [
       { title: 'Open Units', instructions: 'Go to Units and pick a vacant unit.', targetPage: 'units' },
       { title: 'Copy tenant link', instructions: 'Use Copy tenant link or Copy code only on the unit card.', targetPage: 'units' },
       { title: 'Send to tenant', instructions: 'Paste the WhatsApp template text or share the link by SMS.', targetPage: 'units' },
-      { title: 'They join at /join', instructions: 'Tenant opens the link, creates a free account, and sees their unit.', targetPage: 'tenants' },
+      { title: 'They join at /join/tenant', instructions: 'Tenant opens the link, creates a free account, and sees their unit.', targetPage: 'tenants' },
     ],
   },
   {
@@ -45,7 +45,7 @@ export const WORKFLOWS: Workflow[] = [
     description: 'Register free using the link from your landlord.',
     roles: ['tenant'],
     steps: [
-      { title: 'Open join link', instructions: 'Go to /join or use the link your landlord sent.', targetPage: 'my-balance' },
+      { title: 'Open join link', instructions: 'Go to /join/tenant or use the link your landlord sent.', targetPage: 'my-balance' },
       { title: 'Enter code', instructions: 'Type the code if it is not already in the URL.', targetPage: 'my-balance' },
       { title: 'Create account', instructions: 'Register with email and password — no payment needed.', targetPage: 'my-balance' },
       { title: 'See your unit', instructions: 'Home shows what you owe for your unit only.', targetPage: 'my-balance' },
@@ -67,7 +67,7 @@ export const WORKFLOWS: Workflow[] = [
     id: 'record_payment',
     title: 'Record a rent payment',
     description: 'Log money received from a tenant.',
-    roles: ['property_owner', 'accountant'],
+    roles: ['property_owner'],
     steps: [
       { title: 'Open Payments', instructions: 'Go to Payments from the sidebar.', targetPage: 'payments' },
       { title: 'Select tenant', instructions: 'Choose the tenant and enter amount, date, and MoMo reference.', targetPage: 'payments' },
@@ -78,7 +78,7 @@ export const WORKFLOWS: Workflow[] = [
     id: 'view_arrears',
     title: 'See who owes rent',
     description: 'Find tenants with outstanding balances.',
-    roles: ['property_owner', 'accountant'],
+    roles: ['property_owner'],
     steps: [
       { title: 'Rent ledger', instructions: 'Open Balance Tracker to sort by most in arrears.', targetPage: 'balance-tracker' },
       { title: 'Send reminders', instructions: 'Use Reminders to message tenants in English or Luganda.', targetPage: 'reminders' },

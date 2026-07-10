@@ -73,6 +73,46 @@ export const unreadCountForRole = (
 ): number =>
   getRoleSafeNotifications(role, ownerId, userId).filter((n) => !n.read).length
 
+export type NotificationPrefs = {
+  maintenance: boolean
+  messages: boolean
+  payments: boolean
+  system: boolean
+}
+
+const PREFS_KEY = (role: string, userId: string) =>
+  `rt_notif_prefs_${normalizeRole(role)}_${userId}`
+
+const DEFAULT_PREFS: NotificationPrefs = {
+  maintenance: true,
+  messages: true,
+  payments: true,
+  system: true,
+}
+
+export const getNotificationPrefs = (role: string, userId: string): NotificationPrefs =>
+  safeGet<NotificationPrefs>(PREFS_KEY(role, userId), DEFAULT_PREFS)
+
+export const saveNotificationPrefs = (
+  role: string,
+  userId: string,
+  prefs: NotificationPrefs,
+): void => safeSet(PREFS_KEY(role, userId), prefs)
+
+export const getFilteredNotifications = (
+  role: string,
+  ownerId: string,
+  userId?: string,
+): AppNotification[] => {
+  const prefs = getNotificationPrefs(role, userId || ownerId)
+  return getRoleSafeNotifications(role, ownerId, userId).filter((n) => {
+    if (n.kind === 'maintenance') return prefs.maintenance
+    if (n.kind === 'message') return prefs.messages
+    if (n.kind === 'payment') return prefs.payments
+    return prefs.system
+  })
+}
+
 /** Cross-tab sync via storage event */
 export const subscribeNotificationUpdates = (onUpdate: () => void): (() => void) => {
   const handler = () => onUpdate()
