@@ -10,6 +10,8 @@ import {
 } from '../utils/helpers'
 import { REMINDER_TEMPLATES, getReminderType } from '../utils/reminders'
 import { Modal, Badge, EmptyState, LoadingButton } from '../components/UI'
+import DataQualityBadge from '../components/DataQualityBadge'
+import { computeDataQuality, displayTenantName, DATA_SOURCE_LABELS } from '../lib/tenantData'
 
 const inputCls = 'w-full border rounded px-3 py-2 dark:bg-gray-700 dark:border-gray-600'
 const btnPrimary = 'px-4 py-2 bg-[#2d6a4f] text-white rounded hover:opacity-90'
@@ -23,29 +25,58 @@ function lookupBuilding(buildings, id) {
   return buildings.find((b) => b.id === id)
 }
 
-export function TenantsPage({ tenants, payments, units, buildings, setSelectedTenant }) {
+export function TenantsPage({ tenants, payments, units, buildings, setSelectedTenant, importHistory }) {
   const [search, setSearch] = useState('')
+  const [sourceFilter, setSourceFilter] = useState('all')
 
   const rows = useMemo(() => {
     const q = search.toLowerCase()
     return tenants.filter((t) => {
+      if (t.status === 'Departed') return false
       const unit = lookupUnit(units, t.unitId)
       const hay = `${t.firstName} ${t.lastName} ${t.phone} ${t.nin} ${unit?.unitNumber || ''}`.toLowerCase()
-      return !q || hay.includes(q)
+      if (q && !hay.includes(q)) return false
+      if (sourceFilter === 'manual' && t.dataSource && t.dataSource !== 'manual') return false
+      if (sourceFilter === 'spreadsheet' && t.dataSource !== 'spreadsheet') return false
+      if (sourceFilter === 'pdf' && !t.agreementPdf) return false
+      if (sourceFilter === 'invite' && t.dataSource !== 'invite') return false
+      return true
     })
-  }, [tenants, units, search])
+  }, [tenants, units, search, sourceFilter])
 
   return (
     <div className="p-4 space-y-6">
       <h1 className="text-2xl font-bold">Tenants</h1>
-      <input
-        className={`${inputCls} max-w-md`}
-        placeholder="Search by name, phone, unit, NIN…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div className="flex flex-wrap gap-3">
+        <input
+          className={`${inputCls} max-w-md`}
+          placeholder="Search by name, phone, unit, NIN…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select className={`${inputCls} max-w-xs`} value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
+          <option value="all">All sources</option>
+          <option value="manual">Manual / quick add</option>
+          <option value="spreadsheet">From spreadsheet</option>
+          <option value="pdf">Has agreement PDF</option>
+          <option value="invite">Invite code registration</option>
+        </select>
+      </div>
+
+      {importHistory?.length > 0 && (
+        <div className="card p-3 text-sm text-gray-600 dark:text-gray-400">
+          <p className="font-medium text-gray-800 dark:text-gray-200 mb-1">Recent imports</p>
+          {importHistory.slice(0, 3).map((imp) => (
+            <p key={imp.id} className="text-xs">
+              Imported from <strong>{imp.fileName}</strong> on {new Date(imp.importedAt).toLocaleDateString('en-UG')}
+              {' — '}{imp.linked} linked, {imp.updated} updated
+            </p>
+          ))}
+        </div>
+      )}
+
       {rows.length === 0 ? (
-        <EmptyState message="No tenants recorded. Add a tenant to an occupied unit." />
+        <EmptyState message="No tenants yet. Quick add on Units, import a spreadsheet, or share an invite code." />
       ) : (
         <div className="card table-scroll">
           <table className="w-full text-sm">
@@ -58,6 +89,8 @@ export function TenantsPage({ tenants, payments, units, buildings, setSelectedTe
                 <th className="p-2">Balance</th>
                 <th className="p-2">Lease Ends</th>
                 <th className="p-2">Status</th>
+                <th className="p-2">Source</th>
+                <th className="p-2">Quality</th>
                 <th className="p-2">Language</th>
               </tr>
             </thead>
@@ -71,15 +104,17 @@ export function TenantsPage({ tenants, payments, units, buildings, setSelectedTe
                   <tr
                     key={`tenant-row-${t.id}`}
                     className={`border-b dark:border-gray-700 cursor-pointer hover:opacity-90 ${getRowColor(bal.daysLate)}`}
-                    onClick={() => setSelectedTenant(t)}
+                    onClick={() => setSelectedTenant(t.id)}
                   >
-                    <td className="p-2 font-medium">{t.firstName} {t.lastName}</td>
+                    <td className="p-2 font-medium">{displayTenantName(t)}</td>
                     <td className="p-2">{unit?.unitNumber}</td>
                     <td className="p-2">{building?.name}</td>
                     <td className="p-2">{fmtUGX(t.rentAmount)}</td>
                     <td className="p-2">{fmtUGX(bal.balance)}</td>
                     <td className="p-2">{fmtDate(t.leaseEnd)}</td>
                     <td className="p-2"><Badge color={statusColor}>{t.status}</Badge></td>
+                    <td className="p-2 text-xs">{DATA_SOURCE_LABELS[t.dataSource] || t.dataSource || '—'}</td>
+                    <td className="p-2"><DataQualityBadge quality={computeDataQuality(t, unit)} /></td>
                     <td className="p-2">{t.preferredLanguage === 'Luganda' ? 'LG' : 'EN'}</td>
                   </tr>
                 )

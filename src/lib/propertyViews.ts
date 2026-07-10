@@ -12,6 +12,43 @@ export const getTenantSafeUnit = (unit: Record<string, unknown> | null | undefin
   return safe
 }
 
+/** Tenant record safe for tenant portal — strips owner secrets and unshared documents */
+export const getTenantSafeTenantRecord = (record: Record<string, unknown> | null | undefined) => {
+  if (!record) return null
+  const {
+    ownerNotes,
+    internalFlags,
+    importSourcePath,
+    importHistory,
+    agreementPdf,
+    shareAgreementWithTenant,
+    blacklisted,
+    blacklistReason,
+    rating,
+    nin,
+    guarantorName,
+    guarantorPhone,
+    notes,
+    dataSource,
+    ...safe
+  } = record
+
+  const result: Record<string, unknown> = { ...safe }
+
+  if (shareAgreementWithTenant && agreementPdf && typeof agreementPdf === 'object') {
+    const doc = agreementPdf as Record<string, unknown>
+    result.sharedAgreement = {
+      fileName: doc.fileName,
+      dataUrl: doc.dataUrl,
+      uploadedAt: doc.uploadedAt,
+    }
+  }
+
+  return result
+}
+
 export const getOwnerBuilding = (building: Record<string, unknown> | null | undefined) => building
 
 export const getOwnerUnit = (unit: Record<string, unknown> | null | undefined) => unit
+
+export const getOwnerTenant = (tenant: Record<string, unknown> | null | undefined) => tenant

@@ -34,6 +34,8 @@ import {
   DefaulterListPage,
 } from './pages/AdminPages'
 import TenantPortalPage from './pages/TenantPortalPage'
+import DataImportPage from './pages/DataImportPage'
+import AgreementUploadModal from './components/AgreementUploadModal'
 import SubscriptionPage from './pages/SubscriptionPage'
 import SubscriptionBanner from './components/SubscriptionBanner'
 import TenantBottomNav from './components/TenantBottomNav'
@@ -110,8 +112,10 @@ function AppContent() {
   const [settings, setSettings] = usePersistedState('rt_settings', initialSettings)
   const [subscription, setSubscription] = usePersistedState('rt_subscription', initialSubscription)
   const [demoMode, setDemoMode] = usePersistedState('rt_demo_mode', false)
+  const [importHistory, setImportHistory] = usePersistedState('rt_import_history', [])
 
   const [showTour, setShowTour] = useState(false)
+  const [agreementTenantId, setAgreementTenantId] = useState(null)
   const [receiptModal, setReceiptModal] = useState({ open: false, text: '', whatsapp: '' })
   const [paymentFormOpen, setPaymentFormOpen] = useState(false)
 
@@ -222,6 +226,7 @@ function AppContent() {
         blacklisted: false,
         blacklistReason: '',
         rentDueDay: unit.rentDueDay || 5,
+        dataSource: 'invite',
       }
       setTenants((prev) => [...prev, newTenant])
       setUnits((prev) =>
@@ -331,6 +336,8 @@ function AppContent() {
     setPaymentFormOpen,
     subscription,
     setSubscription,
+    importHistory,
+    setImportHistory,
   }
 
   const renderPage = () => {
@@ -482,12 +489,17 @@ function AppContent() {
         return wrapWithGuidance('buildings', <BuildingsPage {...sharedProps} />)
       case 'units':
         return wrapWithGuidance('units', <UnitsPage {...sharedProps} />)
+      case 'data-import':
+        return wrapWithGuidance(
+          'data-import',
+          <DataImportPage {...sharedProps} selectedBuilding={selectedBuilding} setCurrentPage={setPageSafe} />,
+        )
       case 'vacancy':
         return <VacancyBoardPage {...sharedProps} />
       case 'unit-history':
         return <UnitHistoryPage {...sharedProps} unitHistory={unitHistory} tenants={tenants} />
       case 'tenants':
-        return <TenantsPage {...sharedProps} showFinancial={currentRole !== 'caretaker'} />
+        return wrapWithGuidance('tenants', <TenantsPage {...sharedProps} />)
       case 'lease-manager':
         return <LeaseManagerPage {...sharedProps} />
       case 'payments':
@@ -546,7 +558,12 @@ function AppContent() {
     }
   }
 
-  const detailTenant = selectedTenant ? tenants.find((t) => t.id === selectedTenant) : null
+  const detailTenant = selectedTenant
+    ? effectiveTenants.find((t) => t.id === (typeof selectedTenant === 'object' ? selectedTenant.id : selectedTenant))
+    : null
+  const agreementTenant = agreementTenantId
+    ? effectiveTenants.find((t) => t.id === agreementTenantId)
+    : null
   const detailUnit = detailTenant ? units.find((u) => u.id === detailTenant.unitId) : null
   const detailBuilding = detailTenant ? buildings.find((b) => b.id === detailTenant.buildingId) : null
   const showBrandingBanner = !settings.logoDataUrl || !settings.managerName
@@ -643,6 +660,7 @@ function AppContent() {
             showToast('Tenant marked as departed', 'success')
           }}
           onUpdateTenant={(updated) => setTenants((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))}
+          onAttachAgreement={() => setAgreementTenantId(detailTenant.id)}
           onAddNote={(note) => {
             setTenantNotes((prev) => ({
               ...prev,
@@ -667,6 +685,18 @@ function AppContent() {
         />
       )}
 
+      <AgreementUploadModal
+        open={!!agreementTenant}
+        tenant={agreementTenant}
+        unit={agreementTenant ? effectiveUnits.find((u) => u.id === agreementTenant.unitId) : null}
+        onClose={() => setAgreementTenantId(null)}
+        onSave={(updates) => {
+          setTenants((prev) =>
+            prev.map((t) => (t.id === agreementTenant?.id ? { ...t, ...updates } : t)),
+          )
+        }}
+        showToast={showToast}
+      />
       <TourModal
         open={showTour}
         onClose={() => setShowTour(false)}

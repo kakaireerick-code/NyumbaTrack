@@ -198,6 +198,7 @@ export default function TenantDetailPanel({
   onMarkDeparted,
   onUpdateTenant,
   onAddNote,
+  onAttachAgreement,
   tenantNotes = {},
   utilities = [],
   showFinancial = true,
@@ -570,6 +571,40 @@ export default function TenantDetailPanel({
 
           {activeTab === 'Documents' && (
             <div className="space-y-3">
+              <div className="card p-3 flex items-center justify-between gap-2 border-l-4 border-[#2d6a4f]">
+                <div>
+                  <p className="font-medium text-sm">Tenancy agreement (PDF)</p>
+                  <p className="text-xs text-gray-500">
+                    {tenant?.agreementPdf ? String(tenant.agreementPdf.fileName) : 'No PDF attached'}
+                    {tenant?.shareAgreementWithTenant && tenant?.agreementPdf && (
+                      <span className="ml-2"><Badge color="green">Shared with tenant</Badge></span>
+                    )}
+                  </p>
+                  {tenant?.importSourcePath && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      <Badge color="orange">Owner only</Badge> Imported from {String(tenant.importSourcePath)}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={onAttachAgreement}
+                  className="px-3 py-1.5 text-xs bg-[#2d6a4f] text-white rounded shrink-0"
+                >
+                  {tenant?.agreementPdf ? 'Update' : 'Attach'} agreement
+                </button>
+              </div>
+              {tenant?.agreementPdf?.dataUrl && (
+                <a
+                  href={tenant.agreementPdf.dataUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-[#2d6a4f] underline"
+                >
+                  Open agreement PDF
+                </a>
+              )}
+
               {DOCUMENT_TYPES.map((doc) => {
                 const url = doc.urlKey ? tenant?.[doc.urlKey] : null
                 const hasFile = !!url

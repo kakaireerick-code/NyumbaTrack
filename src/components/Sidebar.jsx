@@ -26,6 +26,7 @@ const PAGE_META = {
   help: { label: 'Help', icon: 'HelpCircle' },
   guided: { label: 'Guided Steps', icon: 'ListChecks' },
   assistant: { label: 'Ask Assistant', icon: 'MessageCircle' },
+  'data-import': { label: 'Data Import', icon: 'FileSpreadsheet' },
 }
 
 const ROLE_ALIASES = {

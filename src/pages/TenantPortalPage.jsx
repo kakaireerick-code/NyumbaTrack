@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { formatDate, nextDueDate } from '../lib/dates'
 import { computeArrears, formatCurrency } from '../lib/rentLedger'
-import { getTenantSafeBuilding, getTenantSafeUnit } from '../lib/propertyViews'
+import { getTenantSafeBuilding, getTenantSafeUnit, getTenantSafeTenantRecord } from '../lib/propertyViews'
 import { Badge, EmptyState, LoadingButton } from '../components/UI'
 import { buildReceiptText } from '../utils/receipts'
 import { downloadText } from '../utils/helpers'
@@ -24,14 +24,15 @@ export default function TenantPortalPage({
   const [payForm, setPayForm] = useState({ amount: '', method: 'MTN MoMo', reference: '' })
   const [payLoading, setPayLoading] = useState(false)
 
+  if (!tenant) return <EmptyState message="Your tenant profile was not found. Contact your landlord." />
+
   const safeBuilding = getTenantSafeBuilding(building)
   const safeUnit = getTenantSafeUnit(unit)
-
-  if (!tenant) return <EmptyState message="Your tenant profile was not found. Contact your landlord." />
+  const safeTenant = getTenantSafeTenantRecord(tenant)
 
   const tenantPayments = payments.filter((p) => p.tenantId === tenant.id)
   const balance = computeArrears(
-    { id: tenant.id, rentAmount: tenant.rentAmount, leaseStart: tenant.leaseStart, rentDueDay: unit?.rentDueDay },
+    { id: safeTenant.id, rentAmount: safeTenant.rentAmount, leaseStart: safeTenant.leaseStart, rentDueDay: unit?.rentDueDay },
     tenantPayments,
   )
   const rentPayments = tenantPayments.filter((p) => p.type === 'rent').sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 12)
@@ -104,7 +105,7 @@ export default function TenantPortalPage({
       <div className="space-y-5 pb-24">
         <GuidancePanel guidance={guidance} />
         <h1 className="text-lg font-bold">
-          Hello, {tenant.firstName}
+          Hello, {String(safeTenant.firstName || 'Tenant')}
         </h1>
         <p className="text-sm text-gray-500">{safeUnit?.unitNumber} · {safeBuilding?.name}</p>
 
@@ -118,7 +119,7 @@ export default function TenantPortalPage({
 
         <div className="card p-4">
           <h2 className="font-semibold mb-2">Next payment</h2>
-          <p className="text-lg">{formatDate(dueDate)} — {formatCurrency(tenant.rentAmount)}</p>
+          <p className="text-lg">{formatDate(dueDate)} — {formatCurrency(safeTenant.rentAmount)}</p>
         </div>
 
         <div className="card p-4 space-y-3">
@@ -208,19 +209,29 @@ export default function TenantPortalPage({
   }
 
   if (currentPage === 'my-lease') {
-    const depositStatus = tenant.depositPaid >= tenant.depositAmount ? 'Paid' : tenant.depositPaid > 0 ? 'Partial' : 'Not Paid'
+    const depositStatus = safeTenant.depositPaid >= safeTenant.depositAmount ? 'Paid' : safeTenant.depositPaid > 0 ? 'Partial' : 'Not Paid'
+    const sharedDoc = safeTenant.sharedAgreement
     return (
       <div className="space-y-4 pb-24">
         <GuidancePanel guidance={guidance} />
         <h1 className="text-xl font-bold">My Lease</h1>
         <div className="card p-4 space-y-2 text-sm">
-          <p><strong>Property:</strong> {safeBuilding?.name}</p>
-          <p><strong>Unit:</strong> {safeUnit?.unitNumber}</p>
-          <p><strong>Start:</strong> {formatDate(tenant.leaseStart)}</p>
-          <p><strong>End:</strong> {formatDate(tenant.leaseEnd)}</p>
-          <p><strong>Monthly rent:</strong> {formatCurrency(tenant.rentAmount)}</p>
+          <p><strong>Property:</strong> {String(safeBuilding?.name || '—')}</p>
+          <p><strong>Unit:</strong> {String(safeUnit?.unitNumber || '—')}</p>
+          <p><strong>Start:</strong> {formatDate(safeTenant.leaseStart)}</p>
+          <p><strong>End:</strong> {formatDate(safeTenant.leaseEnd)}</p>
+          <p><strong>Monthly rent:</strong> {formatCurrency(safeTenant.rentAmount)}</p>
           <p><strong>Deposit:</strong> <Badge color={depositStatus === 'Paid' ? 'green' : depositStatus === 'Partial' ? 'orange' : 'red'}>{depositStatus}</Badge></p>
         </div>
+        {sharedDoc?.dataUrl && (
+          <div className="card p-4 text-sm">
+            <h2 className="font-semibold mb-2">Your agreement</h2>
+            <a href={sharedDoc.dataUrl} target="_blank" rel="noreferrer" className="text-[#2d6a4f] underline">
+              Open {String(sharedDoc.fileName || 'agreement.pdf')}
+            </a>
+          </div>
+        )}
+        <p className="text-xs text-gray-500">If something looks wrong, contact your landlord — not the app developer.</p>
         {settings.showLandlordContact !== false && (
           <div className="card p-4 text-sm">
             <h2 className="font-semibold mb-2">Contact</h2>

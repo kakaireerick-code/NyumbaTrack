@@ -19,6 +19,38 @@ export const getPageGuidance = (
   const demoMode = !!ctx.demoMode
 
   if (r === 'property_owner' || r === 'accountant') {
+    if (pageId === 'dashboard' && buildings.length === 0 && units.length === 0) {
+      return {
+        variant: 'info',
+        headline: 'Start simple',
+        detail: 'Start with one property and one tenant — no spreadsheet needed. Use Quick add on any unit.',
+        nextSteps: ['Add a property', 'Add one unit with rent', 'Quick add tenant or share invite code'],
+      }
+    }
+    if (pageId === 'data-import') {
+      if (buildings.length === 0) {
+        return {
+          variant: 'warning',
+          headline: 'Add a property first',
+          detail: 'Import needs at least one property to match rows. Or let import create properties from your sheet.',
+          nextSteps: ['Add a building manually', 'Or upload — we create properties from property_name column'],
+        }
+      }
+      return {
+        variant: 'info',
+        headline: 'Already keep tenants in Excel?',
+        detail: 'Upload your sheet — we match columns for you. Save as CSV from Excel or Google Sheets.',
+        nextSteps: ['Download the sample template', 'Upload your CSV', 'Review the preview before confirming'],
+      }
+    }
+    if (pageId === 'tenants') {
+      return {
+        variant: 'neutral',
+        headline: 'All your tenants in one place',
+        detail: 'Filter by how they were added: manual, spreadsheet, or PDF agreement.',
+        nextSteps: ['Click a row for full details', 'Attach PDF agreements from Documents tab'],
+      }
+    }
     if (pageId === 'buildings' && buildings.length === 0) {
       return {
         variant: 'info',
@@ -48,7 +80,7 @@ export const getPageGuidance = (
         variant: 'warning',
         headline: 'Assign a tenant first',
         detail: 'You cannot record rent payments until a tenant is linked to a unit.',
-        nextSteps: ['Go to Units and share an invite code', 'Or add tenant details manually'],
+        nextSteps: ['Go to Units and share an invite code', 'Or use Quick add tenant on a vacant unit'],
       }
     }
     if (pageId === 'balance-tracker') {

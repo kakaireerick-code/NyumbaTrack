@@ -13,7 +13,10 @@ import {
 } from 'lucide-react'
 import { fmtUGX, fmtDate } from '../utils/helpers'
 import { generateInviteCode } from '../lib/auth'
+import { computeDataQuality, displayTenantName } from '../lib/tenantData'
 import { Badge, Modal, EmptyState, ProgressBar } from '../components/UI'
+import DataQualityBadge from '../components/DataQualityBadge'
+import QuickAddTenantModal from '../components/QuickAddTenantModal'
 
 const STATUS_COLORS = {
   occupied: 'green',
@@ -223,10 +226,13 @@ export function UnitsPage({
   setSelectedUnit,
   setCurrentPage,
   setUnits,
+  setTenants,
+  showToast,
 }) {
   const [viewMode, setViewMode] = useState('grid')
   const [statusFilter, setStatusFilter] = useState('all')
   const [modalOpen, setModalOpen] = useState(false)
+  const [quickAddUnit, setQuickAddUnit] = useState(null)
   const [form, setForm] = useState({
     buildingId: selectedBuilding || '',
     unitNumber: '',
@@ -251,7 +257,12 @@ export function UnitsPage({
   const getBuildingName = (id) => buildings.find((b) => b.id === id)?.name || '—'
   const getTenantName = (unit) => {
     const tenant = tenants.find((t) => t.id === unit.currentTenantId)
-    return tenant ? `${tenant.firstName} ${tenant.lastName}` : null
+    return tenant ? displayTenantName(tenant) : null
+  }
+
+  const handleQuickSave = ({ tenant, unit: updatedUnit }) => {
+    setTenants((prev) => [...prev, tenant])
+    setUnits((prev) => prev.map((u) => (u.id === updatedUnit.id ? updatedUnit : u)))
   }
 
   const handleAdd = (e) => {
@@ -366,11 +377,16 @@ export function UnitsPage({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredUnits.map((unit) => {
             const tenantName = getTenantName(unit)
+            const tenant = tenants.find((t) => t.id === unit.currentTenantId)
+            const quality = computeDataQuality(tenant, unit)
             return (
               <div key={unit.id} className="card p-4">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-lg font-bold">{unit.unitNumber}</h3>
-                  <Badge color={STATUS_COLORS[unit.status] || 'gray'}>{STATUS_LABELS[unit.status] || unit.status}</Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge color={STATUS_COLORS[unit.status] || 'gray'}>{STATUS_LABELS[unit.status] || unit.status}</Badge>
+                    <DataQualityBadge quality={quality} />
+                  </div>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{getBuildingName(unit.buildingId)}</p>
                 <div className="text-sm space-y-1 mb-3">
@@ -386,13 +402,24 @@ export function UnitsPage({
                     <p className="text-xs text-orange-600"><Badge color="orange">Owner only</Badge> {unit.ownerNotes}</p>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openHistory(unit)}
-                  className="text-xs text-[#2d6a4f] hover:underline"
-                >
-                  View history
-                </button>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => openHistory(unit)}
+                    className="text-xs text-[#2d6a4f] hover:underline"
+                  >
+                    View history
+                  </button>
+                  {unit.status === 'vacant' && !unit.currentTenantId && (
+                    <button
+                      type="button"
+                      onClick={() => setQuickAddUnit(unit)}
+                      className="text-xs px-2 py-1 bg-[#2d6a4f] text-white rounded"
+                    >
+                      Quick add tenant
+                    </button>
+                  )}
+                </div>
               </div>
             )
           })}
@@ -559,6 +586,15 @@ export function UnitsPage({
           </div>
         </form>
       </Modal>
+
+      <QuickAddTenantModal
+        open={!!quickAddUnit}
+        unit={quickAddUnit}
+        buildingName={quickAddUnit ? getBuildingName(quickAddUnit.buildingId) : ''}
+        onClose={() => setQuickAddUnit(null)}
+        onSave={handleQuickSave}
+        showToast={showToast}
+      />
     </div>
   )
 }

@@ -24,6 +24,7 @@ export type PageId =
   | 'help'
   | 'guided'
   | 'assistant'
+  | 'data-import'
   | 'my-balance'
   | 'my-payments'
   | 'my-lease'
@@ -40,7 +41,7 @@ const OWNER_PAGES: PageId[] = [
   'dashboard', 'buildings', 'units', 'vacancy', 'tenants', 'lease-manager',
   'payments', 'balance-tracker', 'deposits', 'utilities', 'reminders',
   'maintenance', 'reports', 'documents', 'legal-notices', 'settings',
-  'subscription', 'blacklist', 'defaulter-list', 'tenant-preview', 'help', 'guided', 'assistant',
+  'subscription', 'blacklist', 'defaulter-list', 'tenant-preview', 'help', 'guided', 'assistant', 'data-import',
 ]
 
 const ACCOUNTANT_PAGES: PageId[] = [

@@ -80,4 +80,24 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     roles: ['housekeeper', 'tenant', 'property_owner'],
     answer: 'Housekeepers: log issues under Maintenance. Tenants: call the caretaker number on your Lease tab.',
   },
+  {
+    keywords: ['import', 'spreadsheet', 'excel', 'csv', 'upload tenants'],
+    roles: ['property_owner'],
+    answer: 'Open Data Import from the sidebar. Download the template, fill your tenant list, save as CSV, and upload. We auto-map columns and show a preview before saving.',
+  },
+  {
+    keywords: ['quick add', 'add tenant', 'no agreement'],
+    roles: ['property_owner'],
+    answer: 'On Units, tap Quick add tenant on any vacant unit. Enter name and phone if you have them — no PDF required. You get an invite code to share.',
+  },
+  {
+    keywords: ['pdf', 'agreement', 'attach', 'tenancy'],
+    roles: ['property_owner'],
+    answer: 'Open a tenant → Documents → Attach agreement. Upload a PDF under 800KB. Toggle "Share with tenant" when you want them to see it.',
+  },
+  {
+    keywords: ['agreement', 'lease document', 'pdf'],
+    roles: ['tenant'],
+    answer: 'Your landlord may share your agreement on the Lease tab. Until then you see rent, dates, and unit summary only. Contact your landlord if something looks wrong.',
+  },
 ]

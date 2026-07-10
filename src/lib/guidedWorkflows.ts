@@ -94,6 +94,52 @@ export const WORKFLOWS: Workflow[] = [
       { title: 'Ask assistant', instructions: 'Open Ask Assistant and type "balance wrong".', targetPage: 'assistant' },
     ],
   },
+  {
+    id: 'owner_quick_tenant',
+    title: 'Quick add a tenant',
+    description: 'Add a tenant in under a minute — no spreadsheet or PDF needed.',
+    roles: ['property_owner'],
+    steps: [
+      { title: 'Pick a unit', instructions: 'Go to Units and find a vacant unit.', targetPage: 'units' },
+      { title: 'Quick add', instructions: 'Tap Quick add tenant. Enter name, phone (optional), and rent.', targetPage: 'units' },
+      { title: 'Share invite code', instructions: 'Copy the 6-character code and send it to your tenant.', targetPage: 'units' },
+    ],
+  },
+  {
+    id: 'owner_import_sheet',
+    title: 'Import from spreadsheet',
+    description: 'Upload a CSV from Excel or Google Sheets.',
+    roles: ['property_owner'],
+    steps: [
+      { title: 'Download template', instructions: 'Open Data Import and download the sample CSV.', targetPage: 'data-import' },
+      { title: 'Upload file', instructions: 'Save your sheet as CSV and upload it.', targetPage: 'data-import' },
+      { title: 'Preview & confirm', instructions: 'Check the preview table, then confirm import.', targetPage: 'data-import' },
+      { title: 'Review flagged rows', instructions: 'Fix any rows marked for review on the Tenants page.', targetPage: 'tenants' },
+    ],
+  },
+  {
+    id: 'owner_attach_agreement',
+    title: 'Attach a PDF agreement',
+    description: 'Store tenancy agreements and share when ready.',
+    roles: ['property_owner'],
+    steps: [
+      { title: 'Open tenant', instructions: 'Go to Tenants and click the tenant row.', targetPage: 'tenants' },
+      { title: 'Upload PDF', instructions: 'Documents tab → Attach agreement. Upload your PDF.', targetPage: 'tenants' },
+      { title: 'Confirm fields', instructions: 'Check rent and lease dates — edit if needed.', targetPage: 'tenants' },
+      { title: 'Share toggle', instructions: 'Turn on "Share with tenant" only when you want them to see the PDF.', targetPage: 'tenants' },
+    ],
+  },
+  {
+    id: 'tenant_first_look',
+    title: 'Your first look',
+    description: 'What you can see as a tenant.',
+    roles: ['tenant'],
+    steps: [
+      { title: 'What you owe', instructions: 'Home shows your rent balance and due date.', targetPage: 'my-balance' },
+      { title: 'Where to pay', instructions: 'Use the MoMo numbers on Home. Then notify your landlord.', targetPage: 'my-payments' },
+      { title: 'Lease summary', instructions: 'Lease tab shows your unit, rent, and contact info.', targetPage: 'my-lease' },
+    ],
+  },
 ]
 
 export const workflowsForRole = (role: string): Workflow[] => {
