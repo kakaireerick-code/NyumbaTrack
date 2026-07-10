@@ -99,6 +99,7 @@ export const initialSubscription = {
   currentPeriodEnd: null,
   hasUsedTrial: false,
   paymentHistory: [],
+  invoices: [],
 }
 
 export const getPlanById = (id) => SUBSCRIPTION_PLANS.find((p) => p.id === id) || (id === 'trial' ? TRIAL_PLAN : null)

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Home, Eye, EyeOff } from 'lucide-react'
-import { seedDemoUsers, registerOwner, registerTenant, login } from '../lib/auth'
+import { seedDemoUsers, registerOwner, registerTenant, login, loginOrRegisterWithGoogle } from '../lib/auth'
+import GoogleSignInButton from '../components/GoogleSignInButton'
 
 export default function LoginPage({ onAuthSuccess, units }) {
   const [mode, setMode] = useState('signin')
@@ -15,6 +16,17 @@ export default function LoginPage({ onAuthSuccess, units }) {
   useEffect(() => {
     seedDemoUsers()
   }, [])
+
+  const handleGoogle = (profile) => {
+    setError('')
+    const role = mode === 'register-tenant' ? 'tenant' : 'property_owner'
+    const result = loginOrRegisterWithGoogle(profile, role)
+    if (!result.ok) {
+      setError(result.error || 'Google sign-in failed')
+      return
+    }
+    onAuthSuccess(result.user)
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -51,6 +63,8 @@ export default function LoginPage({ onAuthSuccess, units }) {
     }, 300)
   }
 
+  const showGoogle = mode === 'signin' || mode === 'register-owner'
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#1a1a2e' }}>
       <div className="card w-full max-w-md p-8">
@@ -58,7 +72,7 @@ export default function LoginPage({ onAuthSuccess, units }) {
           <Home className="text-[#2d6a4f]" size={32} />
           <h1 className="text-2xl font-bold text-[#2d6a4f]">NyumbaTrack</h1>
         </div>
-        <p className="text-center text-gray-500 mb-4">Property management for owners & tenants</p>
+        <p className="text-center text-gray-500 mb-4">Property owners: sign in with Google for invoices & billing</p>
 
         <div className="flex rounded-lg border mb-6 overflow-hidden text-sm">
           {['signin', 'register-owner', 'register-tenant'].map((m) => (
@@ -74,6 +88,21 @@ export default function LoginPage({ onAuthSuccess, units }) {
         </div>
 
         {error && <p className="text-red-600 text-sm mb-3 bg-red-50 p-2 rounded">{error}</p>}
+
+        {showGoogle && (
+          <div className="mb-4 space-y-3">
+            <GoogleSignInButton
+              label={mode === 'register-owner' ? 'Register with Google' : 'Sign in with Google'}
+              onSuccess={handleGoogle}
+              onError={(msg) => setError(msg)}
+            />
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              <span className="flex-1 border-t" />
+              or use email
+              <span className="flex-1 border-t" />
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode !== 'signin' && (
@@ -124,12 +153,12 @@ export default function LoginPage({ onAuthSuccess, units }) {
             className="w-full py-2.5 rounded text-white font-medium disabled:opacity-50"
             style={{ background: '#2d6a4f' }}
           >
-            {loading ? 'Please wait...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+            {loading ? 'Please wait...' : mode === 'signin' ? 'Sign In with Email' : 'Create Account'}
           </button>
         </form>
 
         <p className="text-xs text-gray-400 mt-4 text-center">
-          Demo owner: owner@demo.com / owner123 · Tenant: tenant@demo.com / tenant123 · Housekeeper: keeper@demo.com / keeper123
+          Owners: Google recommended for subscription invoices · Demo: owner@demo.com / owner123
         </p>
       </div>
     </div>

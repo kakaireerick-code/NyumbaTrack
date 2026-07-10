@@ -205,7 +205,7 @@ function AppContent() {
     } else if (user.role === 'housekeeper') {
       setCurrentUser({ name, building: buildings[0]?.name || '' })
     } else {
-      setCurrentUser({ name, building: 'All Properties' })
+      setCurrentUser({ name, building: 'All Properties', email: user.email })
     }
 
     let startedTrial = false
@@ -425,10 +425,10 @@ function AppContent() {
           <SubscriptionPage
             subscription={subscription}
             setSubscription={setSubscription}
-            settings={settings}
             showToast={showToast}
             units={units}
             currentUser={currentUser}
+            authUser={authUser}
           />
         )
       default:
@@ -482,14 +482,14 @@ function AppContent() {
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
               <h2 className="text-xl font-bold mb-2">Subscription Required</h2>
               <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
-                Your free trial has ended. Choose a monthly or yearly plan to continue managing your properties with RentTrack Uganda.
+                Your free trial has ended. Subscribe and pay to MTN MoMo <strong>0793068911</strong> to continue.
               </p>
               <button
                 type="button"
                 onClick={() => setCurrentPage('subscription')}
                 className="px-6 py-3 bg-[#2d6a4f] text-white rounded-lg font-medium"
               >
-                View Plans — from UGX 20,000/month
+                View Plans — pay to 0793068911
               </button>
             </div>
           ) : (

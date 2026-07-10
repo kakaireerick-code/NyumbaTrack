@@ -3,14 +3,24 @@ import { safeGet, safeSet } from './storage'
 export type AppUser = {
   id: string
   email: string
-  passwordHash: string
+  passwordHash?: string
   name: string
   role: 'property_owner' | 'tenant' | 'housekeeper' | 'accountant'
+  authProvider?: 'email' | 'google'
+  googleId?: string
+  picture?: string
   tenantId?: string
   unitId?: string
   buildingId?: string
   failedAttempts?: number
   lockedUntil?: string | null
+}
+
+export type GoogleProfile = {
+  sub: string
+  email: string
+  name: string
+  picture?: string
 }
 
 const USERS_KEY = 'rent_app_users'
@@ -96,6 +106,9 @@ export const login = (
   const users = getUsers()
   const user = users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase())
   if (!user) return { ok: false, error: 'Invalid email or password.' }
+  if (user.authProvider === 'google' && !user.passwordHash) {
+    return { ok: false, error: 'This account uses Google sign-in. Please click "Sign in with Google".' }
+  }
   if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
     return { ok: false, error: 'Account temporarily locked. Try again later.' }
   }
@@ -120,6 +133,54 @@ export const login = (
   )
   saveUsers(cleared)
   return { ok: true, user: { ...user, failedAttempts: 0, lockedUntil: null } }
+}
+
+export const loginOrRegisterWithGoogle = (
+  profile: GoogleProfile,
+  role: 'property_owner' | 'tenant' = 'property_owner',
+): { ok: boolean; error?: string; user?: AppUser; isNew?: boolean } => {
+  if (!profile?.email || !profile?.sub) {
+    return { ok: false, error: 'Invalid Google account.' }
+  }
+  const users = getUsers()
+  const email = profile.email.trim().toLowerCase()
+  let existing = users.find((u) => u.googleId === profile.sub || u.email === email)
+
+  if (existing) {
+    const updated = users.map((u) =>
+      u.id === existing!.id
+        ? {
+            ...u,
+            name: profile.name || u.name,
+            picture: profile.picture || u.picture,
+            googleId: profile.sub,
+            authProvider: 'google' as const,
+            failedAttempts: 0,
+            lockedUntil: null,
+          }
+        : u,
+    )
+    saveUsers(updated)
+    const user = updated.find((u) => u.id === existing!.id)!
+    return { ok: true, user, isNew: false }
+  }
+
+  if (users.some((u) => u.email === email)) {
+    return { ok: false, error: 'This email is registered with a password. Sign in with email instead.' }
+  }
+
+  const user: AppUser = {
+    id: `u-google-${Date.now()}`,
+    email,
+    name: profile.name || email.split('@')[0],
+    role,
+    authProvider: 'google',
+    googleId: profile.sub,
+    picture: profile.picture,
+    passwordHash: '',
+  }
+  saveUsers([...users, user])
+  return { ok: true, user, isNew: true }
 }
 
 export const seedDemoUsers = (): void => {
