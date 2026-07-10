@@ -24,6 +24,8 @@ const PAGE_META = {
   'defaulter-list': { label: 'Defaulters', icon: 'AlertTriangle' },
   'tenant-preview': { label: 'Tenant Preview', icon: 'Eye' },
   help: { label: 'Help', icon: 'HelpCircle' },
+  guided: { label: 'Guided Steps', icon: 'ListChecks' },
+  assistant: { label: 'Ask Assistant', icon: 'MessageCircle' },
 }
 
 const ROLE_ALIASES = {

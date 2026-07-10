@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Home, Eye, EyeOff } from 'lucide-react'
 import { seedDemoUsers, registerOwner, registerTenant, login, loginOrRegisterWithGoogle } from '../lib/auth'
 import GoogleSignInButton from '../components/GoogleSignInButton'
+import { ROLE_LOGIN_HINTS } from '../lib/rolePrompts'
 
 export default function LoginPage({ onAuthSuccess, units }) {
   const [mode, setMode] = useState('signin')
@@ -65,6 +66,9 @@ export default function LoginPage({ onAuthSuccess, units }) {
 
   const showGoogle = mode === 'signin' || mode === 'register-owner'
 
+  const roleHintKey = mode === 'register-tenant' ? 'tenant' : mode === 'register-owner' ? 'property_owner' : 'property_owner'
+  const roleHint = ROLE_LOGIN_HINTS[roleHintKey] || ''
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#1a1a2e' }}>
       <div className="card w-full max-w-md p-8">
@@ -86,6 +90,10 @@ export default function LoginPage({ onAuthSuccess, units }) {
             </button>
           ))}
         </div>
+
+        {roleHint && (
+          <p className="text-sm text-center text-[#2d6a4f] bg-green-50 rounded p-2 mb-4">{roleHint}</p>
+        )}
 
         {error && <p className="text-red-600 text-sm mb-3 bg-red-50 p-2 rounded">{error}</p>}
 

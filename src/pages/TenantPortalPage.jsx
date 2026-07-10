@@ -5,7 +5,8 @@ import { getTenantSafeBuilding, getTenantSafeUnit } from '../lib/propertyViews'
 import { Badge, EmptyState, LoadingButton } from '../components/UI'
 import { buildReceiptText } from '../utils/receipts'
 import { downloadText } from '../utils/helpers'
-import TenantHelpPage from '../components/TenantHelpPage'
+import GuidancePanel from '../components/GuidancePanel'
+import { getPageGuidance } from '../lib/actionGuidance'
 import { Smartphone, Copy } from 'lucide-react'
 
 export default function TenantPortalPage({
@@ -35,6 +36,7 @@ export default function TenantPortalPage({
   )
   const rentPayments = tenantPayments.filter((p) => p.type === 'rent').sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 12)
   const dueDate = nextDueDate(unit?.rentDueDay || tenant.rentDueDay || 5)
+  const guidance = getPageGuidance('tenant', currentPage || 'my-balance', {})
 
   const paymentNumbers = {
     mtn: settings.mtnMomo || settings.paymentMtn || '+256 770 000 000',
@@ -94,19 +96,20 @@ export default function TenantPortalPage({
   }
 
   if (currentPage === 'help') {
-    return <TenantHelpPage />
+    return null
   }
 
   if (currentPage === 'my-balance' || !currentPage) {
     return (
       <div className="space-y-5 pb-24">
+        <GuidancePanel guidance={guidance} />
         <h1 className="text-lg font-bold">
           Hello, {tenant.firstName}
         </h1>
         <p className="text-sm text-gray-500">{safeUnit?.unitNumber} · {safeBuilding?.name}</p>
 
         <div className={`card p-6 text-center ${balance.isInArrears ? 'border-2 border-red-500' : 'border-2 border-green-500'}`}>
-          <p className="text-sm text-gray-500">Your balance</p>
+          <p className="text-sm text-gray-500">What I owe</p>
           <p className={`text-3xl font-bold mt-1 ${balance.isInArrears ? 'text-red-600' : 'text-green-600'}`}>
             {formatCurrency(balance.balance)}
           </p>
@@ -141,6 +144,7 @@ export default function TenantPortalPage({
   if (currentPage === 'my-payments') {
     return (
       <div className="space-y-4 pb-24">
+        <GuidancePanel guidance={guidance} />
         <h1 className="text-xl font-bold">My Payments</h1>
 
         <form onSubmit={handleIPaid} className="card p-4 space-y-3">
@@ -170,7 +174,7 @@ export default function TenantPortalPage({
         </form>
 
         {rentPayments.length === 0 ? (
-          <EmptyState message="No confirmed payments yet." />
+          <EmptyState message="Nothing due yet — your first payment will appear here after your landlord confirms it." />
         ) : (
           <div className="table-scroll">
             <table className="w-full text-sm">
@@ -207,6 +211,7 @@ export default function TenantPortalPage({
     const depositStatus = tenant.depositPaid >= tenant.depositAmount ? 'Paid' : tenant.depositPaid > 0 ? 'Partial' : 'Not Paid'
     return (
       <div className="space-y-4 pb-24">
+        <GuidancePanel guidance={guidance} />
         <h1 className="text-xl font-bold">My Lease</h1>
         <div className="card p-4 space-y-2 text-sm">
           <p><strong>Property:</strong> {safeBuilding?.name}</p>

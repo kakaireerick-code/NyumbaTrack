@@ -22,6 +22,8 @@ export type PageId =
   | 'defaulter-list'
   | 'tenant-preview'
   | 'help'
+  | 'guided'
+  | 'assistant'
   | 'my-balance'
   | 'my-payments'
   | 'my-lease'
@@ -38,17 +40,17 @@ const OWNER_PAGES: PageId[] = [
   'dashboard', 'buildings', 'units', 'vacancy', 'tenants', 'lease-manager',
   'payments', 'balance-tracker', 'deposits', 'utilities', 'reminders',
   'maintenance', 'reports', 'documents', 'legal-notices', 'settings',
-  'subscription', 'blacklist', 'defaulter-list', 'tenant-preview', 'help',
+  'subscription', 'blacklist', 'defaulter-list', 'tenant-preview', 'help', 'guided', 'assistant',
 ]
 
 const ACCOUNTANT_PAGES: PageId[] = [
   'dashboard', 'payments', 'balance-tracker', 'reports', 'defaulter-list',
-  'documents', 'subscription', 'help',
+  'documents', 'subscription', 'help', 'guided', 'assistant',
 ]
 
-const HOUSEKEEPER_PAGES: PageId[] = ['units', 'vacancy', 'maintenance', 'tenants', 'help']
+const HOUSEKEEPER_PAGES: PageId[] = ['units', 'vacancy', 'maintenance', 'tenants', 'help', 'guided', 'assistant']
 
-const TENANT_PAGES: PageId[] = ['my-balance', 'my-payments', 'my-lease', 'my-receipts', 'help']
+const TENANT_PAGES: PageId[] = ['my-balance', 'my-payments', 'my-lease', 'my-receipts', 'help', 'guided', 'assistant']
 
 const ROLE_PAGE_MAP: Record<AppRole, PageId[]> = {
   property_owner: OWNER_PAGES,

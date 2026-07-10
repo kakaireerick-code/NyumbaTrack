@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import ErrorBoundary from './components/ErrorBoundary'
 import { ToastProvider, useToast } from './components/Toast'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import QuickActions from './components/QuickActions'
-import OnboardingTour, { shouldShowTour } from './components/OnboardingTour'
+import TourModal from './components/TourModal'
+import PageWithGuidance from './components/PageWithGuidance'
 import ReceiptModal from './components/ReceiptModal'
 import TenantDetailPanel from './components/TenantDetailPanel'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
+import HelpPage from './pages/HelpPage'
+import GuidedWorkflowsPage from './pages/GuidedWorkflowsPage'
+import AssistantPage from './pages/AssistantPage'
 import { BuildingsPage, UnitsPage, VacancyBoardPage, UnitHistoryPage } from './pages/PropertyPages'
 import {
   PaymentsPage,
@@ -34,12 +37,13 @@ import TenantPortalPage from './pages/TenantPortalPage'
 import SubscriptionPage from './pages/SubscriptionPage'
 import SubscriptionBanner from './components/SubscriptionBanner'
 import TenantBottomNav from './components/TenantBottomNav'
-import TenantHelpPage from './components/TenantHelpPage'
-import { usePersistedState, safeRemove } from './utils/storage'
+import { usePersistedState } from './utils/storage'
 import { buildReceiptText } from './utils/receipts'
 import { getTenantBalance } from './utils/helpers'
 import { isSubscriptionActive, startFreeTrial, needsSubscription } from './utils/subscription'
 import { canAccessPage, defaultPageForRole, normalizeRole } from './lib/permissions'
+import { getTourSteps, isTourComplete } from './lib/rolePrompts'
+import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
 import { getUsers, saveUsers } from './lib/auth'
 import { isoToday } from './lib/dates'
 import {
@@ -105,6 +109,7 @@ function AppContent() {
   const [guarantorLogs, setGuarantorLogs] = usePersistedState('rt_guarantor_logs', initialGuarantorLogs)
   const [settings, setSettings] = usePersistedState('rt_settings', initialSettings)
   const [subscription, setSubscription] = usePersistedState('rt_subscription', initialSubscription)
+  const [demoMode, setDemoMode] = usePersistedState('rt_demo_mode', false)
 
   const [showTour, setShowTour] = useState(false)
   const [receiptModal, setReceiptModal] = useState({ open: false, text: '', whatsapp: '' })
@@ -129,6 +134,44 @@ function AppContent() {
     if (authUser?.unitId) return tenants.find((t) => t.unitId === authUser.unitId) || null
     return tenants.find((t) => t.userId === authUser?.id) || null
   }, [currentRole, authUser, tenants])
+
+  const isOwnerRole = currentRole === 'admin' || currentRole === 'property_owner'
+  const showDemoData = demoMode && isOwnerRole
+
+  const effectiveBuildings = useMemo(
+    () => (showDemoData ? [...buildings, ...DEMO_BUILDINGS] : buildings),
+    [showDemoData, buildings],
+  )
+  const effectiveUnits = useMemo(
+    () => (showDemoData ? [...units, ...DEMO_UNITS] : units),
+    [showDemoData, units],
+  )
+  const effectiveTenants = useMemo(
+    () => (showDemoData ? [...tenants, ...DEMO_TENANTS] : tenants),
+    [showDemoData, tenants],
+  )
+
+  const roleKey = currentRole === 'admin' ? 'property_owner' : currentRole === 'caretaker' ? 'housekeeper' : currentRole
+
+  const guidanceContext = useMemo(
+    () => ({
+      buildings: effectiveBuildings,
+      units: effectiveUnits,
+      tenants: effectiveTenants,
+      demoMode: showDemoData,
+    }),
+    [effectiveBuildings, effectiveUnits, effectiveTenants, showDemoData],
+  )
+
+  const wrapWithGuidance = useCallback(
+    (pageId, node) => (
+      <>
+        <PageWithGuidance role={roleKey} pageId={pageId} context={guidanceContext} />
+        {node}
+      </>
+    ),
+    [roleKey, guidanceContext],
+  )
 
   const setPageSafe = useCallback((page) => {
     const roleKey = currentRole === 'admin' ? 'property_owner' : currentRole === 'caretaker' ? 'housekeeper' : currentRole
@@ -219,7 +262,8 @@ function AppContent() {
       })
     }
     setCurrentPage(ROLE_DEFAULT_PAGE[user.role] || ROLE_DEFAULT_PAGE[legacyRole] || 'dashboard')
-    if (shouldShowTour() && (user.role === 'property_owner' || legacyRole === 'admin')) setShowTour(true)
+    const tourRole = user.role === 'admin' ? 'property_owner' : user.role
+    if (!isTourComplete(tourRole)) setShowTour(true)
     showToast(startedTrial ? 'Welcome! Your 14-day free trial has started.' : `Welcome, ${name}!`, 'success')
   }
 
@@ -243,9 +287,9 @@ function AppContent() {
   }, [tenants, payments, settings])
 
   const sharedProps = {
-    buildings,
-    units,
-    tenants,
+    buildings: effectiveBuildings,
+    units: effectiveUnits,
+    tenants: effectiveTenants,
     payments,
     maintenance,
     utilities,
@@ -290,7 +334,6 @@ function AppContent() {
   }
 
   const renderPage = () => {
-    const roleKey = currentRole === 'admin' ? 'property_owner' : currentRole === 'caretaker' ? 'housekeeper' : currentRole
     if (!canAccessPage(roleKey, currentPage)) {
       return (
         <div className="p-6 text-center">
@@ -303,9 +346,9 @@ function AppContent() {
     }
 
     if (currentPage === 'tenant-preview' && normalizeRole(currentRole) !== 'tenant') {
-      const previewTenant = tenants.find((t) => t.status === 'Active') || tenants[0]
-      const u = units.find((un) => un.id === previewTenant?.unitId)
-      const b = buildings.find((bd) => bd.id === previewTenant?.buildingId)
+      const previewTenant = effectiveTenants.find((t) => t.status === 'Active') || effectiveTenants[0]
+      const u = effectiveUnits.find((un) => un.id === previewTenant?.unitId)
+      const b = effectiveBuildings.find((bd) => bd.id === previewTenant?.buildingId)
       return (
         <div>
           <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 rounded flex items-center gap-2">
@@ -325,6 +368,36 @@ function AppContent() {
     }
 
     if (normalizeRole(currentRole) === 'tenant') {
+      if (currentPage === 'help') {
+        return (
+          <HelpPage
+            currentRole={currentRole}
+            setCurrentPage={setPageSafe}
+            onRestartTour={() => setShowTour(true)}
+            showToast={showToast}
+          />
+        )
+      }
+      if (currentPage === 'guided') {
+        return (
+          <GuidedWorkflowsPage
+            currentRole={currentRole}
+            setCurrentPage={setPageSafe}
+            guidanceContext={guidanceContext}
+          />
+        )
+      }
+      if (currentPage === 'assistant') {
+        return (
+          <AssistantPage
+            currentRole={currentRole}
+            currentPage={currentPage}
+            demoMode={false}
+            guidanceContext={guidanceContext}
+          />
+        )
+      }
+
       const t = tenantUser
       const u = units.find((un) => un.id === t?.unitId)
       const b = buildings.find((bd) => bd.id === t?.buildingId)
@@ -339,7 +412,10 @@ function AppContent() {
           currentPage={currentPage}
           showToast={showToast}
           showOnboarding={showTenantOnboarding}
-          onDismissOnboarding={() => setShowTenantOnboarding(false)}
+          onDismissOnboarding={() => {
+            setShowTenantOnboarding(false)
+            if (!isTourComplete('tenant')) setShowTour(true)
+          }}
           onSubmitPayment={(payload) => {
             if (!t) return
             setPayments((prev) => [
@@ -368,16 +444,44 @@ function AppContent() {
     }
 
     if (currentPage === 'help') {
-      return <TenantHelpPage />
+      return (
+        <HelpPage
+          currentRole={currentRole}
+          setCurrentPage={setPageSafe}
+          onRestartTour={() => setShowTour(true)}
+          showToast={showToast}
+        />
+      )
+    }
+
+    if (currentPage === 'guided') {
+      return (
+        <GuidedWorkflowsPage
+          currentRole={currentRole}
+          setCurrentPage={setPageSafe}
+          guidanceContext={guidanceContext}
+        />
+      )
+    }
+
+    if (currentPage === 'assistant') {
+      return (
+        <AssistantPage
+          currentRole={currentRole}
+          currentPage={currentPage}
+          demoMode={showDemoData}
+          guidanceContext={guidanceContext}
+        />
+      )
     }
 
     switch (currentPage) {
       case 'dashboard':
-        return <DashboardPage {...sharedProps} />
+        return wrapWithGuidance('dashboard', <DashboardPage {...sharedProps} />)
       case 'buildings':
-        return <BuildingsPage {...sharedProps} />
+        return wrapWithGuidance('buildings', <BuildingsPage {...sharedProps} />)
       case 'units':
-        return <UnitsPage {...sharedProps} />
+        return wrapWithGuidance('units', <UnitsPage {...sharedProps} />)
       case 'vacancy':
         return <VacancyBoardPage {...sharedProps} />
       case 'unit-history':
@@ -387,19 +491,20 @@ function AppContent() {
       case 'lease-manager':
         return <LeaseManagerPage {...sharedProps} />
       case 'payments':
-        return (
+        return wrapWithGuidance(
+          'payments',
           <PaymentsPage
             {...sharedProps}
             onPaymentSaved={(payment) => {
-              const tenant = tenants.find((t) => t.id === payment.tenantId)
-              const unit = units.find((u) => u.id === payment.unitId)
-              const building = buildings.find((b) => b.id === payment.buildingId)
+              const tenant = effectiveTenants.find((t) => t.id === payment.tenantId)
+              const unit = effectiveUnits.find((u) => u.id === payment.unitId)
+              const building = effectiveBuildings.find((b) => b.id === payment.buildingId)
               showReceipt(payment, tenant, unit, building)
             }}
-          />
+          />,
         )
       case 'balance-tracker':
-        return <BalanceTrackerPage {...sharedProps} />
+        return wrapWithGuidance('balance-tracker', <BalanceTrackerPage {...sharedProps} />)
       case 'deposits':
         return <DepositsPage {...sharedProps} />
       case 'utilities':
@@ -415,7 +520,12 @@ function AppContent() {
       case 'legal-notices':
         return <LegalNoticesPage {...sharedProps} />
       case 'settings':
-        return <SettingsPage {...sharedProps} onRestartTour={() => { safeRemove('renttrack_tour_seen'); setShowTour(true) }} />
+        return (
+          <SettingsPage
+            {...sharedProps}
+            onRestartTour={() => setShowTour(true)}
+          />
+        )
       case 'blacklist':
         return <BlacklistReportPage {...sharedProps} />
       case 'defaulter-list':
@@ -464,11 +574,16 @@ function AppContent() {
       <div className="flex-1 flex flex-col min-w-0">
         <Header
           currentUser={currentUser}
+          currentRole={currentRole}
           theme={theme}
           setTheme={setTheme}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           showBrandingBanner={showBrandingBanner}
+          demoMode={demoMode}
+          onToggleDemoMode={isOwnerRole ? () => setDemoMode((d) => !d) : undefined}
+          onOpenGuide={() => setPageSafe('help')}
+          isTenant={isTenant}
         />
         <div className="flex items-center justify-between px-4 py-1 border-b dark:border-gray-700">
           <span className="text-xs text-gray-500 capitalize">{currentRole} portal</span>
@@ -552,7 +667,12 @@ function AppContent() {
         />
       )}
 
-      <OnboardingTour open={showTour} onClose={() => setShowTour(false)} />
+      <TourModal
+        open={showTour}
+        onClose={() => setShowTour(false)}
+        steps={getTourSteps(roleKey)}
+        role={roleKey}
+      />
       <ReceiptModal
         open={receiptModal.open}
         onClose={() => setReceiptModal({ open: false, text: '', whatsapp: '' })}
@@ -566,10 +686,8 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <ToastProvider>
-        <AppContent />
-      </ToastProvider>
-    </ErrorBoundary>
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   )
 }
