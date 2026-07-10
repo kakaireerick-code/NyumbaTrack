@@ -414,6 +414,7 @@ export function UnitsPage({
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
+                  {canManage && (
                   <button
                     type="button"
                     onClick={() => openHistory(unit)}
@@ -421,6 +422,7 @@ export function UnitsPage({
                   >
                     View history
                   </button>
+                  )}
                   {canManage && unit.status === 'vacant' && !unit.currentTenantId && (
                     <>
                       <button
@@ -473,9 +475,12 @@ export function UnitsPage({
                   <td className="p-3">{getTenantName(unit) || '—'}</td>
                   <td className="p-3">{unit.bedrooms}</td>
                   <td className="p-3">
+                    {canManage && (
                     <button type="button" onClick={() => openHistory(unit)} className="text-[#2d6a4f] hover:underline text-xs">
                       History
                     </button>
+                    )}
+                    {!canManage && '—'}
                   </td>
                 </tr>
               ))}
@@ -784,7 +789,8 @@ export function VacancyBoardPage({ units, buildings, tenants, selectedBuilding, 
 
 // ─── UnitHistoryPage ─────────────────────────────────────────────────────────
 
-export function UnitHistoryPage({ selectedUnit, unitHistory, units, buildings }) {
+export function UnitHistoryPage({ selectedUnit, unitHistory, units, buildings, currentRole }) {
+  const showFinancial = canSeeFinancials(currentRole || '')
   const unit = units.find((u) => u.id === selectedUnit)
   const building = unit ? buildings.find((b) => b.id === unit.buildingId) : null
   const history = unitHistory?.[selectedUnit] || []
@@ -817,8 +823,8 @@ export function UnitHistoryPage({ selectedUnit, unitHistory, units, buildings })
                 <th className="p-3">Tenant</th>
                 <th className="p-3">Move In</th>
                 <th className="p-3">Move Out</th>
-                <th className="p-3">Rent</th>
-                <th className="p-3">Deposit</th>
+                {showFinancial && <th className="p-3">Rent</th>}
+                {showFinancial && <th className="p-3">Deposit</th>}
                 <th className="p-3">Reason</th>
               </tr>
             </thead>
@@ -828,12 +834,14 @@ export function UnitHistoryPage({ selectedUnit, unitHistory, units, buildings })
                   <td className="p-3 font-medium">{record.tenantName}</td>
                   <td className="p-3 whitespace-nowrap">{fmtDate(record.moveIn)}</td>
                   <td className="p-3 whitespace-nowrap">{fmtDate(record.moveOut)}</td>
-                  <td className="p-3">{fmtUGX(record.rentAmount)}</td>
+                  {showFinancial && <td className="p-3">{fmtUGX(record.rentAmount)}</td>}
+                  {showFinancial && (
                   <td className="p-3">
                     <Badge color={record.depositStatus === 'Refunded' ? 'green' : record.depositStatus === 'Forfeited' ? 'red' : 'orange'}>
                       {record.depositStatus}
                     </Badge>
                   </td>
+                  )}
                   <td className="p-3 text-gray-500 dark:text-gray-400">{record.reason || '—'}</td>
                 </tr>
               ))}

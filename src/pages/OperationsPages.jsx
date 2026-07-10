@@ -105,7 +105,7 @@ export function TenantsPage({ tenants, payments, units, buildings, setSelectedTe
                 return (
                   <tr
                     key={`tenant-row-${t.id}`}
-                    className={`border-b dark:border-gray-700 cursor-pointer hover:opacity-90 ${getRowColor(bal.daysLate)}`}
+                    className={`border-b dark:border-gray-700 cursor-pointer hover:opacity-90 ${showFinancial ? getRowColor(bal.daysLate) : ''}`}
                     onClick={() => setSelectedTenant(t.id)}
                   >
                     <td className="p-2 font-medium">{displayTenantName(t)}</td>

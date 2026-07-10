@@ -3,6 +3,7 @@ import { Wrench, Eye, EyeOff } from 'lucide-react'
 import { seedDemoUsers, registerHousekeeper, login } from '../lib/auth'
 import { validateStaffInviteCode } from '../lib/staffInvites'
 import { normalizeInviteCode } from '../lib/routing'
+import { validatePortalSignIn, showDemoCredentials } from '../lib/portalAuth'
 
 export default function StaffJoinPage({ initialCode = '', onAuthSuccess }) {
   const [mode, setMode] = useState('register')
@@ -45,8 +46,9 @@ export default function StaffJoinPage({ initialCode = '', onAuthSuccess }) {
           setLoading(false)
           return
         }
-        if (result.user?.role !== 'housekeeper') {
-          setError('This portal is for property caretakers. Use the link your employer sent you.')
+        const portalCheck = validatePortalSignIn('staff', result.user?.role || '')
+        if (!portalCheck.ok) {
+          setError(portalCheck.error)
           setLoading(false)
           return
         }
@@ -123,7 +125,7 @@ export default function StaffJoinPage({ initialCode = '', onAuthSuccess }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder={mode === 'signin' ? 'keeper@demo.com' : ''}
+              placeholder={mode === 'signin' && showDemoCredentials() ? 'keeper@demo.com' : ''}
             />
           </div>
           <div>
@@ -135,7 +137,7 @@ export default function StaffJoinPage({ initialCode = '', onAuthSuccess }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder={mode === 'signin' ? 'keeper123' : ''}
+                placeholder={mode === 'signin' && showDemoCredentials() ? 'keeper123' : ''}
               />
               <button type="button" className="absolute right-2 top-2.5 text-gray-400" onClick={() => setShowPw(!showPw)}>
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}

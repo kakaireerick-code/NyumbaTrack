@@ -8,6 +8,7 @@ import {
   markStaffInviteUsed,
   seedDemoStaffInvite,
 } from './staffInvites'
+import { isDeployedApp } from './environment'
 import { normalizeInviteCode } from './routing'
 
 export type AppUser = {
@@ -253,6 +254,7 @@ export const loginOrRegisterWithGoogle = (
 }
 
 export const seedDemoUsers = (): void => {
+  if (isDeployedApp()) return
   const users = getUsers()
   if (users.length > 0) return
   const ownerId = 'u-owner-demo'

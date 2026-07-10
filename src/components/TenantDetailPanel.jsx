@@ -448,10 +448,12 @@ export default function TenantDetailPanel({
                   </div>
                 </>
               )}
+              {showFinancial && (
               <div className="flex justify-between py-2 items-center">
                 <span className="text-gray-500">Deposit Status</span>
                 <Badge color={depositStatus.color}>{depositStatus.label}</Badge>
               </div>
+              )}
               <div className="flex justify-between py-2 border-b dark:border-gray-700">
                 <span className="text-gray-500">Rent Due Day</span>
                 <span>{tenant?.rentDueDay ? `${tenant.rentDueDay}th of month` : '—'}</span>

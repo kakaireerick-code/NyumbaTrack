@@ -3,6 +3,7 @@ import { Home, Eye, EyeOff, MessageCircle } from 'lucide-react'
 import { seedDemoUsers, registerTenant, login } from '../lib/auth'
 import { validateInviteCode } from '../lib/invites'
 import { normalizeInviteCode } from '../lib/routing'
+import { validatePortalSignIn, showDemoCredentials } from '../lib/portalAuth'
 
 export default function JoinPage({
   initialCode = '',
@@ -60,8 +61,9 @@ export default function JoinPage({
           setLoading(false)
           return
         }
-        if (result.user?.role !== 'tenant') {
-          setError('This portal is for tenants. Use the link your landlord sent you.')
+        const portalCheck = validatePortalSignIn('tenant', result.user?.role || '')
+        if (!portalCheck.ok) {
+          setError(portalCheck.error)
           setLoading(false)
           return
         }
@@ -141,7 +143,7 @@ export default function JoinPage({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder={mode === 'signin' ? 'tenant@demo.com' : ''}
+              placeholder={mode === 'signin' && showDemoCredentials() ? 'tenant@demo.com' : ''}
             />
           </div>
           <div>
@@ -153,7 +155,7 @@ export default function JoinPage({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder={mode === 'signin' ? 'tenant123' : ''}
+                placeholder={mode === 'signin' && showDemoCredentials() ? 'tenant123' : ''}
               />
               <button type="button" className="absolute right-2 top-2.5 text-gray-400" onClick={() => setShowPw(!showPw)}>
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}

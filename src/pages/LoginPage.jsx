@@ -3,6 +3,7 @@ import { Home, Eye, EyeOff } from 'lucide-react'
 import { seedDemoUsers, registerOwner, login, loginOrRegisterWithGoogle } from '../lib/auth'
 import GoogleSignInButton from '../components/GoogleSignInButton'
 import { isOwnerLoginRole } from '../lib/permissions'
+import { validatePortalSignIn, showDemoCredentials } from '../lib/portalAuth'
 
 export default function LoginPage({ onAuthSuccess }) {
   const [mode, setMode] = useState('signin')
@@ -28,6 +29,11 @@ export default function LoginPage({ onAuthSuccess }) {
       setError('This sign-in is for property owners only.')
       return
     }
+    const portalCheck = validatePortalSignIn('owner', result.user?.role || '')
+    if (!portalCheck.ok) {
+      setError(portalCheck.error)
+      return
+    }
     onAuthSuccess(result.user)
   }
 
@@ -46,6 +52,12 @@ export default function LoginPage({ onAuthSuccess }) {
         }
         if (!isOwnerLoginRole(result.user?.role || '')) {
           setError('This sign-in is for property owners only.')
+          setLoading(false)
+          return
+        }
+        const portalCheck = validatePortalSignIn('owner', result.user?.role || '')
+        if (!portalCheck.ok) {
+          setError(portalCheck.error)
           setLoading(false)
           return
         }
@@ -109,7 +121,7 @@ export default function LoginPage({ onAuthSuccess }) {
           )}
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
-            <input type="email" className="w-full border rounded px-3 py-2" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder={mode === 'signin' ? 'owner@demo.com' : ''} />
+            <input type="email" className="w-full border rounded px-3 py-2" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder={mode === 'signin' && showDemoCredentials() ? 'owner@demo.com' : ''} />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Password</label>
@@ -120,7 +132,7 @@ export default function LoginPage({ onAuthSuccess }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder={mode === 'signin' ? 'owner123' : ''}
+                placeholder={mode === 'signin' && showDemoCredentials() ? 'owner123' : ''}
               />
               <button type="button" className="absolute right-2 top-2.5 text-gray-400" onClick={() => setShowPw(!showPw)}>
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -139,7 +151,7 @@ export default function LoginPage({ onAuthSuccess }) {
         </form>
 
         <p className="text-xs text-gray-400 mt-4 text-center">
-          Demo owner: owner@demo.com / owner123
+          {showDemoCredentials() ? 'Demo owner: owner@demo.com / owner123' : 'Property owner access only'}
         </p>
       </div>
     </div>

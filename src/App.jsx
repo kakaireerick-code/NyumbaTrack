@@ -52,6 +52,7 @@ import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
 import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
 import { syncInvitesFromUnits } from './lib/invites'
 import { parseEntryPath, getJoinPath, getStaffJoinPath } from './lib/routing'
+import { getCaretakerSafeBuilding, getCaretakerSafeUnit, getCaretakerSafeTenant } from './lib/propertyViews'
 import { countUnreadForOwner } from './lib/messages'
 import { getUsers, saveUsers } from './lib/auth'
 import { isoToday } from './lib/dates'
@@ -217,6 +218,25 @@ function AppContent() {
     [showDemoData, ownerTenants],
   )
 
+  const isCaretaker = currentRole === 'caretaker'
+
+  const caretakerBuildings = useMemo(
+    () => effectiveBuildings.map((b) => getCaretakerSafeBuilding(b) || b),
+    [effectiveBuildings],
+  )
+  const caretakerUnits = useMemo(
+    () => effectiveUnits.map((u) => getCaretakerSafeUnit(u) || u),
+    [effectiveUnits],
+  )
+  const caretakerTenants = useMemo(
+    () => effectiveTenants.map((t) => getCaretakerSafeTenant(t) || t),
+    [effectiveTenants],
+  )
+
+  const portalBuildings = isCaretaker ? caretakerBuildings : effectiveBuildings
+  const portalUnits = isCaretaker ? caretakerUnits : effectiveUnits
+  const portalTenants = isCaretaker ? caretakerTenants : effectiveTenants
+
   const roleKey = currentRole === 'admin' ? 'property_owner' : currentRole === 'caretaker' ? 'housekeeper' : currentRole
 
   const guidanceContext = useMemo(
@@ -377,9 +397,9 @@ function AppContent() {
   }, [tenants, payments, settings])
 
   const sharedProps = {
-    buildings: effectiveBuildings,
-    units: effectiveUnits,
-    tenants: effectiveTenants,
+    buildings: portalBuildings,
+    units: portalUnits,
+    tenants: portalTenants,
     payments: ownerPayments,
     maintenance,
     utilities,
@@ -808,9 +828,9 @@ function AppContent() {
 
       {detailTenant && currentRole === 'caretaker' && (
         <TenantDetailPanel
-          tenant={detailTenant}
-          unit={detailUnit}
-          building={detailBuilding}
+          tenant={getCaretakerSafeTenant(detailTenant) || detailTenant}
+          unit={getCaretakerSafeUnit(detailUnit) || detailUnit}
+          building={getCaretakerSafeBuilding(detailBuilding) || detailBuilding}
           payments={[]}
           settings={settings}
           currentUser={currentUser}
