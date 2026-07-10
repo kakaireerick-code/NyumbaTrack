@@ -4,6 +4,8 @@ import { seedDemoUsers, registerOwner, login, loginOrRegisterWithGoogle } from '
 import GoogleSignInButton from '../components/GoogleSignInButton'
 import { isOwnerLoginRole } from '../lib/permissions'
 import { validatePortalSignIn, showDemoCredentials, GENERIC_AUTH_ERROR } from '../lib/portalAuth'
+import { isDeployedApp } from '../lib/environment'
+import { getBuildInfo } from '../lib/buildInfo'
 
 export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
   const [mode, setMode] = useState(initialMode === 'signup' ? 'register-owner' : 'signin')
@@ -77,6 +79,11 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#1a1a2e' }}>
+      {isDeployedApp() && (
+        <p className="fixed bottom-2 right-3 text-[10px] text-gray-400 opacity-70 select-all" title="Deployment build ID">
+          build {getBuildInfo().sha}
+        </p>
+      )}
       <div className="card w-full max-w-md p-8">
         <div className="flex items-center justify-center gap-2 mb-2">
           <Home className="text-[#2d6a4f]" size={32} />
