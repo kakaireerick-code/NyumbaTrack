@@ -8,7 +8,9 @@ import PageWithGuidance from './components/PageWithGuidance'
 import ReceiptModal from './components/ReceiptModal'
 import TenantDetailPanel from './components/TenantDetailPanel'
 import LoginPage from './pages/LoginPage'
+import JoinPage from './pages/JoinPage'
 import DashboardPage from './pages/DashboardPage'
+import MessagesPage from './pages/MessagesPage'
 import HelpPage from './pages/HelpPage'
 import GuidedWorkflowsPage from './pages/GuidedWorkflowsPage'
 import AssistantPage from './pages/AssistantPage'
@@ -43,9 +45,13 @@ import { usePersistedState } from './utils/storage'
 import { buildReceiptText } from './utils/receipts'
 import { getTenantBalance } from './utils/helpers'
 import { isSubscriptionActive, startFreeTrial, needsSubscription } from './utils/subscription'
-import { canAccessPage, defaultPageForRole, normalizeRole } from './lib/permissions'
+import { canAccessPage, defaultPageForRole, normalizeRole, TENANT_BLOCKED_PAGES } from './lib/permissions'
 import { getTourSteps, isTourComplete } from './lib/rolePrompts'
 import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
+import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
+import { syncInvitesFromUnits } from './lib/invites'
+import { parseEntryPath, getJoinPath } from './lib/routing'
+import { countUnreadForOwner } from './lib/messages'
 import { getUsers, saveUsers } from './lib/auth'
 import { isoToday } from './lib/dates'
 import {
@@ -84,6 +90,7 @@ const mapRoleForLegacy = (role) => {
 function AppContent() {
   const { showToast } = useToast()
 
+  const [entryPath] = useState(() => parseEntryPath())
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authUser, setAuthUser] = useState(null)
   const [currentRole, setCurrentRole] = useState('admin')
@@ -110,9 +117,12 @@ function AppContent() {
   const [broadcastHistory, setBroadcastHistory] = usePersistedState('rt_broadcast_history', initialBroadcastHistory)
   const [guarantorLogs, setGuarantorLogs] = usePersistedState('rt_guarantor_logs', initialGuarantorLogs)
   const [settings, setSettings] = usePersistedState('rt_settings', initialSettings)
-  const [subscription, setSubscription] = usePersistedState('rt_subscription', initialSubscription)
+  const [subscriptionByOwner, setSubscriptionByOwner] = usePersistedState('rt_subscriptions_by_owner', {
+    [DEMO_OWNER_ID]: initialSubscription,
+  })
   const [demoMode, setDemoMode] = usePersistedState('rt_demo_mode', false)
   const [importHistory, setImportHistory] = usePersistedState('rt_import_history', [])
+  const [unreadRefresh, setUnreadRefresh] = useState(0)
 
   const [showTour, setShowTour] = useState(false)
   const [agreementTenantId, setAgreementTenantId] = useState(null)
@@ -123,6 +133,57 @@ function AppContent() {
     document.documentElement.classList.toggle('dark', theme === 'dark')
     document.body.classList.toggle('dark', theme === 'dark')
   }, [theme])
+
+  useEffect(() => {
+    syncInvitesFromUnits(units, buildings, DEMO_OWNER_ID)
+    const migrate = (list, setter) => {
+      if (list.some((r) => !r.ownerId)) {
+        setter((prev) => prev.map((r) => (r.ownerId ? r : { ...r, ownerId: DEMO_OWNER_ID })))
+      }
+    }
+    migrate(buildings, setBuildings)
+    migrate(units, setUnits)
+    migrate(tenants, setTenants)
+    migrate(payments, setPayments)
+  }, [])
+
+  const activeOwnerId = getOwnerIdForUser(authUser)
+
+  const subscription = subscriptionByOwner[activeOwnerId] || { status: 'none', hasUsedTrial: false }
+  const setSubscription = useCallback(
+    (updater) => {
+      if (!activeOwnerId) return
+      setSubscriptionByOwner((prev) => {
+        const cur = prev[activeOwnerId] || { status: 'none', hasUsedTrial: false }
+        const next = typeof updater === 'function' ? updater(cur) : updater
+        return { ...prev, [activeOwnerId]: next }
+      })
+    },
+    [activeOwnerId, setSubscriptionByOwner],
+  )
+
+  const ownerBuildings = useMemo(
+    () => (activeOwnerId ? filterByOwner(buildings, activeOwnerId) : []),
+    [buildings, activeOwnerId],
+  )
+  const ownerUnits = useMemo(
+    () => (activeOwnerId ? filterByOwner(units, activeOwnerId) : []),
+    [units, activeOwnerId],
+  )
+  const ownerTenants = useMemo(
+    () => (activeOwnerId ? filterByOwner(tenants, activeOwnerId) : []),
+    [tenants, activeOwnerId],
+  )
+  const ownerPayments = useMemo(
+    () =>
+      activeOwnerId
+        ? payments.filter((p) => {
+            const u = units.find((un) => un.id === p.unitId)
+            return u && (u.ownerId === activeOwnerId || (!u.ownerId && activeOwnerId === DEMO_OWNER_ID))
+          })
+        : [],
+    [payments, units, activeOwnerId],
+  )
 
   useEffect(() => {
     const onResize = () => {
@@ -143,16 +204,16 @@ function AppContent() {
   const showDemoData = demoMode && isOwnerRole
 
   const effectiveBuildings = useMemo(
-    () => (showDemoData ? [...buildings, ...DEMO_BUILDINGS] : buildings),
-    [showDemoData, buildings],
+    () => (showDemoData ? [...ownerBuildings, ...DEMO_BUILDINGS] : ownerBuildings),
+    [showDemoData, ownerBuildings],
   )
   const effectiveUnits = useMemo(
-    () => (showDemoData ? [...units, ...DEMO_UNITS] : units),
-    [showDemoData, units],
+    () => (showDemoData ? [...ownerUnits, ...DEMO_UNITS] : ownerUnits),
+    [showDemoData, ownerUnits],
   )
   const effectiveTenants = useMemo(
-    () => (showDemoData ? [...tenants, ...DEMO_TENANTS] : tenants),
-    [showDemoData, tenants],
+    () => (showDemoData ? [...ownerTenants, ...DEMO_TENANTS] : ownerTenants),
+    [showDemoData, ownerTenants],
   )
 
   const roleKey = currentRole === 'admin' ? 'property_owner' : currentRole === 'caretaker' ? 'housekeeper' : currentRole
@@ -179,6 +240,11 @@ function AppContent() {
 
   const setPageSafe = useCallback((page) => {
     const roleKey = currentRole === 'admin' ? 'property_owner' : currentRole === 'caretaker' ? 'housekeeper' : currentRole
+    if (normalizeRole(roleKey) === 'tenant' && TENANT_BLOCKED_PAGES.includes(page)) {
+      showToast('This area is for your landlord only.', 'error')
+      setCurrentPage('my-balance')
+      return
+    }
     if (canAccessPage(roleKey, page)) {
       setCurrentPage(page)
     } else {
@@ -187,7 +253,15 @@ function AppContent() {
     }
   }, [currentRole, showToast])
 
-  const handleAuthSuccess = (user, registeredUnit = null) => {
+  useEffect(() => {
+    if (!isLoggedIn || authUser?.role !== 'tenant') return
+    if (TENANT_BLOCKED_PAGES.includes(currentPage)) {
+      setCurrentPage('my-balance')
+      showToast('This area is for property owners only.', 'info')
+    }
+  }, [isLoggedIn, authUser, currentPage, showToast])
+
+  const handleAuthSuccess = (user, registeredUnit = null, inviteMeta = null) => {
     setAuthUser(user)
     setIsLoggedIn(true)
     const legacyRole = mapRoleForLegacy(user.role)
@@ -202,6 +276,7 @@ function AppContent() {
       const newTenant = {
         id: tenantId,
         userId: user.id,
+        ownerId: inviteMeta?.ownerId || user.ownerId || unit.ownerId || DEMO_OWNER_ID,
         unitId: unit.id,
         buildingId: unit.buildingId,
         firstName,
@@ -235,12 +310,15 @@ function AppContent() {
         ),
       )
       const users = getUsers()
-      saveUsers(users.map((u) => (u.id === user.id ? { ...u, tenantId, unitId: unit.id, buildingId: unit.buildingId } : u)))
-      setAuthUser({ ...user, tenantId, unitId: unit.id, buildingId: unit.buildingId })
+      saveUsers(users.map((u) => (u.id === user.id ? { ...u, tenantId, unitId: unit.id, buildingId: unit.buildingId, ownerId: newTenant.ownerId } : u)))
+      setAuthUser({ ...user, tenantId, unitId: unit.id, buildingId: unit.buildingId, ownerId: newTenant.ownerId })
       const bName = buildings.find((b) => b.id === unit.buildingId)?.name || ''
       setCurrentUser({ name: user.name, building: bName })
       setShowTenantOnboarding(true)
       setCurrentPage('my-balance')
+      if (entryPath.entry === 'join') {
+        window.history.replaceState({}, '', getJoinPath())
+      }
       showToast(`Welcome! You are registered for unit ${unit.unitNumber}.`, 'success')
       return
     }
@@ -257,11 +335,13 @@ function AppContent() {
     }
 
     let startedTrial = false
-    if (needsSubscription(legacyRole)) {
-      setSubscription((prev) => {
-        if (prev.status === 'none' && !prev.hasUsedTrial) {
+    const ownerIdForSub = user.ownerId || user.id
+    if (needsSubscription(legacyRole) && ownerIdForSub) {
+      setSubscriptionByOwner((prev) => {
+        const cur = prev[ownerIdForSub] || { status: 'none', hasUsedTrial: false }
+        if (cur.status === 'none' && !cur.hasUsedTrial) {
           startedTrial = true
-          return startFreeTrial(prev)
+          return { ...prev, [ownerIdForSub]: startFreeTrial(cur) }
         }
         return prev
       })
@@ -295,7 +375,7 @@ function AppContent() {
     buildings: effectiveBuildings,
     units: effectiveUnits,
     tenants: effectiveTenants,
-    payments,
+    payments: ownerPayments,
     maintenance,
     utilities,
     notices,
@@ -338,6 +418,10 @@ function AppContent() {
     setSubscription,
     importHistory,
     setImportHistory,
+    activeOwnerId,
+    ownerId: activeOwnerId,
+    unreadRefresh,
+    setUnreadRefresh,
   }
 
   const renderPage = () => {
@@ -375,6 +459,11 @@ function AppContent() {
     }
 
     if (normalizeRole(currentRole) === 'tenant') {
+      const t = tenantUser
+      const u = units.find((un) => un.id === t?.unitId)
+      const b = buildings.find((bd) => bd.id === t?.buildingId)
+      const tenantPayments = payments.filter((p) => p.tenantId === t?.id)
+
       if (currentPage === 'help') {
         return (
           <HelpPage
@@ -405,46 +494,53 @@ function AppContent() {
         )
       }
 
-      const t = tenantUser
-      const u = units.find((un) => un.id === t?.unitId)
-      const b = buildings.find((bd) => bd.id === t?.buildingId)
-      const tenantPayments = payments.filter((p) => p.tenantId === t?.id)
+      const portalProps = {
+        tenant: t,
+        unit: u,
+        building: b,
+        payments: tenantPayments,
+        settings,
+        showToast,
+        authUser,
+        setPageSafe,
+        onSubmitPayment: (payload) => {
+          if (!t) return
+          setPayments((prev) => [
+            ...prev,
+            {
+              id: `p-pending-${Date.now()}`,
+              tenantId: t.id,
+              unitId: t.unitId,
+              buildingId: t.buildingId,
+              ownerId: t.ownerId,
+              amount: payload.amount,
+              date: isoToday(),
+              method: payload.method,
+              reference: payload.reference,
+              period: 'Pending confirmation',
+              type: 'rent',
+              notes: 'Submitted by tenant',
+              receiptSent: false,
+              receiptNo: '',
+              status: 'pending',
+            },
+          ])
+          showToast('Payment notice sent to your landlord.', 'success')
+        },
+      }
+
+      if (currentPage === 'my-messages') {
+        return <TenantPortalPage {...portalProps} currentPage="my-messages" />
+      }
+
       return (
         <TenantPortalPage
-          tenant={t}
-          unit={u}
-          building={b}
-          payments={tenantPayments}
-          settings={settings}
+          {...portalProps}
           currentPage={currentPage}
-          showToast={showToast}
           showOnboarding={showTenantOnboarding}
           onDismissOnboarding={() => {
             setShowTenantOnboarding(false)
             if (!isTourComplete('tenant')) setShowTour(true)
-          }}
-          onSubmitPayment={(payload) => {
-            if (!t) return
-            setPayments((prev) => [
-              ...prev,
-              {
-                id: `p-pending-${Date.now()}`,
-                tenantId: t.id,
-                unitId: t.unitId,
-                buildingId: t.buildingId,
-                amount: payload.amount,
-                date: isoToday(),
-                method: payload.method,
-                reference: payload.reference,
-                period: 'Pending confirmation',
-                type: 'rent',
-                notes: 'Submitted by tenant',
-                receiptSent: false,
-                receiptNo: '',
-                status: 'pending',
-              },
-            ])
-            showToast('Payment notice sent to your landlord.', 'success')
           }}
         />
       )
@@ -525,6 +621,20 @@ function AppContent() {
         return <RemindersPage {...sharedProps} setNotifications={setNotifications} setGuarantorLogs={setGuarantorLogs} />
       case 'maintenance':
         return <MaintenancePage {...sharedProps} />
+      case 'messages':
+        return (
+          <MessagesPage
+            currentRole={currentRole}
+            ownerId={activeOwnerId}
+            tenants={effectiveTenants}
+            units={effectiveUnits}
+            buildings={effectiveBuildings}
+            currentUser={currentUser}
+            showToast={showToast}
+            unreadRefresh={unreadRefresh}
+            setUnreadRefresh={setUnreadRefresh}
+          />
+        )
       case 'reports':
         return <ReportsPage {...sharedProps} />
       case 'documents':
@@ -571,7 +681,18 @@ function AppContent() {
   const subGate = needsSubscription(currentRole) && !subActive && currentPage !== 'subscription'
 
   if (!isLoggedIn) {
-    return <LoginPage onAuthSuccess={handleAuthSuccess} units={units} />
+    if (entryPath.entry === 'join') {
+      return (
+        <JoinPage
+          initialCode={entryPath.inviteCode}
+          units={units}
+          buildings={buildings}
+          onAuthSuccess={handleAuthSuccess}
+          onGoOwnerLogin={() => { window.location.href = '/' }}
+        />
+      )
+    }
+    return <LoginPage onAuthSuccess={handleAuthSuccess} />
   }
 
   const isTenant = normalizeRole(currentRole) === 'tenant'
@@ -601,6 +722,8 @@ function AppContent() {
           onToggleDemoMode={isOwnerRole ? () => setDemoMode((d) => !d) : undefined}
           onOpenGuide={() => setPageSafe('help')}
           isTenant={isTenant}
+          unreadMessages={!isTenant && activeOwnerId ? countUnreadForOwner(activeOwnerId) : 0}
+          onOpenMessages={!isTenant ? () => setPageSafe('messages') : undefined}
         />
         <div className="flex items-center justify-between px-4 py-1 border-b dark:border-gray-700">
           <span className="text-xs text-gray-500 capitalize">{currentRole} portal</span>

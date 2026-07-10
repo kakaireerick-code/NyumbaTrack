@@ -20,13 +20,13 @@ const OWNER_STEPS: TourStep[] = [
   { title: 'Add your property', description: 'Go to Properties and add each building or compound you rent out.', icon: 'Building2' },
   { title: 'Create units', description: 'Add every rentable space separately — a ground shop and Flat 2B can have different rent.', icon: 'DoorOpen' },
   { title: 'Set rent per unit', description: 'Enter monthly rent and due day for each unit. You can change these anytime.', icon: 'CreditCard' },
-  { title: 'Invite tenants', description: 'Share the 6-character invite code with your tenant. They register for free and see only their unit.', icon: 'Users' },
+  { title: 'Invite tenants', description: 'Share the join link with each tenant — they use it free; only you manage your account.', icon: 'Users' },
   { title: 'Your dashboard', description: 'Track occupancy, collections, and who owes rent — all from the dashboard.', icon: 'LayoutDashboard' },
   { title: 'Need help later?', description: 'Tap My Guide in the header, or open Help / Ask Assistant anytime. You never need to call support for basic tasks.', icon: 'HelpCircle' },
 ]
 
 const TENANT_STEPS: TourStep[] = [
-  { title: 'Welcome to your home', description: 'This app is free for you. You will only see information about your own unit.', icon: 'Home' },
+  { title: 'Welcome to your home', description: 'Your landlord invited you here to see rent and lease details for your unit only.', icon: 'Home' },
   { title: 'What you owe', description: 'The Home tab shows your rent balance and when payment is due — plain and simple.', icon: 'Scale' },
   { title: 'Make a payment', description: 'Use the payment numbers your landlord gave you. You can notify them after you pay.', icon: 'CreditCard' },
   { title: 'Your lease', description: 'View your lease dates, rent amount, and how to contact your landlord.', icon: 'FileText' },
@@ -48,9 +48,9 @@ export const getTourSteps = (role: string): TourStep[] => {
 }
 
 export const ROLE_LOGIN_HINTS: Record<string, string> = {
-  property_owner: 'Set up properties and units, then share invite codes with tenants.',
-  admin: 'Set up properties and units, then share invite codes with tenants.',
-  tenant: 'Free account — use the code from your landlord to link your unit.',
+  property_owner: 'Set up properties and units, then share join links with tenants.',
+  admin: 'Set up properties and units, then share join links with tenants.',
+  tenant: 'Free portal — use the invite code from your landlord at /join.',
   housekeeper: 'View units and maintenance for properties you care for.',
   caretaker: 'View units and maintenance for properties you care for.',
   accountant: 'Track payments, balances, and reports for the owner.',

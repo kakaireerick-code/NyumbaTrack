@@ -28,6 +28,30 @@ export const WORKFLOWS: Workflow[] = [
     ],
   },
   {
+    id: 'owner_invite_tenant',
+    title: 'Invite a tenant with join link',
+    description: 'Generate a link and code for your tenant to register free.',
+    roles: ['property_owner'],
+    steps: [
+      { title: 'Open Units', instructions: 'Go to Units and pick a vacant unit.', targetPage: 'units' },
+      { title: 'Copy tenant link', instructions: 'Use Copy tenant link or Copy code only on the unit card.', targetPage: 'units' },
+      { title: 'Send to tenant', instructions: 'Paste the WhatsApp template text or share the link by SMS.', targetPage: 'units' },
+      { title: 'They join at /join', instructions: 'Tenant opens the link, creates a free account, and sees their unit.', targetPage: 'tenants' },
+    ],
+  },
+  {
+    id: 'tenant_join_with_code',
+    title: 'Join with your invite code',
+    description: 'Register free using the link from your landlord.',
+    roles: ['tenant'],
+    steps: [
+      { title: 'Open join link', instructions: 'Go to /join or use the link your landlord sent.', targetPage: 'my-balance' },
+      { title: 'Enter code', instructions: 'Type the code if it is not already in the URL.', targetPage: 'my-balance' },
+      { title: 'Create account', instructions: 'Register with email and password — no payment needed.', targetPage: 'my-balance' },
+      { title: 'See your unit', instructions: 'Home shows what you owe for your unit only.', targetPage: 'my-balance' },
+    ],
+  },
+  {
     id: 'invite_tenant',
     title: 'Invite a tenant',
     description: 'Give your tenant a code so they can register for free.',

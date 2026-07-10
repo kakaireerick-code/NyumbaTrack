@@ -1,4 +1,9 @@
 import { safeGet, safeSet } from './storage'
+import {
+  validateInviteCode,
+  markInviteUsed,
+} from './invites'
+import { normalizeInviteCode } from './routing'
 
 export type AppUser = {
   id: string
@@ -9,6 +14,7 @@ export type AppUser = {
   authProvider?: 'email' | 'google'
   googleId?: string
   picture?: string
+  ownerId?: string
   tenantId?: string
   unitId?: string
   buildingId?: string
@@ -37,12 +43,8 @@ export const getUsers = (): AppUser[] => safeGet<AppUser[]>(USERS_KEY, [])
 
 export const saveUsers = (users: AppUser[]): void => safeSet(USERS_KEY, users)
 
-export const generateInviteCode = (): string => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  let code = ''
-  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
-  return code
-}
+/** @deprecated use generateInviteCode from ./invites */
+export { generateInviteCode } from './invites'
 
 export const registerOwner = (
   email: string,
@@ -56,12 +58,14 @@ export const registerOwner = (
   if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
     return { ok: false, error: 'An account with this email already exists.' }
   }
+  const id = `u-${Date.now()}`
   const user: AppUser = {
-    id: `u-${Date.now()}`,
+    id,
     email: email.trim().toLowerCase(),
     passwordHash: simpleHash(password),
     name: name.trim() || email.split('@')[0],
     role: 'property_owner',
+    ownerId: id,
   }
   saveUsers([...users, user])
   return { ok: true, user }
@@ -73,30 +77,51 @@ export const registerTenant = (
   name: string,
   inviteCode: string,
   units: Array<Record<string, unknown>>,
-): { ok: boolean; error?: string; user?: AppUser; unit?: Record<string, unknown> } => {
+  buildings: Array<Record<string, unknown>> = [],
+): {
+  ok: boolean
+  error?: string
+  user?: AppUser
+  unit?: Record<string, unknown>
+  invite?: { ownerId: string; propertyId: string; unitId: string; code: string }
+} => {
   if (!inviteCode?.trim()) return { ok: false, error: 'Invite code is required.' }
   if (!password || password.length < 4) return { ok: false, error: 'Password must be at least 4 characters.' }
-  const code = inviteCode.trim().toUpperCase()
-  const unit = units.find((u) => String(u.inviteCode || '').toUpperCase() === code)
-  if (!unit) return { ok: false, error: 'Invalid invite code. Ask your landlord for a new code.' }
+
+  const code = normalizeInviteCode(inviteCode)
+  const validation = validateInviteCode(code)
+  if (!validation.ok) return { ok: false, error: validation.error }
+
+  const { invite } = validation
+  const unit =
+    units.find((u) => String(u.id) === invite.unitId) ||
+    units.find((u) => normalizeInviteCode(String(u.inviteCode || '')) === normalizeInviteCode(invite.code))
+
+  if (!unit) return { ok: false, error: 'Unit for this code was not found. Contact your landlord.' }
   if (unit.status === 'occupied' && unit.currentTenantId) {
     return { ok: false, error: 'This unit already has a tenant assigned.' }
   }
+
   const users = getUsers()
   if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-    return { ok: false, error: 'Email already registered.' }
+    return { ok: false, error: 'Email already registered. Try Sign in instead.' }
   }
+
   const user: AppUser = {
     id: `u-${Date.now()}`,
     email: email.trim().toLowerCase(),
     passwordHash: simpleHash(password),
     name: name.trim(),
     role: 'tenant',
+    ownerId: invite.ownerId,
     unitId: String(unit.id),
-    buildingId: String(unit.buildingId),
+    buildingId: String(unit.buildingId || invite.propertyId),
   }
+
   saveUsers([...users, user])
-  return { ok: true, user, unit }
+  markInviteUsed(invite.code, user.id)
+
+  return { ok: true, user, unit, invite }
 }
 
 export const login = (
@@ -144,11 +169,11 @@ export const loginOrRegisterWithGoogle = (
   }
   const users = getUsers()
   const email = profile.email.trim().toLowerCase()
-  let existing = users.find((u) => u.googleId === profile.sub || u.email === email)
+  const existing = users.find((u) => u.googleId === profile.sub || u.email === email)
 
   if (existing) {
     const updated = users.map((u) =>
-      u.id === existing!.id
+      u.id === existing.id
         ? {
             ...u,
             name: profile.name || u.name,
@@ -161,7 +186,7 @@ export const loginOrRegisterWithGoogle = (
         : u,
     )
     saveUsers(updated)
-    const user = updated.find((u) => u.id === existing!.id)!
+    const user = updated.find((u) => u.id === existing.id)!
     return { ok: true, user, isNew: false }
   }
 
@@ -169,15 +194,21 @@ export const loginOrRegisterWithGoogle = (
     return { ok: false, error: 'This email is registered with a password. Sign in with email instead.' }
   }
 
+  if (role === 'tenant') {
+    return { ok: false, error: 'Tenants must register with an invite code at /join' }
+  }
+
+  const id = `u-google-${Date.now()}`
   const user: AppUser = {
-    id: `u-google-${Date.now()}`,
+    id,
     email,
     name: profile.name || email.split('@')[0],
-    role,
+    role: 'property_owner',
     authProvider: 'google',
     googleId: profile.sub,
     picture: profile.picture,
     passwordHash: '',
+    ownerId: id,
   }
   saveUsers([...users, user])
   return { ok: true, user, isNew: true }
@@ -193,6 +224,7 @@ export const seedDemoUsers = (): void => {
       passwordHash: simpleHash('owner123'),
       name: 'Demo Owner',
       role: 'property_owner',
+      ownerId: 'u-owner-demo',
     },
     {
       id: 'u-house-demo',
@@ -200,6 +232,7 @@ export const seedDemoUsers = (): void => {
       passwordHash: simpleHash('keeper123'),
       name: 'James Okello',
       role: 'housekeeper',
+      ownerId: 'u-owner-demo',
     },
     {
       id: 'u-tenant-demo',
@@ -207,6 +240,7 @@ export const seedDemoUsers = (): void => {
       passwordHash: simpleHash('tenant123'),
       name: 'David Ssempijja',
       role: 'tenant',
+      ownerId: 'u-owner-demo',
       tenantId: 't1',
       unitId: 'u1',
       buildingId: 'b1',

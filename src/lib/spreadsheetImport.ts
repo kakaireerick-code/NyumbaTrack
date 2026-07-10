@@ -1,5 +1,5 @@
 import { splitName, buildQuickTenant } from './tenantData'
-import { generateInviteCode } from './auth'
+import { generateInviteCode } from './invites'
 import { isoToday } from './dates'
 
 export const IMPORT_COLUMNS = [

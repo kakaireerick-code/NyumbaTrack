@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Modal, LoadingButton } from './UI'
 import GuidancePanel from './GuidancePanel'
 import { buildQuickTenant, assignTenantToUnit } from '../lib/tenantData'
-import { generateInviteCode } from '../lib/auth'
+import { generateInviteCode } from '../lib/invites'
 import { isoToday } from '../lib/dates'
 
 const QUICK_GUIDANCE = {

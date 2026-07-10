@@ -15,6 +15,8 @@ export default function Header({
   onToggleDemoMode,
   onOpenGuide,
   isTenant,
+  unreadMessages,
+  onOpenMessages,
 }) {
   const roleKey = currentRole === 'admin' ? 'property_owner' : currentRole === 'caretaker' ? 'housekeeper' : currentRole
   const roleLabel = ROLE_LABELS[roleKey] || ROLE_LABELS[currentRole] || 'User'
@@ -42,6 +44,16 @@ export default function Header({
           </span>
         </div>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {onOpenMessages && unreadMessages > 0 && (
+            <button
+              type="button"
+              onClick={onOpenMessages}
+              className="px-2 py-1.5 text-xs rounded border border-red-300 text-red-700 bg-red-50"
+              title="Unread tenant messages"
+            >
+              {unreadMessages} new
+            </button>
+          )}
           {onOpenGuide && (
             <button
               type="button"

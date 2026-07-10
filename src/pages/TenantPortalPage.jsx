@@ -7,7 +7,12 @@ import { buildReceiptText } from '../utils/receipts'
 import { downloadText } from '../utils/helpers'
 import GuidancePanel from '../components/GuidancePanel'
 import { getPageGuidance } from '../lib/actionGuidance'
-import { Smartphone, Copy } from 'lucide-react'
+import { Smartphone, Copy, MessageCircle, Send } from 'lucide-react'
+import {
+  getThread,
+  postMessage,
+  markThreadReadByTenant,
+} from '../lib/messages'
 
 export default function TenantPortalPage({
   tenant,
@@ -20,9 +25,12 @@ export default function TenantPortalPage({
   onSubmitPayment,
   showOnboarding,
   onDismissOnboarding,
+  setPageSafe,
 }) {
   const [payForm, setPayForm] = useState({ amount: '', method: 'MTN MoMo', reference: '' })
   const [payLoading, setPayLoading] = useState(false)
+  const [messageText, setMessageText] = useState('')
+  const [msgTick, setMsgTick] = useState(0)
 
   if (!tenant) return <EmptyState message="Your tenant profile was not found. Contact your landlord." />
 
@@ -96,6 +104,71 @@ export default function TenantPortalPage({
     )
   }
 
+  if (currentPage === 'my-messages') {
+    const thread = getThread(String(safeUnit?.id || unit?.id), String(safeTenant.id))
+    if (unit?.id && tenant?.id) markThreadReadByTenant(tenant.id, unit.id)
+
+    const sendMsg = () => {
+      if (!messageText.trim() || !tenant || !unit) return
+      postMessage({
+        ownerId: String(tenant.ownerId || building?.ownerId || ''),
+        unitId: String(unit.id),
+        tenantId: String(tenant.id),
+        buildingId: String(tenant.buildingId),
+        fromRole: 'tenant',
+        authorName: `${safeTenant.firstName} ${safeTenant.lastName}`,
+        body: messageText.trim(),
+      })
+      setMessageText('')
+      setMsgTick((n) => n + 1)
+      showToast?.('Message sent to your landlord', 'success')
+    }
+
+    return (
+      <div className="space-y-4 pb-24">
+        <GuidancePanel guidance={guidance} />
+        <h1 className="text-xl font-bold flex items-center gap-2">
+          <MessageCircle size={22} /> Contact landlord
+        </h1>
+        <p className="text-sm text-gray-500">Wrong amount? Ask about your lease or payments here.</p>
+        <div className="card p-3 text-sm space-y-1">
+          <p><strong>Phone:</strong> {String(building?.caretakerPhone || settings?.whatsappNumber || '—')}</p>
+          <p><strong>Email:</strong> {String(settings?.managerEmail || settings?.companyEmail || '—')}</p>
+        </div>
+        <div className="card p-4 min-h-[200px] flex flex-col">
+          <div className="flex-1 space-y-2 mb-3 max-h-[40vh] overflow-y-auto">
+            {thread.length === 0 ? (
+              <p className="text-sm text-gray-500">No messages yet. Say hello or ask a question.</p>
+            ) : (
+              thread.map((m) => (
+                <div
+                  key={m.id}
+                  className={`p-2 rounded text-sm max-w-[85%] ${
+                    m.fromRole === 'tenant' ? 'ml-auto bg-[#2d6a4f] text-white' : 'bg-gray-100 dark:bg-gray-800'
+                  }`}
+                >
+                  <p>{m.body}</p>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="flex gap-2">
+            <input
+              className="flex-1 border rounded px-3 py-2 text-sm"
+              placeholder="Type your message…"
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendMsg()}
+            />
+            <button type="button" onClick={sendMsg} className="px-3 py-2 bg-[#2d6a4f] text-white rounded">
+              <Send size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (currentPage === 'help') {
     return null
   }
@@ -138,6 +211,18 @@ export default function TenantPortalPage({
             <button type="button" onClick={copyRef} className="ml-auto p-1"><Copy size={16} /></button>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setPageSafe?.('my-messages')}
+          className="w-full card p-4 text-left flex items-center gap-3 hover:ring-2 hover:ring-[#2d6a4f]/30"
+        >
+          <MessageCircle className="text-[#2d6a4f]" size={22} />
+          <div>
+            <p className="font-semibold text-sm">Contact landlord</p>
+            <p className="text-xs text-gray-500">Wrong amount? Send a message</p>
+          </div>
+        </button>
       </div>
     )
   }

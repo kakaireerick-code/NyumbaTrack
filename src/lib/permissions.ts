@@ -25,6 +25,8 @@ export type PageId =
   | 'guided'
   | 'assistant'
   | 'data-import'
+  | 'messages'
+  | 'my-messages'
   | 'my-balance'
   | 'my-payments'
   | 'my-lease'
@@ -41,7 +43,7 @@ const OWNER_PAGES: PageId[] = [
   'dashboard', 'buildings', 'units', 'vacancy', 'tenants', 'lease-manager',
   'payments', 'balance-tracker', 'deposits', 'utilities', 'reminders',
   'maintenance', 'reports', 'documents', 'legal-notices', 'settings',
-  'subscription', 'blacklist', 'defaulter-list', 'tenant-preview', 'help', 'guided', 'assistant', 'data-import',
+  'subscription', 'blacklist', 'defaulter-list', 'tenant-preview', 'help', 'guided', 'assistant', 'data-import', 'messages',
 ]
 
 const ACCOUNTANT_PAGES: PageId[] = [
@@ -51,7 +53,18 @@ const ACCOUNTANT_PAGES: PageId[] = [
 
 const HOUSEKEEPER_PAGES: PageId[] = ['units', 'vacancy', 'maintenance', 'tenants', 'help', 'guided', 'assistant']
 
-const TENANT_PAGES: PageId[] = ['my-balance', 'my-payments', 'my-lease', 'my-receipts', 'help', 'guided', 'assistant']
+const TENANT_PAGES: PageId[] = ['my-balance', 'my-payments', 'my-lease', 'my-receipts', 'my-messages', 'help', 'guided', 'assistant']
+
+/** Pages tenants must never access (billing, owner portfolio) */
+export const TENANT_BLOCKED_PAGES: string[] = [
+  'subscription', 'data-import', 'buildings', 'units', 'tenants', 'reports',
+  'dashboard', 'payments', 'balance-tracker', 'deposits', 'vacancy', 'lease-manager',
+  'utilities', 'reminders', 'maintenance', 'documents', 'legal-notices', 'settings',
+  'blacklist', 'defaulter-list', 'tenant-preview', 'messages',
+]
+
+export const isBillingPage = (pageId: string): boolean =>
+  ['subscription', 'billing', 'pricing', 'plans'].includes(pageId)
 
 const ROLE_PAGE_MAP: Record<AppRole, PageId[]> = {
   property_owner: OWNER_PAGES,
@@ -62,8 +75,13 @@ const ROLE_PAGE_MAP: Record<AppRole, PageId[]> = {
 
 export const pagesForRole = (role: string): PageId[] => ROLE_PAGE_MAP[normalizeRole(role)] || []
 
-export const canAccessPage = (role: string, pageId: string): boolean =>
-  pagesForRole(role).includes(pageId as PageId)
+export const canAccessPage = (role: string, pageId: string): boolean => {
+  const r = normalizeRole(role)
+  if (r === 'tenant' && (TENANT_BLOCKED_PAGES.includes(pageId) || isBillingPage(pageId))) {
+    return false
+  }
+  return pagesForRole(role).includes(pageId as PageId)
+}
 
 export const defaultPageForRole = (role: string): PageId => {
   const pages = pagesForRole(role)

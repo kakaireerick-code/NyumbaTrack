@@ -1,5 +1,5 @@
 import { isoToday } from './dates'
-import { generateInviteCode } from './auth'
+import { generateInviteCode } from './invites'
 
 export type DataSource = 'manual' | 'spreadsheet' | 'invite' | 'pdf'
 export type DataQuality = 'complete' | 'partial' | 'minimal'

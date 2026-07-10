@@ -12,10 +12,12 @@ import {
   User,
 } from 'lucide-react'
 import { fmtUGX, fmtDate } from '../utils/helpers'
-import { generateInviteCode } from '../lib/auth'
+import { createInviteForUnit } from '../lib/invites'
+import { scopeRecord } from '../lib/scope'
 import { computeDataQuality, displayTenantName } from '../lib/tenantData'
 import { Badge, Modal, EmptyState, ProgressBar } from '../components/UI'
 import DataQualityBadge from '../components/DataQualityBadge'
+import InviteTenantPanel from '../components/InviteTenantPanel'
 import QuickAddTenantModal from '../components/QuickAddTenantModal'
 
 const STATUS_COLORS = {
@@ -38,7 +40,7 @@ const VACANCY_BG = {
 
 // ─── BuildingsPage ───────────────────────────────────────────────────────────
 
-export function BuildingsPage({ buildings, units, setBuildings, setSelectedBuilding, setCurrentPage }) {
+export function BuildingsPage({ buildings, units, setBuildings, setSelectedBuilding, setCurrentPage, activeOwnerId }) {
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState({
     name: '',
@@ -62,7 +64,7 @@ export function BuildingsPage({ buildings, units, setBuildings, setSelectedBuild
   const handleAdd = (e) => {
     e.preventDefault()
     if (!form.name.trim()) return
-    const newBuilding = {
+    const newBuilding = scopeRecord({
       id: `b${Date.now()}`,
       name: form.name.trim(),
       address: form.address.trim(),
@@ -70,7 +72,7 @@ export function BuildingsPage({ buildings, units, setBuildings, setSelectedBuild
       caretakerPhone: form.caretakerPhone.trim(),
       totalUnits: parseInt(form.totalUnits, 10) || 0,
       description: form.description.trim(),
-    }
+    }, activeOwnerId || 'u-new')
     setBuildings((prev) => [...prev, newBuilding])
     setForm({ name: '', address: '', caretakerName: '', caretakerPhone: '', totalUnits: '', description: '' })
     setModalOpen(false)
@@ -228,6 +230,7 @@ export function UnitsPage({
   setUnits,
   setTenants,
   showToast,
+  activeOwnerId,
 }) {
   const [viewMode, setViewMode] = useState('grid')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -269,8 +272,10 @@ export function UnitsPage({
     e.preventDefault()
     if (!form.buildingId || !form.unitNumber.trim()) return
     const monthlyRent = parseInt(form.monthlyRent, 10) || 0
-    const newUnit = {
-      id: `u${Date.now()}`,
+    const unitId = `u${Date.now()}`
+    const inv = createInviteForUnit(activeOwnerId, form.buildingId, unitId)
+    const newUnit = scopeRecord({
+      id: unitId,
       buildingId: form.buildingId,
       unitNumber: form.unitNumber.trim(),
       bedrooms: parseInt(form.bedrooms, 10) || 1,
@@ -282,9 +287,9 @@ export function UnitsPage({
       currentTenantId: null,
       squareMeters: parseInt(form.squareMeters, 10) || 0,
       notes: form.notes.trim(),
-      inviteCode: generateInviteCode(),
+      inviteCode: inv.code,
       ownerNotes: '',
-    }
+    }, activeOwnerId)
     setUnits((prev) => [...prev, newUnit])
     setForm({
       buildingId: selectedBuilding || '',
@@ -411,13 +416,25 @@ export function UnitsPage({
                     View history
                   </button>
                   {unit.status === 'vacant' && !unit.currentTenantId && (
-                    <button
-                      type="button"
-                      onClick={() => setQuickAddUnit(unit)}
-                      className="text-xs px-2 py-1 bg-[#2d6a4f] text-white rounded"
-                    >
-                      Quick add tenant
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setQuickAddUnit(unit)}
+                        className="text-xs px-2 py-1 bg-[#2d6a4f] text-white rounded"
+                      >
+                        Quick add tenant
+                      </button>
+                      <InviteTenantPanel
+                        compact
+                        unit={unit}
+                        building={buildings.find((b) => b.id === unit.buildingId)}
+                        ownerId={activeOwnerId}
+                        onCodeChange={(c) => {
+                          setUnits((prev) => prev.map((u) => (u.id === unit.id ? { ...u, inviteCode: c } : u)))
+                        }}
+                        showToast={showToast}
+                      />
+                    </>
                   )}
                 </div>
               </div>

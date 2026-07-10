@@ -107,6 +107,14 @@ export const getPageGuidance = (
         nextSteps: ['Try the suggested questions below', 'Open Help for the full manual'],
       }
     }
+    if (pageId === 'messages') {
+      return {
+        variant: 'info',
+        headline: 'Messages from tenants',
+        detail: 'Tenants can contact you about rent or lease questions. Reply here — they never see your other properties.',
+        nextSteps: ['Unread messages show in the header badge', 'Click a thread to reply'],
+      }
+    }
     if (demoMode) {
       return {
         variant: 'warning',

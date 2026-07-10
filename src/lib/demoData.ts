@@ -3,6 +3,7 @@
 export const DEMO_BUILDINGS = [
   {
     id: 'demo-b1',
+    ownerId: 'u-owner-demo',
     name: 'Sample Apartments',
     address: 'Training Road, Kampala (Demo)',
     caretakerName: 'Demo Caretaker',
@@ -16,6 +17,7 @@ export const DEMO_BUILDINGS = [
 export const DEMO_UNITS = [
   {
     id: 'demo-u1',
+    ownerId: 'u-owner-demo',
     buildingId: 'demo-b1',
     unitNumber: 'Flat 2B',
     bedrooms: 2,
@@ -27,10 +29,11 @@ export const DEMO_UNITS = [
     currentTenantId: 'demo-t1',
     squareMeters: 55,
     notes: 'Demo tenant',
-    inviteCode: 'DEMO2B',
+    inviteCode: 'DEMO-2B',
   },
   {
     id: 'demo-u2',
+    ownerId: 'u-owner-demo',
     buildingId: 'demo-b1',
     unitNumber: 'Shop G1',
     bedrooms: 0,
@@ -42,13 +45,14 @@ export const DEMO_UNITS = [
     currentTenantId: null,
     squareMeters: 40,
     notes: 'Vacant demo unit',
-    inviteCode: 'DEMOG1',
+    inviteCode: 'DEMO-G1',
   },
 ]
 
 export const DEMO_TENANTS = [
   {
     id: 'demo-t1',
+    ownerId: 'u-owner-demo',
     unitId: 'demo-u1',
     buildingId: 'demo-b1',
     firstName: 'Sample',
