@@ -1,4 +1,5 @@
 import { fmtUGX, fmtDate } from './helpers'
+import { saveReceiptSnapshot } from '../lib/receiptStore'
 
 export const generateReceiptNo = (payments) => {
   const year = new Date().getFullYear()
@@ -19,6 +20,7 @@ export const buildReceiptData = (payment, tenant, unit, building, settings, bala
   const bal = Number(balance) || 0
 
   return {
+    receiptId: payment?.receiptId || payment?.receiptNo || `RCT-${Date.now()}`,
     receiptNo: payment?.receiptNo || 'PENDING',
     issuedAt: payment?.date || new Date().toISOString().split('T')[0],
     companyName: propertyName,
@@ -40,6 +42,21 @@ export const buildReceiptData = (payment, tenant, unit, building, settings, bala
     notes: payment?.notes || '',
     status: payment?.status === 'pending' ? 'Pending confirmation' : 'Confirmed',
   }
+}
+
+/** Owner only — writes immutable receipt snapshot */
+export const issueReceipt = (payment, tenant, unit, building, settings, balance = 0, ownerId = '') => {
+  const data = buildReceiptData(payment, tenant, unit, building, settings, balance)
+  const snapshot = {
+    ...data,
+    receiptId: data.receiptId || data.receiptNo,
+    paymentId: payment?.id,
+    ownerId: ownerId || tenant?.ownerId || building?.ownerId || '',
+    tenantId: tenant?.id,
+    unitId: unit?.id,
+  }
+  saveReceiptSnapshot(snapshot)
+  return snapshot
 }
 
 /** Plain text fallback for WhatsApp / clipboard */

@@ -19,7 +19,7 @@ Use **Guided Workflows** for step-by-step help. Turn on **Demo Mode** to practic
 
 You only ever see **your unit** — nothing about other tenants or the owner's private notes.`,
 
-  housekeeper: `## Getting started (Housekeeper)
+  caretaker: `## Getting started (Caretaker)
 
 You can view **units**, **vacancy**, **maintenance**, and **tenant names**.
 
@@ -40,7 +40,7 @@ export const ROLE_MANUALS: Record<string, string> = {
 ## FAQ
 **Can tenants see my notes?** No. Owner notes and portfolio stats are stripped before any tenant screen.
 
-**How do tenants register?** They use your join link at /join — free for them forever.
+**How do tenants register?** They use your tenant join link — free for them forever.
 
 **Subscription?** 14-day trial, then pay to 0793068911 via Plans & Billing.`,
 
@@ -51,5 +51,5 @@ export const ROLE_MANUALS: Record<string, string> = {
 
 **Wrong balance?** Contact your landlord. Use Payments → I paid after sending MoMo.`,
 
-  housekeeper: `${ROLE_HELP_GETTING_STARTED.housekeeper}`,
+  caretaker: `${ROLE_HELP_GETTING_STARTED.caretaker}`,
 }

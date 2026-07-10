@@ -1,4 +1,9 @@
-export type AppRole = 'property_owner' | 'tenant' | 'housekeeper' | 'accountant'
+/**
+ * Central permission module — all role/page/field checks go through here.
+ * Roles: property_owner | caretaker | tenant (exactly three).
+ */
+
+export type Role = 'property_owner' | 'caretaker' | 'tenant'
 
 export type PageId =
   | 'dashboard'
@@ -20,7 +25,6 @@ export type PageId =
   | 'subscription'
   | 'blacklist'
   | 'defaulter-list'
-  | 'tenant-preview'
   | 'help'
   | 'guided'
   | 'assistant'
@@ -31,11 +35,50 @@ export type PageId =
   | 'my-payments'
   | 'my-lease'
   | 'my-receipts'
+  | 'receipt-view'
 
-export const normalizeRole = (role: string): AppRole => {
-  if (role === 'admin' || role === 'property_owner') return 'property_owner'
-  if (role === 'caretaker' || role === 'housekeeper') return 'housekeeper'
-  if (role === 'accountant') return 'accountant'
+export type FieldKey =
+  | 'unit.monthlyRent'
+  | 'unit.depositAmount'
+  | 'unit.inviteCode'
+  | 'unit.ownerNotes'
+  | 'tenant.rentAmount'
+  | 'tenant.depositPaid'
+  | 'tenant.depositAmount'
+  | 'tenant.balance'
+  | 'tenant.payments'
+  | 'payment.amount'
+  | 'receipt.amount'
+  | 'receipt.list'
+  | 'subscription.billing'
+  | 'owner.revenue'
+
+const FINANCIAL_FIELDS: FieldKey[] = [
+  'unit.monthlyRent',
+  'unit.depositAmount',
+  'tenant.rentAmount',
+  'tenant.depositPaid',
+  'tenant.depositAmount',
+  'tenant.balance',
+  'tenant.payments',
+  'payment.amount',
+  'receipt.amount',
+  'receipt.list',
+  'subscription.billing',
+  'owner.revenue',
+]
+
+const OWNER_ONLY_FIELDS: FieldKey[] = [
+  'unit.inviteCode',
+  'unit.ownerNotes',
+  'subscription.billing',
+  'owner.revenue',
+]
+
+/** Legacy role aliases from stored users / old code */
+export const normalizeRole = (role: string): Role => {
+  if (role === 'admin' || role === 'property_owner' || role === 'accountant') return 'property_owner'
+  if (role === 'caretaker' || role === 'housekeeper') return 'caretaker'
   return 'tenant'
 }
 
@@ -43,41 +86,44 @@ const OWNER_PAGES: PageId[] = [
   'dashboard', 'buildings', 'units', 'vacancy', 'tenants', 'lease-manager',
   'payments', 'balance-tracker', 'deposits', 'utilities', 'reminders',
   'maintenance', 'reports', 'documents', 'legal-notices', 'settings',
-  'subscription', 'blacklist', 'defaulter-list', 'tenant-preview', 'help', 'guided', 'assistant', 'data-import', 'messages',
+  'subscription', 'blacklist', 'defaulter-list', 'help', 'guided', 'assistant',
+  'data-import', 'messages', 'receipt-view',
 ]
 
-const ACCOUNTANT_PAGES: PageId[] = [
-  'dashboard', 'payments', 'balance-tracker', 'reports', 'defaulter-list',
-  'documents', 'subscription', 'help', 'guided', 'assistant',
+const CARETAKER_PAGES: PageId[] = [
+  'units', 'vacancy', 'maintenance', 'tenants', 'help', 'guided', 'assistant', 'messages',
 ]
 
-const HOUSEKEEPER_PAGES: PageId[] = ['units', 'vacancy', 'maintenance', 'tenants', 'help', 'guided', 'assistant']
+const TENANT_PAGES: PageId[] = [
+  'my-balance', 'my-payments', 'my-lease', 'my-receipts', 'my-messages',
+  'help', 'guided', 'assistant', 'receipt-view',
+]
 
-const TENANT_PAGES: PageId[] = ['my-balance', 'my-payments', 'my-lease', 'my-receipts', 'my-messages', 'help', 'guided', 'assistant']
+const ROLE_PAGE_MAP: Record<Role, PageId[]> = {
+  property_owner: OWNER_PAGES,
+  caretaker: CARETAKER_PAGES,
+  tenant: TENANT_PAGES,
+}
 
-/** Pages tenants must never access (billing, owner portfolio) */
 export const TENANT_BLOCKED_PAGES: string[] = [
   'subscription', 'data-import', 'buildings', 'units', 'tenants', 'reports',
   'dashboard', 'payments', 'balance-tracker', 'deposits', 'vacancy', 'lease-manager',
   'utilities', 'reminders', 'maintenance', 'documents', 'legal-notices', 'settings',
-  'blacklist', 'defaulter-list', 'tenant-preview', 'messages',
+  'blacklist', 'defaulter-list', 'messages',
 ]
 
 export const isBillingPage = (pageId: string): boolean =>
   ['subscription', 'billing', 'pricing', 'plans'].includes(pageId)
 
-const ROLE_PAGE_MAP: Record<AppRole, PageId[]> = {
-  property_owner: OWNER_PAGES,
-  accountant: ACCOUNTANT_PAGES,
-  housekeeper: HOUSEKEEPER_PAGES,
-  tenant: TENANT_PAGES,
-}
-
-export const pagesForRole = (role: string): PageId[] => ROLE_PAGE_MAP[normalizeRole(role)] || []
+export const pagesForRole = (role: string): PageId[] =>
+  ROLE_PAGE_MAP[normalizeRole(role)] || []
 
 export const canAccessPage = (role: string, pageId: string): boolean => {
   const r = normalizeRole(role)
   if (r === 'tenant' && (TENANT_BLOCKED_PAGES.includes(pageId) || isBillingPage(pageId))) {
+    return false
+  }
+  if (r === 'caretaker' && (pageId === 'receipt-view' || pageId === 'my-receipts')) {
     return false
   }
   return pagesForRole(role).includes(pageId as PageId)
@@ -88,17 +134,78 @@ export const defaultPageForRole = (role: string): PageId => {
   return pages[0] || 'dashboard'
 }
 
-/** Pages that expose owner-only financial / secret data */
-export const isOwnerOnlyPage = (pageId: string): boolean =>
-  ['balance-tracker', 'reports', 'deposits', 'utilities', 'legal-notices', 'blacklist', 'defaulter-list', 'subscription', 'tenant-preview'].includes(pageId)
-
-export const canSeeFinancials = (role: string): boolean => {
+export const canViewField = (role: string, fieldKey: FieldKey): boolean => {
   const r = normalizeRole(role)
-  return r === 'property_owner' || r === 'accountant'
+  if (r === 'property_owner') return true
+
+  if (r === 'tenant') {
+    if (fieldKey === 'tenant.rentAmount' || fieldKey === 'tenant.balance') return true
+    if (fieldKey === 'receipt.amount' || fieldKey === 'receipt.list') return true
+    if (fieldKey === 'subscription.billing' || fieldKey === 'owner.revenue') return false
+    if (fieldKey.startsWith('unit.') && fieldKey !== 'unit.monthlyRent') return false
+    return false
+  }
+
+  if (r === 'caretaker') {
+    if (fieldKey === 'receipt.list' || fieldKey === 'receipt.amount') return false
+    return !FINANCIAL_FIELDS.includes(fieldKey) && !OWNER_ONLY_FIELDS.includes(fieldKey)
+  }
+
+  return false
 }
+
+export const canSeeFinancials = (role: string): boolean =>
+  normalizeRole(role) === 'property_owner'
 
 export const isOwnerLoginRole = (role: string): boolean =>
   normalizeRole(role) === 'property_owner'
 
 export const canManagePortfolio = (role: string): boolean =>
   normalizeRole(role) === 'property_owner'
+
+export const isOwnerOnlyPage = (pageId: string): boolean =>
+  ['balance-tracker', 'reports', 'deposits', 'utilities', 'legal-notices',
+    'blacklist', 'defaulter-list', 'subscription'].includes(pageId)
+
+const CARETAKER_STRIP_KEYS = new Set([
+  'monthlyRent', 'depositAmount', 'rentAmount', 'depositPaid', 'balance',
+  'payments', 'ownerNotes', 'inviteCode', 'expenses', 'maintenanceLog',
+  'netYield', 'internalFlags', 'rating', 'blacklisted', 'blacklistReason',
+])
+
+export const getCaretakerSafeRecord = <T extends Record<string, unknown>>(
+  record: T | null | undefined,
+): T | null => {
+  if (!record) return null
+  const safe = { ...record }
+  for (const key of Object.keys(safe)) {
+    if (CARETAKER_STRIP_KEYS.has(key)) {
+      delete safe[key]
+    }
+  }
+  return safe
+}
+
+export type OwnerAction =
+  | 'issue_receipt'
+  | 'record_payment'
+  | 'manage_subscription'
+  | 'create_invite'
+  | 'import_data'
+
+export class PermissionDeniedError extends Error {
+  readonly status = 403
+  constructor(message = 'Not allowed') {
+    super(message)
+    this.name = 'PermissionDeniedError'
+  }
+}
+
+export const assertOwnerOnly = (role: string, action: OwnerAction): void => {
+  if (!canManagePortfolio(role)) {
+    throw new PermissionDeniedError(`Owner only: ${action}`)
+  }
+}
+
+/** @deprecated use normalizeRole — kept for gradual migration */
+export type AppRole = Role

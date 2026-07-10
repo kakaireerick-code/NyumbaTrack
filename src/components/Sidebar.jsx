@@ -22,7 +22,6 @@ const PAGE_META = {
   subscription: { label: 'Plans & Billing', icon: 'CreditCard' },
   blacklist: { label: 'Blacklist', icon: 'Ban' },
   'defaulter-list': { label: 'Defaulters', icon: 'AlertTriangle' },
-  'tenant-preview': { label: 'Tenant Preview', icon: 'Eye' },
   help: { label: 'Help', icon: 'HelpCircle' },
   guided: { label: 'Guided Steps', icon: 'ListChecks' },
   assistant: { label: 'Ask Assistant', icon: 'MessageCircle' },
@@ -30,17 +29,8 @@ const PAGE_META = {
   'data-import': { label: 'Data Import', icon: 'FileSpreadsheet' },
 }
 
-const ROLE_ALIASES = {
-  admin: 'property_owner',
-  property_owner: 'property_owner',
-  caretaker: 'housekeeper',
-  housekeeper: 'housekeeper',
-  accountant: 'accountant',
-  tenant: 'tenant',
-}
-
 export default function Sidebar({ currentRole, currentPage, setCurrentPage, sidebarOpen, setSidebarOpen }) {
-  const role = ROLE_ALIASES[currentRole] || normalizeRole(currentRole)
+  const role = normalizeRole(currentRole)
   const pageIds = pagesForRole(role)
   const items = pageIds
     .filter((id) => PAGE_META[id])

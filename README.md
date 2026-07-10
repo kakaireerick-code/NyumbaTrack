@@ -1,32 +1,64 @@
-# React + TypeScript + Vite
+# NyumbaTrack
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Multi-landlord rental management — React + TypeScript + Vite, local-first with role-locked portals.
 
-Currently, two official plugins are available:
+## Entry URLs
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Role | URL | Notes |
+|------|-----|-------|
+| **Property owner** | `/login` or `/owner` | Sign in / manage portfolio |
+| **Owner signup** | `/owner/signup` or `/signup` | Create subscriber account |
+| **Tenant** | `/join/tenant/{CODE}` | Invite link from owner — free for tenants |
+| **Caretaker** | `/join/caretaker/{CODE}` | Ops access only — no rent amounts |
+| **Receipt** | `/receipt/{id}` or `/tenant/receipts/{id}` | Read-only payment receipt |
 
-## React Compiler
+There is no generic `/join` picker and no role switcher. Each portal is isolated.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Quick start
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
+npm run build
+npm test
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+### Demo credentials (development only)
+
+Hidden in production builds.
+
+| Role | Email | Password | Where to sign in |
+|------|-------|----------|------------------|
+| Owner | `owner@demo.com` | `owner123` | `/login` |
+| Tenant | `tenant@demo.com` | `tenant123` | `/join/tenant` (any code in dev) |
+| Caretaker | `keeper@demo.com` | `keeper123` | `/join/caretaker` |
+
+## Architecture
+
+- **Routing**: `useState` page shell in `App.jsx`; path parsed once via `src/lib/routing.ts`
+- **Permissions**: `src/lib/permissions.ts` — `canAccessPage`, `canViewField`, `getCaretakerSafeRecord`, `assertOwnerOnly`
+- **Storage**: `safeGet` / `safeSet` in `src/lib/storage.ts`
+- **Invites**: `src/lib/invites.ts` — tenant and caretaker codes with role validation
+- **Receipts**: `src/lib/receiptStore.ts` + `src/pages/ReceiptPage.jsx`
+
+## Documentation
+
+- [Role & permission matrix](docs/ROLES-AND-PERMISSIONS.md)
+- [Receipt flow](docs/RECEIPTS.md)
+
+## Manual QA checklist
+
+- [ ] Open tenant invite on phone — only tenant join visible
+- [ ] Open caretaker invite — no rent columns anywhere
+- [ ] Tenant opens receipt — print/PDF works, cannot edit
+- [ ] Owner logs in only at owner login — no impersonation
+- [ ] Wrong-role invite code shows neutral error (no role hints)
+- [ ] Owner credentials rejected on tenant/caretaker join with generic error
+
+## Tests
+
+```bash
+npm test
+```
+
+Covers join isolation, portal auth, caretaker redaction, receipt immutability, and routing.

@@ -12,7 +12,7 @@ import { REMINDER_TEMPLATES, getReminderType } from '../utils/reminders'
 import { Modal, Badge, EmptyState, LoadingButton } from '../components/UI'
 import DataQualityBadge from '../components/DataQualityBadge'
 import { computeDataQuality, displayTenantName, DATA_SOURCE_LABELS } from '../lib/tenantData'
-import { canSeeFinancials } from '../lib/permissions'
+import { canSeeFinancials, normalizeRole } from '../lib/permissions'
 
 const inputCls = 'w-full border rounded px-3 py-2 dark:bg-gray-700 dark:border-gray-600'
 const btnPrimary = 'px-4 py-2 bg-[#2d6a4f] text-white rounded hover:opacity-90'
@@ -568,7 +568,7 @@ export function MaintenancePage({
   showToast,
   currentRole,
 }) {
-  const isCaretaker = currentRole === 'caretaker'
+  const isCaretaker = normalizeRole(currentRole || '') === 'caretaker'
   const [showForm, setShowForm] = useState(false)
   const [filterBuilding, setFilterBuilding] = useState('')
   const [filterStatus, setFilterStatus] = useState('')

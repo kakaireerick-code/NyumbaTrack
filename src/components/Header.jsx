@@ -18,10 +18,10 @@ export default function Header({
   unreadMessages,
   onOpenMessages,
 }) {
-  const roleKey = currentRole === 'admin' ? 'property_owner' : currentRole === 'caretaker' ? 'housekeeper' : currentRole
-  const roleLabel = ROLE_LABELS[roleKey] || ROLE_LABELS[currentRole] || 'User'
-  const badgeClass = ROLE_BADGE_CLASS[roleKey] || ROLE_BADGE_CLASS[currentRole] || 'bg-gray-600 text-white'
-  const isOwner = normalizeRole(roleKey) === 'property_owner'
+  const roleKey = normalizeRole(currentRole)
+  const roleLabel = ROLE_LABELS[roleKey] || 'User'
+  const badgeClass = ROLE_BADGE_CLASS[roleKey] || 'bg-gray-600 text-white'
+  const isOwner = roleKey === 'property_owner'
 
   return (
     <>

@@ -26,6 +26,7 @@ export default function TenantPortalPage({
   showOnboarding,
   onDismissOnboarding,
   setPageSafe,
+  onOpenReceipt,
 }) {
   const [payForm, setPayForm] = useState({ amount: '', method: 'MTN MoMo', reference: '' })
   const [payLoading, setPayLoading] = useState(false)
@@ -86,6 +87,11 @@ export default function TenantPortalPage({
   }
 
   const viewReceipt = (payment) => {
+    const receiptId = payment.receiptId || payment.receiptNo
+    if (onOpenReceipt && receiptId) {
+      onOpenReceipt(receiptId)
+      return
+    }
     const receiptData = buildReceiptData(payment, tenant, unit, building, settings, balance.balance)
     setViewingReceipt(receiptData)
   }

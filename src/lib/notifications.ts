@@ -1,0 +1,84 @@
+/**
+ * Role-safe notification payloads — caretakers never receive amount fields.
+ */
+import { safeGet, safeSet } from './storage'
+import { normalizeRole } from './permissions'
+import type { Role } from './permissions'
+
+export type AppNotification = {
+  id: string
+  ownerId: string
+  role: Role
+  userId?: string
+  title: string
+  body: string
+  createdAt: string
+  read: boolean
+  kind: 'maintenance' | 'message' | 'payment' | 'system'
+}
+
+const NOTIF_KEY = 'rt_role_notifications'
+
+export const getNotifications = (): AppNotification[] =>
+  safeGet<AppNotification[]>(NOTIF_KEY, [])
+
+export const saveNotifications = (list: AppNotification[]): void =>
+  safeSet(NOTIF_KEY, list)
+
+export const addNotification = (n: Omit<AppNotification, 'id' | 'createdAt' | 'read'>): void => {
+  const record: AppNotification = {
+    ...n,
+    id: `n-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    read: false,
+  }
+  saveNotifications([...getNotifications(), record])
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('rt-notifications-updated'))
+  }
+}
+
+/** Strip amount references from caretaker notification bodies */
+export const getRoleSafeNotifications = (
+  role: string,
+  ownerId: string,
+  userId?: string,
+): AppNotification[] => {
+  const r = normalizeRole(role)
+  return getNotifications().filter((n) => {
+    if (n.ownerId !== ownerId) return false
+    if (r === 'property_owner') return n.role === 'property_owner' || !n.userId
+    if (r === 'tenant') return n.userId === userId || n.role === 'tenant'
+    if (r === 'caretaker') return n.role === 'caretaker'
+    return false
+  }).map((n) => {
+    if (r !== 'caretaker') return n
+    const { title, body, ...rest } = n
+    return {
+      ...rest,
+      title: title.replace(/UGX[\s\d,]+/gi, '[redacted]'),
+      body: body.replace(/UGX[\s\d,]+/gi, '[redacted]').replace(/\d{3,}/g, '[redacted]'),
+    }
+  })
+}
+
+export const markNotificationRead = (id: string): void => {
+  saveNotifications(getNotifications().map((n) => (n.id === id ? { ...n, read: true } : n)))
+}
+
+export const unreadCountForRole = (
+  role: string,
+  ownerId: string,
+  userId?: string,
+): number =>
+  getRoleSafeNotifications(role, ownerId, userId).filter((n) => !n.read).length
+
+/** Cross-tab sync via storage event */
+export const subscribeNotificationUpdates = (onUpdate: () => void): (() => void) => {
+  const handler = () => onUpdate()
+  window.addEventListener('rt-notifications-updated', handler)
+  window.addEventListener('storage', (e) => {
+    if (e.key === NOTIF_KEY) onUpdate()
+  })
+  return () => window.removeEventListener('rt-notifications-updated', handler)
+}

@@ -8,6 +8,7 @@ import PageWithGuidance from './components/PageWithGuidance'
 import ReceiptModal from './components/ReceiptModal'
 import TenantDetailPanel from './components/TenantDetailPanel'
 import LoginPage from './pages/LoginPage'
+import ReceiptPage from './pages/ReceiptPage'
 import JoinPage from './pages/JoinPage'
 import StaffJoinPage from './pages/StaffJoinPage'
 import DashboardPage from './pages/DashboardPage'
@@ -43,7 +44,7 @@ import SubscriptionPage from './pages/SubscriptionPage'
 import SubscriptionBanner from './components/SubscriptionBanner'
 import TenantBottomNav from './components/TenantBottomNav'
 import { usePersistedState } from './utils/storage'
-import { buildReceiptData, buildReceiptText } from './utils/receipts'
+import { buildReceiptData, buildReceiptText, issueReceipt } from './utils/receipts'
 import { getTenantBalance } from './utils/helpers'
 import { isSubscriptionActive, startFreeTrial, needsSubscription } from './utils/subscription'
 import { canAccessPage, defaultPageForRole, normalizeRole, TENANT_BLOCKED_PAGES } from './lib/permissions'
@@ -51,7 +52,7 @@ import { getTourSteps, isTourComplete } from './lib/rolePrompts'
 import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
 import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
 import { syncInvitesFromUnits } from './lib/invites'
-import { parseEntryPath, getJoinPath, getStaffJoinPath } from './lib/routing'
+import { parseEntryPath, getTenantJoinPath, getCaretakerJoinPath, getReceiptPath } from './lib/routing'
 import { getCaretakerSafeBuilding, getCaretakerSafeUnit, getCaretakerSafeTenant } from './lib/propertyViews'
 import { countUnreadForOwner } from './lib/messages'
 import { getUsers, saveUsers } from './lib/auth'
@@ -75,27 +76,21 @@ import {
 import { initialSubscription } from './data/subscriptionPlans'
 
 const ROLE_DEFAULT_PAGE = {
-  admin: 'dashboard',
   property_owner: 'dashboard',
-  accountant: 'dashboard',
   caretaker: 'units',
-  housekeeper: 'units',
   tenant: 'my-balance',
-}
-
-const mapRoleForLegacy = (role) => {
-  if (role === 'property_owner') return 'admin'
-  if (role === 'housekeeper') return 'caretaker'
-  return role
 }
 
 function AppContent() {
   const { showToast } = useToast()
 
   const [entryPath] = useState(() => parseEntryPath())
+  const [receiptViewId, setReceiptViewId] = useState(() =>
+    entryPath.kind === 'receipt' ? entryPath.receiptId : '',
+  )
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authUser, setAuthUser] = useState(null)
-  const [currentRole, setCurrentRole] = useState('admin')
+  const [currentRole, setCurrentRole] = useState('property_owner')
   const [currentUser, setCurrentUser] = useState({ name: '', building: '' })
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 768)
@@ -188,6 +183,20 @@ function AppContent() {
   )
 
   useEffect(() => {
+    if (entryPath.kind === 'receipt' && entryPath.receiptId && isLoggedIn) {
+      setReceiptViewId(entryPath.receiptId)
+      setCurrentPage('receipt-view')
+    }
+  }, [isLoggedIn, entryPath.kind, entryPath.receiptId])
+
+  const openReceiptRoute = useCallback((receiptId) => {
+    if (!receiptId) return
+    window.history.pushState({}, '', getReceiptPath(receiptId))
+    setReceiptViewId(receiptId)
+    setCurrentPage('receipt-view')
+  }, [])
+
+  useEffect(() => {
     const onResize = () => {
       if (window.innerWidth > 768) setSidebarOpen(true)
     }
@@ -202,7 +211,7 @@ function AppContent() {
     return tenants.find((t) => t.userId === authUser?.id) || null
   }, [currentRole, authUser, tenants])
 
-  const isOwnerRole = currentRole === 'admin' || currentRole === 'property_owner'
+  const isOwnerRole = normalizeRole(currentRole) === 'property_owner'
   const showDemoData = demoMode && isOwnerRole
 
   const effectiveBuildings = useMemo(
@@ -218,7 +227,7 @@ function AppContent() {
     [showDemoData, ownerTenants],
   )
 
-  const isCaretaker = currentRole === 'caretaker'
+  const isCaretaker = normalizeRole(currentRole) === 'caretaker'
 
   const caretakerBuildings = useMemo(
     () => effectiveBuildings.map((b) => getCaretakerSafeBuilding(b) || b),
@@ -237,7 +246,7 @@ function AppContent() {
   const portalUnits = isCaretaker ? caretakerUnits : effectiveUnits
   const portalTenants = isCaretaker ? caretakerTenants : effectiveTenants
 
-  const roleKey = currentRole === 'admin' ? 'property_owner' : currentRole === 'caretaker' ? 'housekeeper' : currentRole
+  const roleKey = normalizeRole(currentRole)
 
   const guidanceContext = useMemo(
     () => ({
@@ -260,17 +269,17 @@ function AppContent() {
   )
 
   const setPageSafe = useCallback((page) => {
-    const roleKey = currentRole === 'admin' ? 'property_owner' : currentRole === 'caretaker' ? 'housekeeper' : currentRole
-    if (normalizeRole(roleKey) === 'tenant' && TENANT_BLOCKED_PAGES.includes(page)) {
-      showToast('This area is for your landlord only.', 'error')
+    const rk = normalizeRole(currentRole)
+    if (rk === 'tenant' && TENANT_BLOCKED_PAGES.includes(page)) {
+      showToast('This area is not available.', 'error')
       setCurrentPage('my-balance')
       return
     }
-    if (canAccessPage(roleKey, page)) {
+    if (canAccessPage(rk, page)) {
       setCurrentPage(page)
     } else {
       showToast('You do not have access to that page.', 'error')
-      setCurrentPage(defaultPageForRole(roleKey))
+      setCurrentPage(defaultPageForRole(rk))
     }
   }, [currentRole, showToast])
 
@@ -285,8 +294,8 @@ function AppContent() {
   const handleAuthSuccess = (user, registeredUnit = null, inviteMeta = null) => {
     setAuthUser(user)
     setIsLoggedIn(true)
-    const legacyRole = mapRoleForLegacy(user.role)
-    setCurrentRole(legacyRole === 'admin' ? 'admin' : legacyRole)
+    const role = normalizeRole(user.role)
+    setCurrentRole(role)
 
     if (user.role === 'tenant' && registeredUnit) {
       const tenantId = `t-${Date.now()}`
@@ -337,8 +346,8 @@ function AppContent() {
       setCurrentUser({ name: user.name, building: bName })
       setShowTenantOnboarding(true)
       setCurrentPage('my-balance')
-      if (entryPath.entry === 'join') {
-        window.history.replaceState({}, '', getJoinPath())
+      if (entryPath.kind === 'join-tenant') {
+        window.history.replaceState({}, '', getTenantJoinPath())
       }
       showToast(`Welcome! You are registered for unit ${unit.unitNumber}.`, 'success')
       return
@@ -349,10 +358,10 @@ function AppContent() {
       const t = tenants.find((t) => t.userId === user.id || t.id === user.tenantId)
       const bName = buildings.find((b) => b.id === t?.buildingId)?.name || ''
       setCurrentUser({ name: t ? `${t.firstName} ${t.lastName}` : name, building: bName })
-    } else if (user.role === 'housekeeper') {
+    } else if (role === 'caretaker') {
       setCurrentUser({ name, building: buildings[0]?.name || '' })
-      if (entryPath.entry === 'staff-join') {
-        window.history.replaceState({}, '', getStaffJoinPath())
+      if (entryPath.kind === 'join-caretaker') {
+        window.history.replaceState({}, '', getCaretakerJoinPath())
       }
     } else {
       setCurrentUser({ name, building: 'All Properties', email: user.email })
@@ -360,7 +369,7 @@ function AppContent() {
 
     let startedTrial = false
     const ownerIdForSub = user.ownerId || user.id
-    if (needsSubscription(legacyRole) && ownerIdForSub) {
+    if (needsSubscription(role) && ownerIdForSub) {
       setSubscriptionByOwner((prev) => {
         const cur = prev[ownerIdForSub] || { status: 'none', hasUsedTrial: false }
         if (cur.status === 'none' && !cur.hasUsedTrial) {
@@ -370,9 +379,8 @@ function AppContent() {
         return prev
       })
     }
-    setCurrentPage(ROLE_DEFAULT_PAGE[user.role] || ROLE_DEFAULT_PAGE[legacyRole] || 'dashboard')
-    const tourRole = user.role === 'admin' ? 'property_owner' : user.role
-    if (!isTourComplete(tourRole)) setShowTour(true)
+    setCurrentPage(ROLE_DEFAULT_PAGE[role] || defaultPageForRole(role))
+    if (!isTourComplete(role)) setShowTour(true)
     showToast(startedTrial ? 'Welcome! Your 14-day free trial has started.' : `Welcome, ${name}!`, 'success')
   }
 
@@ -388,13 +396,13 @@ function AppContent() {
 
   const showReceipt = useCallback((payment, tenant, unit, building) => {
     const bal = getTenantBalance(tenant?.id, tenants, payments)
-    const receiptData = buildReceiptData(payment, tenant, unit, building, settings, bal.balance)
+    const receiptData = issueReceipt(payment, tenant, unit, building, settings, bal.balance, activeOwnerId)
     const text = buildReceiptText(payment, tenant, unit, building, settings, bal.balance)
     const wa = tenant?.whatsapp
       ? `https://wa.me/${tenant.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(text.slice(0, 500))}`
       : ''
     setReceiptModal({ open: true, receiptData, whatsapp: wa })
-  }, [tenants, payments, settings])
+  }, [tenants, payments, settings, activeOwnerId])
 
   const sharedProps = {
     buildings: portalBuildings,
@@ -461,25 +469,18 @@ function AppContent() {
       )
     }
 
-    if (currentPage === 'tenant-preview' && normalizeRole(currentRole) !== 'tenant') {
-      const previewTenant = effectiveTenants.find((t) => t.status === 'Active') || effectiveTenants[0]
-      const u = effectiveUnits.find((un) => un.id === previewTenant?.unitId)
-      const b = effectiveBuildings.find((bd) => bd.id === previewTenant?.buildingId)
+    if (currentPage === 'receipt-view' && receiptViewId) {
       return (
-        <div>
-          <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 rounded flex items-center gap-2">
-            <span className="badge bg-orange-100 text-orange-800">Owner only</span>
-            <span className="text-sm">Tenant view preview — this is what your tenant sees</span>
-          </div>
-          <TenantPortalPage
-            tenant={previewTenant}
-            unit={u}
-            building={b}
-            payments={payments.filter((p) => p.tenantId === previewTenant?.id)}
-            settings={settings}
-            currentPage="my-balance"
-          />
-        </div>
+        <ReceiptPage
+          receiptId={receiptViewId}
+          currentRole={currentRole}
+          authUser={authUser}
+          onClose={() => {
+            setReceiptViewId('')
+            window.history.replaceState({}, '', '/')
+            setPageSafe(defaultPageForRole(roleKey))
+          }}
+        />
       )
     }
 
@@ -528,6 +529,7 @@ function AppContent() {
         showToast,
         authUser,
         setPageSafe,
+        onOpenReceipt: openReceiptRoute,
         onSubmitPayment: (payload) => {
           if (!t) return
           setPayments((prev) => [
@@ -706,7 +708,16 @@ function AppContent() {
   const subGate = needsSubscription(currentRole) && !subActive && currentPage !== 'subscription'
 
   if (!isLoggedIn) {
-    if (entryPath.entry === 'join') {
+    if (entryPath.kind === 'receipt') {
+      return (
+        <ReceiptPage
+          receiptId={entryPath.receiptId}
+          currentRole="tenant"
+          authUser={null}
+        />
+      )
+    }
+    if (entryPath.kind === 'join-tenant') {
       return (
         <JoinPage
           initialCode={entryPath.inviteCode}
@@ -716,7 +727,7 @@ function AppContent() {
         />
       )
     }
-    if (entryPath.entry === 'staff-join') {
+    if (entryPath.kind === 'join-caretaker') {
       return (
         <StaffJoinPage
           initialCode={entryPath.inviteCode}
@@ -724,7 +735,12 @@ function AppContent() {
         />
       )
     }
-    return <LoginPage onAuthSuccess={handleAuthSuccess} />
+    return (
+      <LoginPage
+        onAuthSuccess={handleAuthSuccess}
+        initialMode={entryPath.kind === 'owner-signup' ? 'signup' : 'signin'}
+      />
+    )
   }
 
   const isTenant = normalizeRole(currentRole) === 'tenant'
@@ -826,7 +842,7 @@ function AppContent() {
         />
       )}
 
-      {detailTenant && currentRole === 'caretaker' && (
+      {detailTenant && isCaretaker && (
         <TenantDetailPanel
           tenant={getCaretakerSafeTenant(detailTenant) || detailTenant}
           unit={getCaretakerSafeUnit(detailUnit) || detailUnit}

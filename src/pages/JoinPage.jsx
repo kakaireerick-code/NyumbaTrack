@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { Home, Eye, EyeOff, MessageCircle } from 'lucide-react'
 import { seedDemoUsers, registerTenant, login } from '../lib/auth'
-import { validateInviteCode } from '../lib/invites'
+import { validateInviteForRole } from '../lib/invites'
 import { normalizeInviteCode } from '../lib/routing'
-import { validatePortalSignIn, showDemoCredentials } from '../lib/portalAuth'
+import { validatePortalSignIn, showDemoCredentials, GENERIC_AUTH_ERROR } from '../lib/portalAuth'
+import { checkJoinRateLimit, recordJoinFailure, clearJoinFailures } from '../lib/joinRateLimit'
 
-export default function JoinPage({
+export default function TenantJoinPage({
   initialCode = '',
   units,
   buildings,
@@ -34,47 +35,57 @@ export default function JoinPage({
       setCodeHint('')
       return
     }
-    const v = validateInviteCode(inviteCode)
+    const v = validateInviteForRole(inviteCode, 'tenant')
     if (v.ok) {
       const unit = units?.find((u) => u.id === v.invite.unitId)
       const building = buildings?.find((b) => b.id === v.invite.propertyId)
       setCodeHint(
         unit
-          ? `Code valid — Unit ${unit.unitNumber}${building ? ` at ${building.name}` : ''}`
-          : 'Code valid',
+          ? `Code accepted — Unit ${unit.unitNumber}${building ? ` at ${building.name}` : ''}`
+          : 'Code accepted',
       )
     } else {
-      setCodeHint(v.error)
+      setCodeHint('')
     }
   }, [inviteCode, units, buildings])
 
   const handleSubmit = (e) => {
     e.preventDefault()
     setError('')
+    const limit = checkJoinRateLimit()
+    if (!limit.ok) {
+      setError(limit.error)
+      return
+    }
     setLoading(true)
 
     setTimeout(() => {
       if (mode === 'signin') {
         const result = login(email, password)
         if (!result.ok) {
-          setError(result.error || 'Login failed')
+          recordJoinFailure()
+          setError(GENERIC_AUTH_ERROR)
           setLoading(false)
           return
         }
         const portalCheck = validatePortalSignIn('tenant', result.user?.role || '')
         if (!portalCheck.ok) {
+          recordJoinFailure()
           setError(portalCheck.error)
           setLoading(false)
           return
         }
+        clearJoinFailures()
         onAuthSuccess(result.user)
       } else {
         const result = registerTenant(email, password, name, inviteCode, units || [], buildings || [])
         if (!result.ok) {
-          setError(result.error || 'Registration failed')
+          recordJoinFailure()
+          setError(result.error || GENERIC_AUTH_ERROR)
           setLoading(false)
           return
         }
+        clearJoinFailures()
         onAuthSuccess(result.user, result.unit, result.invite)
       }
       setLoading(false)
@@ -86,13 +97,10 @@ export default function JoinPage({
       <div className="card w-full max-w-md p-8">
         <div className="flex items-center justify-center gap-2 mb-2">
           <Home className="text-[#2d6a4f]" size={32} />
-          <h1 className="text-2xl font-bold text-[#2d6a4f]">Tenant portal</h1>
+          <h1 className="text-2xl font-bold text-[#2d6a4f]">Join as tenant</h1>
         </div>
-        <p className="text-center text-gray-500 mb-2 text-sm">
-          Your landlord invited you here — access your unit, rent, and lease.
-        </p>
-        <p className="text-center text-xs text-gray-400 mb-4">
-          Use the invite code from your landlord to create your account.
+        <p className="text-center text-gray-500 mb-6 text-sm">
+          Use the invite code from your landlord to access your unit and lease.
         </p>
 
         <div className="flex rounded-lg border mb-6 overflow-hidden text-sm">
@@ -114,7 +122,7 @@ export default function JoinPage({
           {mode === 'register' && (
             <>
               <div>
-                <label className="block text-sm font-medium mb-1">Invite code (from landlord)</label>
+                <label className="block text-sm font-medium mb-1">Invite code</label>
                 <input
                   className="w-full border rounded px-3 py-2 uppercase tracking-widest font-mono text-lg"
                   value={inviteCode}
@@ -123,9 +131,7 @@ export default function JoinPage({
                   required
                 />
                 {codeHint && (
-                  <p className={`text-xs mt-1 ${codeHint.startsWith('Code valid') ? 'text-green-600' : 'text-orange-600'}`}>
-                    {codeHint}
-                  </p>
+                  <p className="text-xs mt-1 text-green-600">{codeHint}</p>
                 )}
               </div>
               <div>
@@ -175,7 +181,7 @@ export default function JoinPage({
 
         <div className="mt-6 pt-4 border-t text-center">
           <p className="text-xs text-gray-400 flex items-center justify-center gap-1">
-            <MessageCircle size={14} /> Wrong amount? You can message your landlord after you join.
+            <MessageCircle size={14} /> Questions about your rent? Message your landlord after you join.
           </p>
         </div>
       </div>

@@ -1,22 +1,16 @@
 import { safeGet, safeSet } from './storage'
-import {
-  validateInviteCode,
-  markInviteUsed,
-} from './invites'
-import {
-  validateStaffInviteCode,
-  markStaffInviteUsed,
-  seedDemoStaffInvite,
-} from './staffInvites'
+import { validateInviteForRole, markInviteUsed, seedDemoInvites } from './invites'
+import { GENERIC_INVITE_ERROR, GENERIC_AUTH_ERROR } from './portalAuth'
 import { isDeployedApp } from './environment'
 import { normalizeInviteCode } from './routing'
+import type { Role } from './permissions'
 
 export type AppUser = {
   id: string
   email: string
   passwordHash?: string
   name: string
-  role: 'property_owner' | 'tenant' | 'housekeeper' | 'accountant'
+  role: Role
   authProvider?: 'email' | 'google'
   googleId?: string
   picture?: string
@@ -49,7 +43,6 @@ export const getUsers = (): AppUser[] => safeGet<AppUser[]>(USERS_KEY, [])
 
 export const saveUsers = (users: AppUser[]): void => safeSet(USERS_KEY, users)
 
-/** @deprecated use generateInviteCode from ./invites */
 export { generateInviteCode } from './invites'
 
 export const registerOwner = (
@@ -91,11 +84,13 @@ export const registerTenant = (
   unit?: Record<string, unknown>
   invite?: { ownerId: string; propertyId: string; unitId: string; code: string }
 } => {
-  if (!inviteCode?.trim()) return { ok: false, error: 'Invite code is required.' }
-  if (!password || password.length < 4) return { ok: false, error: 'Password must be at least 4 characters.' }
+  if (!inviteCode?.trim()) return { ok: false, error: GENERIC_INVITE_ERROR }
+  if (!password || password.length < 4) {
+    return { ok: false, error: 'Password must be at least 4 characters.' }
+  }
 
   const code = normalizeInviteCode(inviteCode)
-  const validation = validateInviteCode(code)
+  const validation = validateInviteForRole(code, 'tenant')
   if (!validation.ok) return { ok: false, error: validation.error }
 
   const { invite } = validation
@@ -103,14 +98,14 @@ export const registerTenant = (
     units.find((u) => String(u.id) === invite.unitId) ||
     units.find((u) => normalizeInviteCode(String(u.inviteCode || '')) === normalizeInviteCode(invite.code))
 
-  if (!unit) return { ok: false, error: 'Unit for this code was not found. Contact your landlord.' }
+  if (!unit) return { ok: false, error: GENERIC_INVITE_ERROR }
   if (unit.status === 'occupied' && unit.currentTenantId) {
-    return { ok: false, error: 'This unit already has a tenant assigned.' }
+    return { ok: false, error: GENERIC_INVITE_ERROR }
   }
 
   const users = getUsers()
   if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-    return { ok: false, error: 'Email already registered. Try Sign in instead.' }
+    return { ok: false, error: GENERIC_AUTH_ERROR }
   }
 
   const user: AppUser = {
@@ -127,26 +122,38 @@ export const registerTenant = (
   saveUsers([...users, user])
   markInviteUsed(invite.code, user.id)
 
-  return { ok: true, user, unit, invite }
+  return {
+    ok: true,
+    user,
+    unit,
+    invite: {
+      ownerId: invite.ownerId,
+      propertyId: String(invite.propertyId || unit.buildingId),
+      unitId: String(unit.id),
+      code: invite.code,
+    },
+  }
 }
 
-export const registerHousekeeper = (
+export const registerCaretaker = (
   email: string,
   password: string,
   name: string,
   inviteCode: string,
 ): { ok: boolean; error?: string; user?: AppUser } => {
-  if (!inviteCode?.trim()) return { ok: false, error: 'Invite code is required.' }
-  if (!password || password.length < 4) return { ok: false, error: 'Password must be at least 4 characters.' }
+  if (!inviteCode?.trim()) return { ok: false, error: GENERIC_INVITE_ERROR }
+  if (!password || password.length < 4) {
+    return { ok: false, error: 'Password must be at least 4 characters.' }
+  }
 
   const code = normalizeInviteCode(inviteCode)
-  const validation = validateStaffInviteCode(code)
+  const validation = validateInviteForRole(code, 'caretaker')
   if (!validation.ok) return { ok: false, error: validation.error }
 
   const { invite } = validation
   const users = getUsers()
   if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-    return { ok: false, error: 'Email already registered. Try Sign in instead.' }
+    return { ok: false, error: GENERIC_AUTH_ERROR }
   }
 
   const user: AppUser = {
@@ -154,14 +161,17 @@ export const registerHousekeeper = (
     email: email.trim().toLowerCase(),
     passwordHash: simpleHash(password),
     name: name.trim(),
-    role: 'housekeeper',
+    role: 'caretaker',
     ownerId: invite.ownerId,
   }
 
   saveUsers([...users, user])
-  markStaffInviteUsed(invite.code, user.id)
+  markInviteUsed(invite.code, user.id)
   return { ok: true, user }
 }
+
+/** @deprecated use registerCaretaker */
+export const registerHousekeeper = registerCaretaker
 
 export const login = (
   email: string,
@@ -169,9 +179,9 @@ export const login = (
 ): { ok: boolean; error?: string; user?: AppUser } => {
   const users = getUsers()
   const user = users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase())
-  if (!user) return { ok: false, error: 'Invalid email or password.' }
+  if (!user) return { ok: false, error: GENERIC_AUTH_ERROR }
   if (user.authProvider === 'google' && !user.passwordHash) {
-    return { ok: false, error: 'This account uses Google sign-in. Please click "Sign in with Google".' }
+    return { ok: false, error: GENERIC_AUTH_ERROR }
   }
   if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
     return { ok: false, error: 'Account temporarily locked. Try again later.' }
@@ -190,7 +200,7 @@ export const login = (
         : u,
     )
     saveUsers(updated)
-    return { ok: false, error: 'Invalid email or password.' }
+    return { ok: false, error: GENERIC_AUTH_ERROR }
   }
   const cleared = users.map((u) =>
     u.id === user.id ? { ...u, failedAttempts: 0, lockedUntil: null } : u,
@@ -204,7 +214,7 @@ export const loginOrRegisterWithGoogle = (
   role: 'property_owner' | 'tenant' = 'property_owner',
 ): { ok: boolean; error?: string; user?: AppUser; isNew?: boolean } => {
   if (!profile?.email || !profile?.sub) {
-    return { ok: false, error: 'Invalid Google account.' }
+    return { ok: false, error: GENERIC_AUTH_ERROR }
   }
   const users = getUsers()
   const email = profile.email.trim().toLowerCase()
@@ -230,11 +240,11 @@ export const loginOrRegisterWithGoogle = (
   }
 
   if (users.some((u) => u.email === email)) {
-    return { ok: false, error: 'This email is registered with a password. Sign in with email instead.' }
+    return { ok: false, error: GENERIC_AUTH_ERROR }
   }
 
   if (role === 'tenant') {
-    return { ok: false, error: 'Tenants must register with an invite code at /join' }
+    return { ok: false, error: GENERIC_INVITE_ERROR }
   }
 
   const id = `u-google-${Date.now()}`
@@ -272,7 +282,7 @@ export const seedDemoUsers = (): void => {
       email: 'keeper@demo.com',
       passwordHash: simpleHash('keeper123'),
       name: 'James Okello',
-      role: 'housekeeper',
+      role: 'caretaker',
       ownerId,
     },
     {
@@ -287,5 +297,5 @@ export const seedDemoUsers = (): void => {
       buildingId: 'b1',
     },
   ])
-  seedDemoStaffInvite(ownerId)
+  seedDemoInvites(ownerId)
 }

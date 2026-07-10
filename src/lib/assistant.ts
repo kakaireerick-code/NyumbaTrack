@@ -45,7 +45,7 @@ export const getSuggestedQuestions = (role: string): string[] => {
   if (r === 'tenant') {
     return ['How do I pay rent?', 'What do I owe?', 'How do I use my invite code?', 'My balance looks wrong', 'Who do I contact?']
   }
-  if (r === 'housekeeper') {
+  if (r === 'caretaker') {
     return ['How do I log maintenance?', 'What can I see?', 'Who do tenants call?']
   }
   return ['How do I add a unit?', 'How do I invite a tenant?', 'What can tenants see?', 'How do I record a payment?', 'How does subscription work?']

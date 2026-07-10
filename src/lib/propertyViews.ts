@@ -12,7 +12,6 @@ export const getTenantSafeUnit = (unit: Record<string, unknown> | null | undefin
   return safe
 }
 
-/** Tenant record safe for tenant portal — strips owner secrets and unshared documents */
 export const getTenantSafeTenantRecord = (record: Record<string, unknown> | null | undefined) => {
   if (!record) return null
   const {
@@ -47,45 +46,12 @@ export const getTenantSafeTenantRecord = (record: Record<string, unknown> | null
   return result
 }
 
+import { getCaretakerSafeRecord } from './permissions'
+
+export const getCaretakerSafeBuilding = getCaretakerSafeRecord
+export const getCaretakerSafeUnit = getCaretakerSafeRecord
+export const getCaretakerSafeTenant = getCaretakerSafeRecord
+
 export const getOwnerBuilding = (building: Record<string, unknown> | null | undefined) => building
-
 export const getOwnerUnit = (unit: Record<string, unknown> | null | undefined) => unit
-
 export const getOwnerTenant = (tenant: Record<string, unknown> | null | undefined) => tenant
-
-/** Strip rent, deposit, and payment-related fields for caretaker views */
-export const getCaretakerSafeUnit = (unit: Record<string, unknown> | null | undefined) => {
-  if (!unit) return null
-  const {
-    monthlyRent,
-    depositAmount,
-    ownerNotes,
-    inviteCode,
-    expenses,
-    maintenanceLog,
-    netYield,
-    ...safe
-  } = unit
-  return safe
-}
-
-export const getCaretakerSafeTenant = (tenant: Record<string, unknown> | null | undefined) => {
-  if (!tenant) return null
-  const {
-    rentAmount,
-    depositPaid,
-    depositAmount,
-    ownerNotes,
-    rating,
-    blacklisted,
-    blacklistReason,
-    ...safe
-  } = tenant
-  return safe
-}
-
-export const getCaretakerSafeBuilding = (building: Record<string, unknown> | null | undefined) => {
-  if (!building) return null
-  const { ownerNotes, expenses, maintenanceLog, netYield, ...safe } = building
-  return safe
-}

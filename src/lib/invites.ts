@@ -1,13 +1,17 @@
 import { safeGet, safeSet } from './storage'
-import { normalizeInviteCode, getJoinPath } from './routing'
+import { normalizeInviteCode, getJoinUrl } from './routing'
+import { GENERIC_INVITE_ERROR } from './portalAuth'
 
+export type InviteRole = 'tenant' | 'caretaker'
 export type InviteStatus = 'pending' | 'used' | 'revoked'
 
 export type InviteRecord = {
   code: string
+  role: InviteRole
   ownerId: string
-  propertyId: string
-  unitId: string
+  propertyId?: string
+  unitId?: string
+  scopeUnitIds?: string[]
   status: InviteStatus
   expiresAt?: string | null
   createdAt: string
@@ -15,29 +19,61 @@ export type InviteRecord = {
 }
 
 const INVITES_KEY = 'rt_invites'
+const LEGACY_STAFF_KEY = 'rt_staff_invites'
 
 const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-const PREFIXES = ['KLA', 'NTD', 'WKO', 'JIN', 'MBR', 'GUL', 'ENT']
+const TENANT_PREFIXES = ['KLA', 'NTD', 'WKO', 'JIN', 'MBR', 'GUL', 'ENT']
+const CARETAKER_PREFIX = 'CTR'
 
-export const generateInviteCode = (): string => {
-  const prefix = PREFIXES[Math.floor(Math.random() * PREFIXES.length)]
-  let suffix = ''
-  for (let i = 0; i < 4; i++) suffix += CHARS[Math.floor(Math.random() * CHARS.length)]
-  return `${prefix}-${suffix}`
+const randomSuffix = (len = 4): string => {
+  let s = ''
+  for (let i = 0; i < len; i++) s += CHARS[Math.floor(Math.random() * CHARS.length)]
+  return s
 }
 
-export const getInvites = (): InviteRecord[] => safeGet<InviteRecord[]>(INVITES_KEY, [])
+export const generateInviteCode = (role: InviteRole): string => {
+  if (role === 'caretaker') return `${CARETAKER_PREFIX}-${randomSuffix()}`
+  const prefix = TENANT_PREFIXES[Math.floor(Math.random() * TENANT_PREFIXES.length)]
+  return `${prefix}-${randomSuffix()}`
+}
+
+export const getInvites = (): InviteRecord[] => {
+  migrateLegacyStaffInvites()
+  return safeGet<InviteRecord[]>(INVITES_KEY, [])
+}
 
 export const saveInvites = (invites: InviteRecord[]): void => safeSet(INVITES_KEY, invites)
 
-export const getJoinUrl = (code: string): string => {
-  if (typeof window === 'undefined') return getJoinPath(code)
-  return `${window.location.origin}${getJoinPath(code)}`
+const migrateLegacyStaffInvites = (): void => {
+  const legacy = safeGet<Array<Record<string, unknown>>>(LEGACY_STAFF_KEY, [])
+  if (!legacy.length) return
+  const existing = safeGet<InviteRecord[]>(INVITES_KEY, [])
+  const codes = new Set(existing.map((i) => normalizeInviteCode(i.code)))
+  const migrated: InviteRecord[] = []
+  for (const row of legacy) {
+    const code = normalizeInviteCode(String(row.code || ''))
+    if (!code || codes.has(code)) continue
+    migrated.push({
+      code,
+      role: 'caretaker',
+      ownerId: String(row.ownerId || ''),
+      status: (row.status as InviteStatus) || 'pending',
+      expiresAt: (row.expiresAt as string) || null,
+      createdAt: String(row.createdAt || new Date().toISOString()),
+      usedByUserId: (row.usedByUserId as string) || null,
+    })
+    codes.add(code)
+  }
+  if (migrated.length) saveInvites([...existing, ...migrated])
+  safeSet(LEGACY_STAFF_KEY, [])
 }
 
-export const getShareTemplate = (code: string): string => {
-  const link = getJoinUrl(code)
-  return `Hi, use this link to view your rent and lease: ${link}. Your code is ${code}.`
+export const getShareTemplate = (role: InviteRole, code: string): string => {
+  const link = getJoinUrl(role, code)
+  if (role === 'caretaker') {
+    return `Hi, use this link to access your property portal: ${link}. Your code is ${code}.`
+  }
+  return `Hi, use this link to view your unit and lease: ${link}. Your code is ${code}.`
 }
 
 export const findInvite = (code: string): InviteRecord | undefined => {
@@ -46,23 +82,29 @@ export const findInvite = (code: string): InviteRecord | undefined => {
 }
 
 export const findInviteForUnit = (unitId: string): InviteRecord | undefined =>
-  getInvites().find((i) => i.unitId === unitId && i.status === 'pending')
+  getInvites().find((i) => i.role === 'tenant' && i.unitId === unitId && i.status === 'pending')
 
-export const createInviteForUnit = (
+export const findPendingCaretakerInviteForOwner = (ownerId: string): InviteRecord | undefined =>
+  getInvites().find((i) => i.role === 'caretaker' && i.ownerId === ownerId && i.status === 'pending')
+
+export const createTenantInviteForUnit = (
   ownerId: string,
   propertyId: string,
   unitId: string,
 ): InviteRecord => {
   const invites = getInvites()
   const revoked = invites.map((i) =>
-    i.unitId === unitId && i.status === 'pending' ? { ...i, status: 'revoked' as InviteStatus } : i,
+    i.unitId === unitId && i.role === 'tenant' && i.status === 'pending'
+      ? { ...i, status: 'revoked' as InviteStatus }
+      : i,
   )
-  let code = generateInviteCode()
+  let code = generateInviteCode('tenant')
   while (revoked.some((i) => normalizeInviteCode(i.code) === normalizeInviteCode(code))) {
-    code = generateInviteCode()
+    code = generateInviteCode('tenant')
   }
   const record: InviteRecord = {
     code,
+    role: 'tenant',
     ownerId,
     propertyId,
     unitId,
@@ -75,46 +117,83 @@ export const createInviteForUnit = (
   return record
 }
 
-export const regenerateInvite = (
+export const createCaretakerInvite = (ownerId: string, propertyId?: string): InviteRecord => {
+  const invites = getInvites()
+  const revoked = invites.map((i) =>
+    i.ownerId === ownerId && i.role === 'caretaker' && i.status === 'pending'
+      ? { ...i, status: 'revoked' as InviteStatus }
+      : i,
+  )
+  let code = generateInviteCode('caretaker')
+  while (revoked.some((i) => normalizeInviteCode(i.code) === normalizeInviteCode(code))) {
+    code = generateInviteCode('caretaker')
+  }
+  const record: InviteRecord = {
+    code,
+    role: 'caretaker',
+    ownerId,
+    propertyId,
+    status: 'pending',
+    expiresAt: null,
+    createdAt: new Date().toISOString(),
+    usedByUserId: null,
+  }
+  saveInvites([...revoked, record])
+  return record
+}
+
+export const regenerateTenantInvite = (
   ownerId: string,
   propertyId: string,
   unitId: string,
   oldCode?: string,
 ): InviteRecord => {
   const invites = getInvites().map((i) => {
-    if (i.unitId !== unitId) return i
+    if (i.unitId !== unitId || i.role !== 'tenant') return i
     if (oldCode && normalizeInviteCode(i.code) !== normalizeInviteCode(oldCode)) return i
     return { ...i, status: 'revoked' as InviteStatus }
   })
   saveInvites(invites)
-  return createInviteForUnit(ownerId, propertyId, unitId)
+  return createTenantInviteForUnit(ownerId, propertyId, unitId)
+}
+
+export const regenerateCaretakerInvite = (ownerId: string, oldCode?: string): InviteRecord => {
+  const invites = getInvites().map((i) => {
+    if (i.ownerId !== ownerId || i.role !== 'caretaker') return i
+    if (oldCode && normalizeInviteCode(i.code) !== normalizeInviteCode(oldCode)) return i
+    return { ...i, status: 'revoked' as InviteStatus }
+  })
+  saveInvites(invites)
+  return createCaretakerInvite(ownerId)
 }
 
 export type ValidateInviteResult =
   | { ok: true; invite: InviteRecord }
   | { ok: false; error: string }
 
-export const validateInviteCode = (code: string): ValidateInviteResult => {
+export const validateInviteForRole = (
+  code: string,
+  expectedRole: InviteRole,
+): ValidateInviteResult => {
   const norm = normalizeInviteCode(code)
   if (!norm || norm.length < 6) {
-    return { ok: false, error: 'Enter the invite code from your landlord (e.g. KLA-7F2G).' }
-  }
-  if (norm.startsWith('STF')) {
-    return { ok: false, error: 'This code is not valid for tenant registration. Check the link your landlord sent.' }
+    return { ok: false, error: GENERIC_INVITE_ERROR }
   }
   const invite = findInvite(norm)
-  if (!invite) return { ok: false, error: 'Invalid invite code. Ask your landlord for a new link or code.' }
-  if (invite.status === 'revoked') {
-    return { ok: false, error: 'This code was replaced. Ask your landlord for the latest code.' }
-  }
-  if (invite.status === 'used') {
-    return { ok: false, error: 'This code was already used. Ask your landlord for a new code if you moved in.' }
+  if (!invite) return { ok: false, error: GENERIC_INVITE_ERROR }
+  if (invite.role !== expectedRole) return { ok: false, error: GENERIC_INVITE_ERROR }
+  if (invite.status === 'revoked' || invite.status === 'used') {
+    return { ok: false, error: GENERIC_INVITE_ERROR }
   }
   if (invite.expiresAt && new Date(invite.expiresAt) < new Date()) {
-    return { ok: false, error: 'This invite code has expired. Contact your landlord.' }
+    return { ok: false, error: GENERIC_INVITE_ERROR }
   }
   return { ok: true, invite }
 }
+
+/** @deprecated use validateInviteForRole(code, 'tenant') */
+export const validateInviteCode = (code: string): ValidateInviteResult =>
+  validateInviteForRole(code, 'tenant')
 
 export const markInviteUsed = (code: string, userId: string): void => {
   const norm = normalizeInviteCode(code)
@@ -127,7 +206,6 @@ export const markInviteUsed = (code: string, userId: string): void => {
   )
 }
 
-/** Sync legacy unit.inviteCode fields into invite store */
 export const syncInvitesFromUnits = (
   units: Array<Record<string, unknown>>,
   buildings: Array<Record<string, unknown>>,
@@ -146,6 +224,7 @@ export const syncInvitesFromUnits = (
     const ownerId = String(unit.ownerId || building?.ownerId || defaultOwnerId)
     added.push({
       code: norm.includes('-') ? norm : raw.toUpperCase(),
+      role: 'tenant',
       ownerId,
       propertyId: String(unit.buildingId),
       unitId: String(unit.id),
@@ -159,5 +238,31 @@ export const syncInvitesFromUnits = (
   if (added.length) saveInvites([...existing, ...added])
 }
 
-/** v2: custom subdomain per owner (enterprise) — not implemented in v1 */
-/** v2: QR code on printable tenant welcome card — not implemented in v1 */
+export const seedDemoInvites = (ownerId: string): void => {
+  const existing = getInvites()
+  if (existing.some((i) => i.ownerId === ownerId)) return
+  saveInvites([
+    ...existing,
+    {
+      code: 'CTR-DEMO',
+      role: 'caretaker',
+      ownerId,
+      status: 'used',
+      createdAt: new Date().toISOString(),
+      usedByUserId: 'u-house-demo',
+    },
+    {
+      code: 'CTR-NEW1',
+      role: 'caretaker',
+      ownerId,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      usedByUserId: null,
+    },
+  ])
+}
+
+// Back-compat exports for existing imports
+export const createInviteForUnit = createTenantInviteForUnit
+export const regenerateInvite = regenerateTenantInvite
+export { getJoinUrl } from './routing'

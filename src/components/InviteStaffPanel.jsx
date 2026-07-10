@@ -1,33 +1,33 @@
 import React, { useState } from 'react'
 import { Copy, Link2, RefreshCw, Wrench } from 'lucide-react'
 import {
-  getStaffJoinUrl,
-  getStaffShareTemplate,
-  regenerateStaffInvite,
-  findPendingStaffInviteForOwner,
-  createStaffInvite,
-} from '../lib/staffInvites'
+  getJoinUrl,
+  getShareTemplate,
+  regenerateCaretakerInvite,
+  findPendingCaretakerInviteForOwner,
+  createCaretakerInvite,
+} from '../lib/invites'
 
-export default function InviteStaffPanel({ ownerId, showToast }) {
+export default function InviteStaffPanel({ ownerId, showToast, propertyId }) {
   const [code, setCode] = useState(() => {
-    const inv = findPendingStaffInviteForOwner(ownerId)
+    const inv = findPendingCaretakerInviteForOwner(ownerId)
     return inv?.code || ''
   })
 
   if (!ownerId) return null
 
   const ensureCode = () => {
-    let inv = findPendingStaffInviteForOwner(ownerId)
+    let inv = findPendingCaretakerInviteForOwner(ownerId)
     if (!inv) {
-      inv = createStaffInvite(ownerId)
+      inv = createCaretakerInvite(ownerId, propertyId)
     }
     setCode(inv.code)
     return inv.code
   }
 
   const activeCode = code || ensureCode()
-  const link = getStaffJoinUrl(activeCode)
-  const template = getStaffShareTemplate(activeCode)
+  const link = getJoinUrl('caretaker', activeCode)
+  const template = getShareTemplate('caretaker', activeCode)
 
   const copy = async (text, label) => {
     try {
@@ -39,9 +39,9 @@ export default function InviteStaffPanel({ ownerId, showToast }) {
   }
 
   const handleRegenerate = () => {
-    const inv = regenerateStaffInvite(ownerId, activeCode)
+    const inv = regenerateCaretakerInvite(ownerId, activeCode)
     setCode(inv.code)
-    showToast?.('New caretaker code generated — old link no longer works', 'success')
+    showToast?.('New code generated — old link no longer works', 'success')
   }
 
   return (
@@ -58,7 +58,7 @@ export default function InviteStaffPanel({ ownerId, showToast }) {
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => copy(link, 'Caretaker link')}
+          onClick={() => copy(link, 'Link')}
           className="flex items-center gap-1 px-3 py-2 text-xs bg-orange-600 text-white rounded"
         >
           <Link2 size={14} /> Copy caretaker link

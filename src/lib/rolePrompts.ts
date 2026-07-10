@@ -33,7 +33,7 @@ const TENANT_STEPS: TourStep[] = [
   { title: 'Get help', description: 'Open Help or Ask Assistant if something looks wrong. No jargon — just answers.', icon: 'HelpCircle' },
 ]
 
-const HOUSEKEEPER_STEPS: TourStep[] = [
+const CARETAKER_STEPS: TourStep[] = [
   { title: 'Caretaker access', description: 'You can view units, vacancy, maintenance, and tenant contact details — not financial records.', icon: 'Wrench' },
   { title: 'Units & vacancy', description: 'See which units are occupied, vacant, or under repair.', icon: 'DoorOpen' },
   { title: 'Log maintenance', description: 'Report and update repair issues for your assigned properties.', icon: 'Wrench' },
@@ -43,33 +43,24 @@ const HOUSEKEEPER_STEPS: TourStep[] = [
 export const getTourSteps = (role: string): TourStep[] => {
   const r = normalizeRole(role)
   if (r === 'tenant') return TENANT_STEPS
-  if (r === 'housekeeper') return HOUSEKEEPER_STEPS
+  if (r === 'caretaker') return CARETAKER_STEPS
   return OWNER_STEPS
 }
 
 export const ROLE_LOGIN_HINTS: Record<string, string> = {
   property_owner: 'Set up properties and units, then share join links with tenants.',
-  admin: 'Set up properties and units, then share join links with tenants.',
   tenant: 'Use the invite code from your landlord to access your unit.',
-  housekeeper: 'View units and maintenance for properties you care for.',
   caretaker: 'View units and maintenance for properties you care for.',
-  accountant: 'Track payments, balances, and reports for the owner.',
 }
 
 export const ROLE_LABELS: Record<string, string> = {
   property_owner: 'Property Owner',
-  admin: 'Property Owner',
   tenant: 'Tenant',
-  housekeeper: 'Housekeeper',
-  caretaker: 'Housekeeper',
-  accountant: 'Accountant',
+  caretaker: 'Caretaker',
 }
 
 export const ROLE_BADGE_CLASS: Record<string, string> = {
   property_owner: 'bg-[#2d6a4f] text-white',
-  admin: 'bg-[#2d6a4f] text-white',
   tenant: 'bg-blue-600 text-white',
-  housekeeper: 'bg-orange-600 text-white',
   caretaker: 'bg-orange-600 text-white',
-  accountant: 'bg-purple-600 text-white',
 }

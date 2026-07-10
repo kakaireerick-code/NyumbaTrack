@@ -1,11 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Copy, Link2, RefreshCw, MessageCircle } from 'lucide-react'
 import {
   getJoinUrl,
   getShareTemplate,
-  regenerateInvite,
+  regenerateTenantInvite,
   findInviteForUnit,
-  createInviteForUnit,
+  createTenantInviteForUnit,
 } from '../lib/invites'
 
 export default function InviteTenantPanel({
@@ -26,7 +26,7 @@ export default function InviteTenantPanel({
   const ensureCode = () => {
     let inv = findInviteForUnit(unit.id)
     if (!inv || inv.status !== 'pending') {
-      inv = createInviteForUnit(ownerId, String(unit.buildingId), String(unit.id))
+      inv = createTenantInviteForUnit(ownerId, String(unit.buildingId), String(unit.id))
       onCodeChange?.(inv.code)
     }
     setCode(inv.code)
@@ -34,8 +34,8 @@ export default function InviteTenantPanel({
   }
 
   const activeCode = code || ensureCode()
-  const link = getJoinUrl(activeCode)
-  const template = getShareTemplate(activeCode)
+  const link = getJoinUrl('tenant', activeCode)
+  const template = getShareTemplate('tenant', activeCode)
 
   const copy = async (text, label) => {
     try {
@@ -47,7 +47,7 @@ export default function InviteTenantPanel({
   }
 
   const handleRegenerate = () => {
-    const inv = regenerateInvite(ownerId, String(unit.buildingId), String(unit.id), activeCode)
+    const inv = regenerateTenantInvite(ownerId, String(unit.buildingId), String(unit.id), activeCode)
     setCode(inv.code)
     onCodeChange?.(inv.code)
     showToast?.('New code generated — old link no longer works', 'success')
@@ -79,7 +79,7 @@ export default function InviteTenantPanel({
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => copy(link, 'Tenant link')}
+          onClick={() => copy(link, 'Link')}
           className="flex items-center gap-1 px-3 py-2 text-xs bg-[#2d6a4f] text-white rounded"
         >
           <Link2 size={14} /> Copy tenant link
@@ -96,7 +96,7 @@ export default function InviteTenantPanel({
           onClick={() => copy(template, 'Message')}
           className="flex items-center gap-1 px-3 py-2 text-xs border rounded"
         >
-          <Copy size={14} /> Copy WhatsApp text
+          <Copy size={14} /> Copy message
         </button>
         <button
           type="button"

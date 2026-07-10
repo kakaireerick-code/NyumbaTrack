@@ -1,4 +1,5 @@
 import { TRIAL_PLAN, getPlanById } from '../data/subscriptionPlans'
+import { normalizeRole } from '../lib/permissions'
 
 export const isSubscriptionActive = (sub) => {
   if (!sub) return false
@@ -78,7 +79,7 @@ export const getActiveEndDate = (sub) => {
 }
 
 export const needsSubscription = (role) =>
-  role === 'admin' || role === 'property_owner' || role === 'accountant'
+  normalizeRole(role || '') === 'property_owner'
 
 export const checkUnitLimit = (sub, unitCount) => {
   const plan = getPlanById(sub?.planId)

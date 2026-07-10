@@ -1,44 +1,32 @@
 import { isDeployedApp } from './environment'
-import { isOwnerLoginRole, normalizeRole } from './permissions'
+import { normalizeRole, type Role } from './permissions'
 
-export type PortalKind = 'owner' | 'tenant' | 'staff'
+export type PortalKind = 'owner' | 'tenant' | 'caretaker'
 
 export type PortalSignInResult = { ok: true } | { ok: false; error: string }
 
-const OWNER_ONLY_MSG = 'This sign-in is for property owners only.'
-const TENANT_ONLY_MSG = 'This portal is for tenants. Use the link your landlord sent you.'
-const STAFF_ONLY_MSG = 'This portal is for property caretakers. Use the link your employer sent you.'
+/** Neutral message — never reveals other roles or portals */
+export const GENERIC_AUTH_ERROR = 'Invalid email or password.'
+export const GENERIC_INVITE_ERROR = 'Invalid or expired invite. Check the link you received or request a new one.'
 
-/**
- * Validates that an authenticated user may sign in at a given portal.
- * On deployed builds, roles are strictly isolated — owners cannot use tenant/caretaker portals.
- */
-export const validatePortalSignIn = (portal: PortalKind, role: string): PortalSignInResult => {
-  const normalized = normalizeRole(role || '')
-
-  if (portal === 'owner') {
-    if (!isOwnerLoginRole(role)) {
-      return { ok: false, error: OWNER_ONLY_MSG }
-    }
-    return { ok: true }
-  }
-
-  if (portal === 'tenant') {
-    if (normalized !== 'tenant') {
-      return { ok: false, error: TENANT_ONLY_MSG }
-    }
-    return { ok: true }
-  }
-
-  if (portal === 'staff') {
-    if (normalized !== 'housekeeper') {
-      return { ok: false, error: STAFF_ONLY_MSG }
-    }
-    return { ok: true }
-  }
-
-  return { ok: false, error: 'Invalid portal.' }
+const portalExpectedRole = (portal: PortalKind): Role => {
+  if (portal === 'owner') return 'property_owner'
+  if (portal === 'tenant') return 'tenant'
+  return 'caretaker'
 }
 
-/** Demo accounts and hints are for local development only. */
+/**
+ * Validates sign-in at a role-locked portal.
+ * Wrong role always gets the same generic error (no cross-portal hints).
+ */
+export const validatePortalSignIn = (portal: PortalKind, role: string): PortalSignInResult => {
+  const expected = portalExpectedRole(portal)
+  const actual = normalizeRole(role || '')
+  if (actual !== expected) {
+    return { ok: false, error: GENERIC_AUTH_ERROR }
+  }
+  return { ok: true }
+}
+
+/** Demo accounts and hints — local development only */
 export const showDemoCredentials = (): boolean => !isDeployedApp()

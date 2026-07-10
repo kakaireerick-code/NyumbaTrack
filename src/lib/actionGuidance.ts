@@ -160,7 +160,7 @@ export const getPageGuidance = (
     }
   }
 
-  if (r === 'housekeeper' && pageId === 'maintenance') {
+  if (r === 'caretaker' && pageId === 'maintenance') {
     return {
       variant: 'info',
       headline: 'Log and update repairs',

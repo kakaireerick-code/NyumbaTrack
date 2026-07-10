@@ -5,8 +5,8 @@ export const DEMO_OWNER_ID = 'u-owner-demo'
 export const getOwnerIdForUser = (user: Record<string, unknown> | null | undefined): string | null => {
   if (!user) return null
   if (user.role === 'tenant') return String(user.ownerId || '')
-  if (user.role === 'housekeeper' || user.role === 'accountant') {
-    return String(user.ownerId || user.employerId || DEMO_OWNER_ID)
+  if (user.role === 'caretaker') {
+    return String(user.ownerId || DEMO_OWNER_ID)
   }
   return String(user.id || '')
 }

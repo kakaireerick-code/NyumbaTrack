@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { Wrench, Eye, EyeOff } from 'lucide-react'
-import { seedDemoUsers, registerHousekeeper, login } from '../lib/auth'
-import { validateStaffInviteCode } from '../lib/staffInvites'
+import { seedDemoUsers, registerCaretaker, login } from '../lib/auth'
+import { validateInviteForRole } from '../lib/invites'
 import { normalizeInviteCode } from '../lib/routing'
-import { validatePortalSignIn, showDemoCredentials } from '../lib/portalAuth'
+import { validatePortalSignIn, showDemoCredentials, GENERIC_AUTH_ERROR } from '../lib/portalAuth'
+import { checkJoinRateLimit, recordJoinFailure, clearJoinFailures } from '../lib/joinRateLimit'
 
-export default function StaffJoinPage({ initialCode = '', onAuthSuccess }) {
+export default function CaretakerJoinPage({ initialCode = '', onAuthSuccess }) {
   const [mode, setMode] = useState('register')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -29,37 +30,47 @@ export default function StaffJoinPage({ initialCode = '', onAuthSuccess }) {
       setCodeHint('')
       return
     }
-    const v = validateStaffInviteCode(inviteCode)
-    setCodeHint(v.ok ? 'Code valid — you can create your caretaker account' : v.error)
+    const v = validateInviteForRole(inviteCode, 'caretaker')
+    setCodeHint(v.ok ? 'Code accepted' : '')
   }, [inviteCode])
 
   const handleSubmit = (e) => {
     e.preventDefault()
     setError('')
+    const limit = checkJoinRateLimit()
+    if (!limit.ok) {
+      setError(limit.error)
+      return
+    }
     setLoading(true)
 
     setTimeout(() => {
       if (mode === 'signin') {
         const result = login(email, password)
         if (!result.ok) {
-          setError(result.error || 'Login failed')
+          recordJoinFailure()
+          setError(GENERIC_AUTH_ERROR)
           setLoading(false)
           return
         }
-        const portalCheck = validatePortalSignIn('staff', result.user?.role || '')
+        const portalCheck = validatePortalSignIn('caretaker', result.user?.role || '')
         if (!portalCheck.ok) {
+          recordJoinFailure()
           setError(portalCheck.error)
           setLoading(false)
           return
         }
+        clearJoinFailures()
         onAuthSuccess(result.user)
       } else {
-        const result = registerHousekeeper(email, password, name, inviteCode)
+        const result = registerCaretaker(email, password, name, inviteCode)
         if (!result.ok) {
-          setError(result.error || 'Registration failed')
+          recordJoinFailure()
+          setError(result.error || GENERIC_AUTH_ERROR)
           setLoading(false)
           return
         }
+        clearJoinFailures()
         onAuthSuccess(result.user)
       }
       setLoading(false)
@@ -71,10 +82,10 @@ export default function StaffJoinPage({ initialCode = '', onAuthSuccess }) {
       <div className="card w-full max-w-md p-8">
         <div className="flex items-center justify-center gap-2 mb-2">
           <Wrench className="text-orange-600" size={32} />
-          <h1 className="text-2xl font-bold text-orange-700">Caretaker portal</h1>
+          <h1 className="text-2xl font-bold text-orange-700">Join as caretaker</h1>
         </div>
         <p className="text-center text-gray-500 mb-6 text-sm">
-          Your property owner invited you here to manage units and maintenance.
+          Use the invite code from your property owner to manage units and maintenance.
         </p>
 
         <div className="flex rounded-lg border mb-6 overflow-hidden text-sm">
@@ -96,19 +107,15 @@ export default function StaffJoinPage({ initialCode = '', onAuthSuccess }) {
           {mode === 'register' && (
             <>
               <div>
-                <label className="block text-sm font-medium mb-1">Invite code (from owner)</label>
+                <label className="block text-sm font-medium mb-1">Invite code</label>
                 <input
                   className="w-full border rounded px-3 py-2 uppercase tracking-widest font-mono text-lg"
                   value={inviteCode}
                   onChange={(e) => setInviteCode(normalizeInviteCode(e.target.value))}
-                  placeholder="STF-7F2G"
+                  placeholder="CTR-7F2G"
                   required
                 />
-                {codeHint && (
-                  <p className={`text-xs mt-1 ${codeHint.startsWith('Code valid') ? 'text-green-600' : 'text-orange-600'}`}>
-                    {codeHint}
-                  </p>
-                )}
+                {codeHint && <p className="text-xs mt-1 text-green-600">{codeHint}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Full name</label>
@@ -150,7 +157,7 @@ export default function StaffJoinPage({ initialCode = '', onAuthSuccess }) {
             disabled={loading}
             className="w-full py-2.5 rounded text-white font-medium disabled:opacity-50 bg-orange-600"
           >
-            {loading ? 'Please wait...' : mode === 'signin' ? 'Sign in' : 'Join as caretaker'}
+            {loading ? 'Please wait...' : mode === 'signin' ? 'Sign in' : 'Create account'}
           </button>
         </form>
       </div>

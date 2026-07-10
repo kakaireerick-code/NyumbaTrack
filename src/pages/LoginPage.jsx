@@ -3,10 +3,10 @@ import { Home, Eye, EyeOff } from 'lucide-react'
 import { seedDemoUsers, registerOwner, login, loginOrRegisterWithGoogle } from '../lib/auth'
 import GoogleSignInButton from '../components/GoogleSignInButton'
 import { isOwnerLoginRole } from '../lib/permissions'
-import { validatePortalSignIn, showDemoCredentials } from '../lib/portalAuth'
+import { validatePortalSignIn, showDemoCredentials, GENERIC_AUTH_ERROR } from '../lib/portalAuth'
 
-export default function LoginPage({ onAuthSuccess }) {
-  const [mode, setMode] = useState('signin')
+export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
+  const [mode, setMode] = useState(initialMode === 'signup' ? 'register-owner' : 'signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -26,7 +26,7 @@ export default function LoginPage({ onAuthSuccess }) {
       return
     }
     if (!isOwnerLoginRole(result.user?.role || '')) {
-      setError('This sign-in is for property owners only.')
+      setError(GENERIC_AUTH_ERROR)
       return
     }
     const portalCheck = validatePortalSignIn('owner', result.user?.role || '')
@@ -46,12 +46,12 @@ export default function LoginPage({ onAuthSuccess }) {
       if (mode === 'signin') {
         const result = login(email, password)
         if (!result.ok) {
-          setError(result.error || 'Login failed')
+          setError(GENERIC_AUTH_ERROR)
           setLoading(false)
           return
         }
         if (!isOwnerLoginRole(result.user?.role || '')) {
-          setError('This sign-in is for property owners only.')
+          setError(GENERIC_AUTH_ERROR)
           setLoading(false)
           return
         }
