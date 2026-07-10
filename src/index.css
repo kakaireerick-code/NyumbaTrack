@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --primary: #2d6a4f;
   --accent: #40916c;
@@ -7,6 +9,27 @@
   --danger: #d62828;
   --sidebar: #1a2e1a;
   --bg: #f8f9fa;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --text-subtle: #9ca3af;
+  --text-on-card: #1f2937;
+  --border-color: #e5e7eb;
+  --input-bg: #ffffff;
+  --input-text: #111827;
+}
+
+.dark,
+.dark :root {
+  --bg: #121212;
+  --text-primary: #f3f4f6;
+  --text-secondary: #e5e7eb;
+  --text-muted: #d1d5db;
+  --text-subtle: #9ca3af;
+  --text-on-card: #f3f4f6;
+  --border-color: #374151;
+  --input-bg: #374151;
+  --input-text: #f3f4f6;
 }
 
 * {
@@ -17,20 +40,72 @@ body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
 }
 
 .dark body,
 body.dark {
-  --bg: #121212;
   background: #121212;
-  color: #e5e5e5;
+  color: var(--text-primary);
 }
 
 .dark .card,
 body.dark .card {
   background: #1e1e1e;
-  color: #e5e5e5;
+  color: var(--text-on-card);
+}
+
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: var(--text-primary);
+}
+
+.dark label {
+  color: var(--text-secondary);
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  color: var(--input-text);
+  background-color: var(--input-bg);
+  border-color: var(--border-color);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--text-subtle);
+}
+
+.dark table th {
+  color: var(--text-secondary);
+}
+
+.dark table td {
+  color: var(--text-primary);
+}
+
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700 {
+  color: var(--text-primary);
+}
+
+.dark .text-gray-600 {
+  color: var(--text-secondary);
+}
+
+.dark .text-gray-500 {
+  color: var(--text-muted);
+}
+
+.dark .text-gray-400 {
+  color: var(--text-subtle);
 }
 
 .badge {
@@ -46,6 +121,7 @@ body.dark .card {
   background: white;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  color: var(--text-on-card);
 }
 
 .table-scroll {
