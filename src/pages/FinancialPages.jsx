@@ -13,9 +13,7 @@ import { generateReceiptNo } from '../utils/receipts'
 import { CHECKLIST_ITEMS } from '../data/mockData'
 import { Modal, Badge, EmptyState, LoadingButton, StatCard } from '../components/UI'
 
-const inputCls = 'w-full border rounded px-3 py-2 dark:bg-gray-700 dark:border-gray-600'
-const btnPrimary = 'px-4 py-2 bg-[#2d6a4f] text-white rounded hover:opacity-90'
-const btnSecondary = 'px-4 py-2 border rounded dark:border-gray-600'
+import { inputCls, btnPrimary, btnSecondary } from '../lib/formStyles'
 
 function lookupTenant(tenants, id) {
   return tenants.find((t) => t.id === id)

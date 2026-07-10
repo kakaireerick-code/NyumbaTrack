@@ -62,6 +62,7 @@ import { addNotification } from './lib/notifications'
 import { countUnreadForOwner } from './lib/messages'
 import { getUsers, saveUsers } from './lib/auth'
 import { isoToday } from './lib/dates'
+import { getStoredTheme, persistTheme } from './lib/theme'
 import {
   initialBuildings,
   initialUnits,
@@ -99,7 +100,7 @@ function AppContent() {
   const [currentUser, setCurrentUser] = useState({ name: '', building: '' })
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 768)
-  const [theme, setTheme] = useState('light')
+  const [theme, setTheme] = useState(getStoredTheme)
   const [selectedBuilding, setSelectedBuilding] = useState(null)
   const [selectedUnit, setSelectedUnit] = useState(null)
   const [selectedTenant, setSelectedTenant] = useState(null)
@@ -133,8 +134,7 @@ function AppContent() {
   const [paymentFormOpen, setPaymentFormOpen] = useState(false)
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-    document.body.classList.toggle('dark', theme === 'dark')
+    persistTheme(theme)
   }, [theme])
 
   useEffect(() => {

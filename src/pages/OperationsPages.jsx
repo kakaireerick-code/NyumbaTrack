@@ -14,9 +14,7 @@ import DataQualityBadge from '../components/DataQualityBadge'
 import { computeDataQuality, displayTenantName, DATA_SOURCE_LABELS } from '../lib/tenantData'
 import { canSeeFinancials, canViewMaintenanceCost, filterMaintenanceForRole } from '../lib/permissions'
 
-const inputCls = 'w-full border rounded px-3 py-2 dark:bg-gray-700 dark:border-gray-600'
-const btnPrimary = 'px-4 py-2 bg-[#2d6a4f] text-white rounded hover:opacity-90'
-const btnSecondary = 'px-4 py-2 border rounded dark:border-gray-600'
+import { inputCls, btnPrimary, btnSecondary } from '../lib/formStyles'
 
 function lookupUnit(units, id) {
   return units.find((u) => u.id === id)

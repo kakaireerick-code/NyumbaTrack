@@ -71,7 +71,7 @@ export default function Header({
             <button
               type="button"
               onClick={onToggleDemoMode}
-              className={`px-2 py-1.5 text-xs rounded border ${demoMode ? 'bg-yellow-100 border-yellow-500 text-yellow-800' : 'border-gray-300 text-gray-600'}`}
+              className={`px-2 py-1.5 text-xs rounded border ${demoMode ? 'bg-yellow-100 border-yellow-500 text-yellow-800 dark:bg-yellow-900/40 dark:border-yellow-600 dark:text-yellow-200' : 'border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300'}`}
               title="Practice with sample data"
             >
               Demo {demoMode ? 'ON' : 'OFF'}

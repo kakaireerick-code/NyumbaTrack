@@ -14,9 +14,7 @@ import InviteStaffPanel from '../components/InviteStaffPanel'
 import { canManagePortfolio } from '../lib/permissions'
 import { Badge, EmptyState, LoadingButton, StatCard } from '../components/UI'
 
-const inputCls = 'w-full border rounded px-3 py-2 dark:bg-gray-700 dark:border-gray-600'
-const btnPrimary = 'px-4 py-2 bg-[#2d6a4f] text-white rounded hover:opacity-90'
-const btnSecondary = 'px-4 py-2 border rounded dark:border-gray-600'
+import { inputCls, btnPrimary, btnSecondary } from '../lib/formStyles'
 
 const LTA_SUMMARY = `Key tenant rights under Uganda's Landlord and Tenant Act 2019:
 - 2 months notice required for rent increases
