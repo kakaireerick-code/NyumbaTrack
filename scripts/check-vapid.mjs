@@ -23,10 +23,24 @@ const checkOnce = async () => {
           console.log('  hint: set UPSTASH_REDIS_REST_URL + TOKEN on Vercel, then redeploy')
           ok = false
         }
-        if (!data.vapid) {
-          console.log('  hint: run .\\SETUP-VAPID.ps1 or npm run setup:vapid with VERCEL_TOKEN')
-          ok = false
+      if (!data.vapid) {
+        console.log('  hint: run .\\SETUP-VAPID.ps1 or npm run setup:vapid with VERCEL_TOKEN')
+        if (data.vapidEnv) {
+          const labels = {
+            publicKey: 'VAPID_PUBLIC_KEY',
+            privateKey: 'VAPID_PRIVATE_KEY',
+            subject: 'VAPID_SUBJECT',
+          }
+          const missing = Object.entries(data.vapidEnv)
+            .filter(([, v]) => !v)
+            .map(([k]) => labels[k] || k)
+          if (missing.length) {
+            console.log(`  missing on server: ${missing.join(', ')}`)
+            console.log('  fix: Vercel → nyumbatrack → Env Variables → Production → Redeploy')
+          }
         }
+        ok = false
+      }
         continue
       }
 
