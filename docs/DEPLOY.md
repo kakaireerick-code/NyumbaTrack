@@ -53,6 +53,31 @@ On push to `main`, `.github/workflows/deploy.yml` builds and deploys. If secrets
 
 You can also trigger manually: **Actions → Deploy to Vercel → Run workflow**.
 
+### Automatic ship (cloud agents + owner PC)
+
+After an agent pushes a `cursor/*-ae35` branch:
+
+1. **CI** runs tests on the branch (`.github/workflows/ci.yml`).
+2. When CI succeeds, **Auto-ship to production** (`.github/workflows/auto-ship.yml`) can merge the open PR into `main`.
+3. Merge to `main` triggers **Deploy to Vercel** automatically.
+4. Verify: `npm run ops:guardrail` (expect **8/8**).
+
+**Owner PC — one command after agent work:**
+
+```powershell
+.\SHIP-TO-PRODUCTION.ps1 -Branch cursor/your-feature-ae35
+# or
+.\SHIP-TO-PRODUCTION.ps1 -PrNumber 48
+```
+
+**Cloud agent — end of turn:**
+
+```bash
+node scripts/ship-to-production.mjs --branch cursor/your-feature-ae35
+```
+
+Manual workflow: **Actions → Auto-ship to production → Run workflow** (optional PR number).
+
 Copy the same billing env vars from Option A into the Vercel project (Actions deploy uses Vercel project env).
 
 ## Local preview (always has latest code)

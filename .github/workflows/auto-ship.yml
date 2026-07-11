@@ -1,0 +1,120 @@
+# Merge an agent PR to main after CI passes, then verify production deploy.
+# Trigger manually: Actions → Auto-ship to production → Run workflow (optional PR number).
+# Cloud agents can also run: node scripts/ship-to-production.mjs --branch cursor/foo-ae35
+
+name: Auto-ship to production
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to merge (optional if branch is set)
+        required: false
+        type: string
+      branch:
+        description: Head branch to find PR and merge
+        required: false
+        type: string
+        default: ''
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: auto-ship-${{ github.event.workflow_run.head_branch || github.event.inputs.branch || 'manual' }}
+  cancel-in-progress: false
+
+jobs:
+  auto-merge:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'cursor/') &&
+       endsWith(github.event.workflow_run.head_branch, '-ae35'))
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.meta.outputs.skip }}
+      pr: ${{ steps.meta.outputs.pr }}
+    steps:
+      - name: Resolve branch and PR
+        id: meta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_PR: ${{ github.event.inputs.pr_number }}
+          INPUT_BRANCH: ${{ github.event.inputs.branch }}
+          RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          BRANCH="${INPUT_BRANCH:-$RUN_BRANCH}"
+          PR="${INPUT_PR:-}"
+
+          if [ -z "$PR" ] && [ -n "$BRANCH" ]; then
+            PR=$(gh pr list --head "$BRANCH" --base main --state open --json number -q '.[0].number' || true)
+          fi
+
+          if [ -z "$PR" ]; then
+            echo "No open PR to merge (branch=${BRANCH:-none})."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "Merging PR #$PR (branch: $BRANCH)"
+
+      - name: Merge pull request
+        if: steps.meta.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ steps.meta.outputs.pr }}" --merge --delete-branch=false
+
+  verify-deploy:
+    needs: auto-merge
+    if: needs.auto-merge.result == 'success' && needs.auto-merge.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Wait for Vercel deploy workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "Waiting for Deploy to Vercel on main..."
+          for i in $(seq 1 40); do
+            RUN=$(gh run list --workflow=deploy.yml --branch=main --limit=1 --json databaseId,status,conclusion -q '.[0]')
+            STATUS=$(echo "$RUN" | jq -r '.status')
+            CONCLUSION=$(echo "$RUN" | jq -r '.conclusion')
+            if [ "$STATUS" = "completed" ]; then
+              if [ "$CONCLUSION" = "success" ]; then
+                echo "Deploy workflow succeeded."
+                exit 0
+              fi
+              echo "Deploy workflow ended: $CONCLUSION"
+              exit 1
+            fi
+            sleep 15
+          done
+          echo "Timed out waiting for deploy workflow"
+          exit 1
+
+      - run: npm ci
+
+      - name: Production guardrail
+        env:
+          GUARDRAIL_URL: https://nyumbatracker.vercel.app
+        run: npm run ops:guardrail
