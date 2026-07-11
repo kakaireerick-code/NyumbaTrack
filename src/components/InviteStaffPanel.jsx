@@ -6,6 +6,7 @@ import {
   regenerateCaretakerInvite,
   findPendingCaretakerInviteForOwner,
   createCaretakerInvite,
+  pushInviteToCloud,
 } from '../lib/invites'
 
 export default function InviteStaffPanel({ ownerId, showToast, propertyId }) {
@@ -20,6 +21,7 @@ export default function InviteStaffPanel({ ownerId, showToast, propertyId }) {
     let inv = findPendingCaretakerInviteForOwner(ownerId)
     if (!inv) {
       inv = createCaretakerInvite(ownerId, propertyId)
+      pushInviteToCloud(inv)
     }
     setCode(inv.code)
     return inv.code
@@ -41,6 +43,7 @@ export default function InviteStaffPanel({ ownerId, showToast, propertyId }) {
   const handleRegenerate = () => {
     const inv = regenerateCaretakerInvite(ownerId, activeCode)
     setCode(inv.code)
+    pushInviteToCloud(inv)
     showToast?.('New code generated — old link no longer works', 'success')
   }
 

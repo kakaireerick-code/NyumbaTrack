@@ -137,6 +137,19 @@ confirm(
   'BillingAdminPage + MoMo approval API + /billing-admin route',
 )
 
+// F16 Cloud tenant invites
+const inviteApi = exists('api/invite.ts') ? read('api/invite.ts') : ''
+const inviteCloud = exists('src/lib/inviteCloud.ts') ? read('src/lib/inviteCloud.ts') : ''
+const joinPage = exists('src/pages/JoinPage.jsx') ? read('src/pages/JoinPage.jsx') : ''
+confirm(
+  'F16',
+  'Cloud tenant invites',
+  inviteApi.includes("req.method === 'POST'") &&
+    inviteCloud.includes('fetchCloudInvite') &&
+    joinPage.includes('registerTenantAsync'),
+  'api/invite.ts + cross-device join',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -148,6 +161,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F15 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F16 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)

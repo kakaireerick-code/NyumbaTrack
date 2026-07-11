@@ -1,6 +1,15 @@
 import { safeGet, safeSet } from './storage'
 import { normalizeInviteCode, getJoinUrl } from './routing'
 import { GENERIC_INVITE_ERROR } from './portalAuth'
+import {
+  fetchCloudInvite,
+  cloudInviteToRecord,
+  syncCloudInvite,
+  type UnitInviteSnapshot,
+} from './inviteCloud'
+
+export { syncCloudInvite, fetchCloudInvite, markCloudInviteUsed } from './inviteCloud'
+export type { UnitInviteSnapshot } from './inviteCloud'
 
 export type InviteRole = 'tenant' | 'caretaker'
 export type InviteStatus = 'pending' | 'used' | 'revoked'
@@ -202,6 +211,28 @@ export const validateInviteForRole = (
     return { ok: false, error: GENERIC_INVITE_ERROR }
   }
   return { ok: true, invite }
+}
+
+/** Local storage first, then Redis cloud invite (cross-device join) */
+export const validateInviteForRoleAsync = async (
+  code: string,
+  expectedRole: InviteRole,
+): Promise<ValidateInviteResult & { cloud?: boolean }> => {
+  const local = validateInviteForRole(code, expectedRole)
+  if (local.ok) return local
+
+  const cloud = await fetchCloudInvite(code, expectedRole)
+  if (!cloud || cloud.status !== 'pending') {
+    return { ok: false, error: GENERIC_INVITE_ERROR }
+  }
+  return { ok: true, invite: cloudInviteToRecord(cloud), cloud: true }
+}
+
+export const pushInviteToCloud = async (
+  invite: InviteRecord,
+  snapshot?: UnitInviteSnapshot,
+): Promise<void> => {
+  await syncCloudInvite(invite, snapshot)
 }
 
 /** @deprecated use validateInviteForRole(code, 'tenant') */

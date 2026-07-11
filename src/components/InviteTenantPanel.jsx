@@ -6,6 +6,7 @@ import {
   regenerateTenantInvite,
   findInviteForUnit,
   createTenantInviteForUnit,
+  pushInviteToCloud,
 } from '../lib/invites'
 
 export default function InviteTenantPanel({
@@ -23,11 +24,22 @@ export default function InviteTenantPanel({
 
   if (!unit || !ownerId) return null
 
+  const syncToCloud = (inv) => {
+    pushInviteToCloud(inv, {
+      unitNumber: unit?.unitNumber,
+      buildingName: building?.name,
+      monthlyRent: unit?.monthlyRent,
+      depositAmount: unit?.depositAmount,
+      rentDueDay: unit?.rentDueDay,
+    })
+  }
+
   const ensureCode = () => {
     let inv = findInviteForUnit(unit.id)
     if (!inv || inv.status !== 'pending') {
       inv = createTenantInviteForUnit(ownerId, String(unit.buildingId), String(unit.id))
       onCodeChange?.(inv.code)
+      syncToCloud(inv)
     }
     setCode(inv.code)
     return inv.code
@@ -50,6 +62,7 @@ export default function InviteTenantPanel({
     const inv = regenerateTenantInvite(ownerId, String(unit.buildingId), String(unit.id), activeCode)
     setCode(inv.code)
     onCodeChange?.(inv.code)
+    syncToCloud(inv)
     showToast?.('New code generated — old link no longer works', 'success')
   }
 

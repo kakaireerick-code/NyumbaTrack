@@ -1,5 +1,13 @@
 import { safeGet, safeSet } from './storage'
-import { validateInviteForRole, markInviteUsed, seedDemoInvites } from './invites'
+import {
+  validateInviteForRole,
+  validateInviteForRoleAsync,
+  markInviteUsed,
+  seedDemoInvites,
+  getInvites,
+  saveInvites,
+} from './invites'
+import { fetchCloudInvite, markCloudInviteUsed, unitFromCloudInvite } from './inviteCloud'
 import { GENERIC_INVITE_ERROR, GENERIC_AUTH_ERROR } from './portalAuth'
 import { isDeployedApp } from './environment'
 import { normalizeInviteCode } from './routing'
@@ -168,6 +176,67 @@ export const registerCaretaker = (
   saveUsers([...users, user])
   markInviteUsed(invite.code, user.id)
   return { ok: true, user }
+}
+
+export const registerTenantAsync = async (
+  email: string,
+  password: string,
+  name: string,
+  inviteCode: string,
+  units: Array<Record<string, unknown>>,
+  buildings: Array<Record<string, unknown>> = [],
+): Promise<{
+  ok: boolean
+  error?: string
+  user?: AppUser
+  unit?: Record<string, unknown>
+  invite?: { ownerId: string; propertyId: string; unitId: string; code: string }
+}> => {
+  const validation = await validateInviteForRoleAsync(inviteCode, 'tenant')
+  if (!validation.ok) return { ok: false, error: validation.error }
+
+  let unitList = units
+  if (validation.cloud) {
+    const norm = normalizeInviteCode(inviteCode)
+    const existing = getInvites()
+    if (!existing.some((i) => normalizeInviteCode(i.code) === norm)) {
+      saveInvites([...existing, validation.invite])
+    }
+    const cloud = await fetchCloudInvite(inviteCode, 'tenant')
+    if (cloud && !unitList.find((u) => String(u.id) === String(cloud.unitId))) {
+      unitList = [...unitList, unitFromCloudInvite(cloud)]
+    }
+  }
+
+  const result = registerTenant(email, password, name, inviteCode, unitList, buildings)
+  if (result.ok && result.user) {
+    await markCloudInviteUsed(inviteCode, 'tenant', result.user.id)
+  }
+  return result
+}
+
+export const registerCaretakerAsync = async (
+  email: string,
+  password: string,
+  name: string,
+  inviteCode: string,
+): Promise<{ ok: boolean; error?: string; user?: AppUser }> => {
+  const validation = await validateInviteForRoleAsync(inviteCode, 'caretaker')
+  if (!validation.ok) return { ok: false, error: validation.error }
+
+  if (validation.cloud) {
+    const norm = normalizeInviteCode(inviteCode)
+    const existing = getInvites()
+    if (!existing.some((i) => normalizeInviteCode(i.code) === norm)) {
+      saveInvites([...existing, validation.invite])
+    }
+  }
+
+  const result = registerCaretaker(email, password, name, inviteCode)
+  if (result.ok && result.user) {
+    await markCloudInviteUsed(inviteCode, 'caretaker', result.user.id)
+  }
+  return result
 }
 
 /** @deprecated use registerCaretaker */

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Wrench, Eye, EyeOff } from 'lucide-react'
-import { seedDemoUsers, registerCaretaker, login } from '../lib/auth'
+import { seedDemoUsers, registerCaretakerAsync, login } from '../lib/auth'
 import { validateInviteForRole } from '../lib/invites'
+import { fetchCloudInvite } from '../lib/inviteCloud'
 import { normalizeInviteCode } from '../lib/routing'
 import { validatePortalSignIn, showDemoCredentials, GENERIC_AUTH_ERROR } from '../lib/portalAuth'
 import { checkJoinRateLimit, recordJoinFailure, clearJoinFailures } from '../lib/joinRateLimit'
@@ -26,15 +27,27 @@ export default function CaretakerJoinPage({ initialCode = '', onAuthSuccess }) {
   }, [initialCode])
 
   useEffect(() => {
-    if (!inviteCode || inviteCode.length < 6) {
-      setCodeHint('')
-      return
+    let cancelled = false
+    const run = async () => {
+      if (!inviteCode || inviteCode.length < 6) {
+        setCodeHint('')
+        return
+      }
+      const v = validateInviteForRole(inviteCode, 'caretaker')
+      if (v.ok) {
+        if (!cancelled) setCodeHint('Code accepted')
+        return
+      }
+      const cloud = await fetchCloudInvite(inviteCode, 'caretaker')
+      if (!cancelled) setCodeHint(cloud ? 'Code accepted' : '')
     }
-    const v = validateInviteForRole(inviteCode, 'caretaker')
-    setCodeHint(v.ok ? 'Code accepted' : '')
+    run()
+    return () => {
+      cancelled = true
+    }
   }, [inviteCode])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     const limit = checkJoinRateLimit()
@@ -44,37 +57,35 @@ export default function CaretakerJoinPage({ initialCode = '', onAuthSuccess }) {
     }
     setLoading(true)
 
-    setTimeout(() => {
+    try {
       if (mode === 'signin') {
         const result = login(email, password)
         if (!result.ok) {
           recordJoinFailure()
           setError(GENERIC_AUTH_ERROR)
-          setLoading(false)
           return
         }
         const portalCheck = validatePortalSignIn('caretaker', result.user?.role || '')
         if (!portalCheck.ok) {
           recordJoinFailure()
           setError(portalCheck.error)
-          setLoading(false)
           return
         }
         clearJoinFailures()
         onAuthSuccess(result.user)
       } else {
-        const result = registerCaretaker(email, password, name, inviteCode)
+        const result = await registerCaretakerAsync(email, password, name, inviteCode)
         if (!result.ok) {
           recordJoinFailure()
           setError(result.error || GENERIC_AUTH_ERROR)
-          setLoading(false)
           return
         }
         clearJoinFailures()
         onAuthSuccess(result.user)
       }
+    } finally {
       setLoading(false)
-    }, 300)
+    }
   }
 
   return (
