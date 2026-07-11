@@ -201,6 +201,29 @@ confirm(
   '200 + configured:false on probes, api-smoke + guardrail probes',
 )
 
+// F21 About + Partner Rewards wiring
+const aboutPage = exists('src/pages/AboutPage.jsx') ? read('src/pages/AboutPage.jsx') : ''
+const referralsPage = exists('src/pages/ReferralsPage.jsx') ? read('src/pages/ReferralsPage.jsx') : ''
+const partnerRewards = exists('src/lib/partnerRewards.ts') ? read('src/lib/partnerRewards.ts') : ''
+const subscriptionPageFile = exists('src/pages/SubscriptionPage.jsx') ? read('src/pages/SubscriptionPage.jsx') : ''
+const assistantKb = exists('src/lib/assistantKnowledge.ts') ? read('src/lib/assistantKnowledge.ts') : ''
+const guidance = exists('src/lib/actionGuidance.ts') ? read('src/lib/actionGuidance.ts') : ''
+const navAbout = exists('src/lib/navigation.ts') ? read('src/lib/navigation.ts') : ''
+confirm(
+  'F21',
+  'About + Partner Rewards',
+  aboutPage.includes('About NyumbaTrack') &&
+    referralsPage.includes('Partner Rewards') &&
+    partnerRewards.includes('getPartnerRewards') &&
+    subscriptionPageFile.includes('Partner Rewards') &&
+    subscriptionPageFile.includes('Get your invite link') &&
+    assistantKb.includes('partner rewards') &&
+    guidance.includes("pageId === 'about'") &&
+    guidance.includes("pageId === 'referrals'") &&
+    navAbout.includes("'referrals'"),
+  'About/Referrals pages + billing promo + assistant + guidance',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -212,6 +235,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F20 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F21 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)

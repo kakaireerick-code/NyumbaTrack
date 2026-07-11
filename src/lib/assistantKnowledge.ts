@@ -155,4 +155,18 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     offerPage: 'Settings',
     offerPageId: 'settings',
   },
+  {
+    keywords: ['about', 'what is nyumbatrack', 'who made'],
+    roles: ['property_owner', 'tenant', 'caretaker'],
+    answer: 'NyumbaTrack is rent management software built for Uganda. Owners manage properties; tenants and caretakers get simple portals. Open About for your role-specific overview.',
+    offerPage: 'About',
+    offerPageId: 'about',
+  },
+  {
+    keywords: ['partner rewards', 'referral', 'refer', 'invite landlord', 'free month'],
+    roles: ['property_owner'],
+    answer: 'Partner Rewards lets you refer another landlord. When they subscribe, you bank free months toward your renewal. Copy your personal link from Partner Rewards or Plans & Billing.',
+    offerPage: 'Partner Rewards',
+    offerPageId: 'referrals',
+  },
 ]

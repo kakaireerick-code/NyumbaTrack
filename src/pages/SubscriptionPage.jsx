@@ -36,6 +36,7 @@ import {
   checkUnitLimit,
 } from '../utils/subscription'
 import { ADMIN_MOMO_LINE, ADMIN_MOMO_DISPLAY, subscriptionPaymentReference } from '../lib/billing'
+import { getPartnerRewards } from '../lib/partnerRewards'
 import { verifyMomoReference, collectSubscriptionReferences } from '../lib/momoVerification'
 import { buildSubscriptionInvoice, queueInvoiceEmail, downloadInvoice } from '../lib/subscriptionInvoice'
 import { submitCloudSubscriptionClaim } from '../lib/subscriptionCloud'
@@ -63,6 +64,8 @@ export default function SubscriptionPage({
   currentUser,
   authUser,
   settings = {},
+  setCurrentPage,
+  activeOwnerId,
 }) {
   const [billingCycle, setBillingCycle] = useState(subscription.billingCycle || 'monthly')
   const [loading, setLoading] = useState(null)
@@ -75,6 +78,8 @@ export default function SubscriptionPage({
 
   const customerEmail = authUser?.email || currentUser?.email || ''
   const customerName = authUser?.name || currentUser?.name || 'Customer'
+  const ownerId = activeOwnerId || authUser?.ownerId || authUser?.id || ''
+  const partnerRewards = ownerId ? getPartnerRewards(ownerId) : null
 
   const active = isSubscriptionActive(subscription)
   const endDate = getActiveEndDate(subscription)
@@ -215,6 +220,42 @@ export default function SubscriptionPage({
           </p>
         )}
       </div>
+
+      {/* Partner Rewards — always visible */}
+      {partnerRewards && (
+        <div className="card p-5 border-2 border-brand/30 bg-brand-muted/20 dark:bg-brand/10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold flex items-center gap-2 text-brand">
+                <Gift size={22} />
+                Partner Rewards
+              </h2>
+              {partnerRewards.bankedMonths > 0 ? (
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                  You have <strong>{partnerRewards.bankedMonths}</strong> free month
+                  {partnerRewards.bankedMonths === 1 ? '' : 's'} banked toward your next renewal.
+                </p>
+              ) : (
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                  Refer another landlord — when they subscribe, you earn free months on your plan.
+                </p>
+              )}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Code: <span className="font-mono font-semibold">{partnerRewards.referralCode}</span>
+              </p>
+            </div>
+            {setCurrentPage && (
+              <button
+                type="button"
+                onClick={() => setCurrentPage('referrals')}
+                className="tap-target px-5 py-2.5 bg-brand text-white rounded-lg font-semibold whitespace-nowrap hover:opacity-90"
+              >
+                {partnerRewards.bankedMonths > 0 ? 'View rewards' : 'Get your invite link'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Yearly offer banner */}
       <div

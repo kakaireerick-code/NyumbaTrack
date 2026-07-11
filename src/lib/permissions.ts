@@ -37,6 +37,8 @@ export type PageId =
   | 'my-lease'
   | 'my-receipts'
   | 'receipt-view'
+  | 'about'
+  | 'referrals'
 
 export type FieldKey =
   | 'unit.monthlyRent'
@@ -88,16 +90,16 @@ const OWNER_PAGES: PageId[] = [
   'payments', 'balance-tracker', 'deposits', 'utilities', 'reminders',
   'maintenance', 'reports', 'documents', 'legal-notices', 'settings',
   'subscription', 'billing-admin', 'blacklist', 'defaulter-list', 'help', 'guided', 'assistant',
-  'data-import', 'messages', 'receipt-view',
+  'data-import', 'messages', 'receipt-view', 'about', 'referrals',
 ]
 
 const CARETAKER_PAGES: PageId[] = [
-  'units', 'vacancy', 'maintenance', 'tenants', 'help', 'guided', 'assistant', 'messages',
+  'units', 'vacancy', 'maintenance', 'tenants', 'help', 'guided', 'assistant', 'messages', 'about',
 ]
 
 const TENANT_PAGES: PageId[] = [
   'my-balance', 'my-payments', 'my-lease', 'my-receipts', 'my-messages',
-  'help', 'guided', 'assistant', 'receipt-view',
+  'help', 'guided', 'assistant', 'receipt-view', 'about',
 ]
 
 const ROLE_PAGE_MAP: Record<Role, PageId[]> = {

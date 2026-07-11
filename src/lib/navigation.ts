@@ -42,6 +42,8 @@ export const MORE_TOOLS_LINKS: MoreToolLink[] = [
   { id: 'defaulter-list', label: 'Defaulters', description: 'Outstanding rent list' },
   { id: 'messages', label: 'Tenant Messages', description: 'Owner–tenant inbox' },
   { id: 'help', label: 'Help', description: 'Manuals and support' },
+  { id: 'about', label: 'About', description: 'What NyumbaTrack is and who it is for' },
+  { id: 'referrals', label: 'Partner Rewards', description: 'Refer landlords and earn free months' },
 ]
 
 export type MoreToolsGroup = { title: string; ids: PageId[] }
@@ -50,7 +52,8 @@ export type MoreToolsGroup = { title: string; ids: PageId[] }
 export const MORE_TOOLS_GROUPS: MoreToolsGroup[] = [
   { title: 'Billing & money', ids: ['subscription', 'billing-admin', 'balance-tracker', 'utilities', 'defaulter-list'] },
   { title: 'Daily work', ids: ['vacancy', 'lease-manager', 'reminders', 'maintenance', 'messages', 'data-import'] },
-  { title: 'Help', ids: ['guided', 'assistant', 'help'] },
+  { title: 'Help', ids: ['guided', 'assistant', 'help', 'about'] },
+  { title: 'Company', ids: ['referrals'] },
   { title: 'Documents & legal', ids: ['documents', 'legal-notices', 'blacklist'] },
 ]
 

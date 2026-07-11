@@ -25,4 +25,10 @@ describe('navigation', () => {
     ]
     expect(sidebarPagesForRole('caretaker', allCaretakerPages)).toEqual(PRIMARY_CARETAKER_PAGES)
   })
+
+  it('more tools includes about and partner rewards', () => {
+    const ids = MORE_TOOLS_LINKS.map((t) => t.id)
+    expect(ids).toContain('about')
+    expect(ids).toContain('referrals')
+  })
 })

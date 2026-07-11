@@ -16,6 +16,8 @@ import MessagesPage from './pages/MessagesPage'
 import HelpPage from './pages/HelpPage'
 import GuidedWorkflowsPage from './pages/GuidedWorkflowsPage'
 import AssistantPage from './pages/AssistantPage'
+import AboutPage from './pages/AboutPage'
+import ReferralsPage from './pages/ReferralsPage'
 import { BuildingsPage, UnitsPage, VacancyBoardPage, UnitHistoryPage } from './pages/PropertyPages'
 import {
   PaymentsPage,
@@ -636,6 +638,9 @@ function AppContent() {
       const b = buildings.find((bd) => bd.id === t?.buildingId)
       const tenantPayments = payments.filter((p) => p.tenantId === t?.id)
 
+      if (currentPage === 'about') {
+        return <AboutPage currentRole={currentRole} setCurrentPage={setPageSafe} />
+      }
       if (currentPage === 'help') {
         return (
           <HelpPage
@@ -717,6 +722,21 @@ function AppContent() {
             setShowTenantOnboarding(false)
             if (!isTourComplete('tenant')) setShowTour(true)
           }}
+        />
+      )
+    }
+
+    if (currentPage === 'about') {
+      return <AboutPage currentRole={currentRole} setCurrentPage={setPageSafe} />
+    }
+
+    if (currentPage === 'referrals') {
+      return (
+        <ReferralsPage
+          activeOwnerId={activeOwnerId}
+          authUser={authUser}
+          showToast={showToast}
+          setCurrentPage={setPageSafe}
         />
       )
     }
@@ -842,6 +862,8 @@ function AppContent() {
             currentUser={currentUser}
             authUser={authUser}
             settings={settings}
+            setCurrentPage={setPageSafe}
+            activeOwnerId={activeOwnerId}
           />
         )
       case 'billing-admin':
