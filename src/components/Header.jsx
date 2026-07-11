@@ -34,9 +34,16 @@ export default function Header({
       )}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
-          <button type="button" className="md:hidden p-1 shrink-0" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            <Icon name="Menu" size={24} />
-          </button>
+          {!isTenant && (
+            <button
+              type="button"
+              className="tap-target md:hidden p-1 shrink-0"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label="Open menu"
+            >
+              <Icon name="Menu" size={24} />
+            </button>
+          )}
           <span className="text-sm text-gray-600 dark:text-gray-300 hidden sm:inline truncate">
             {currentUser?.name || 'User'}
             {currentUser?.building ? ` — ${currentUser.building}` : ''}
@@ -61,7 +68,7 @@ export default function Header({
             <button
               type="button"
               onClick={onOpenGuide}
-              className="px-2 py-1.5 text-xs sm:text-sm rounded border border-[#2d6a4f] text-[#2d6a4f] hover:bg-[#2d6a4f]/10"
+              className="tap-target px-3 py-2 text-xs sm:text-sm rounded-lg border border-brand text-brand hover:bg-brand/10"
               title="Help and guided workflows"
             >
               My guide

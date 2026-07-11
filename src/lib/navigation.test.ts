@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PRIMARY_SIDEBAR_PAGES, MORE_TOOLS_LINKS, sidebarPagesForRole } from './navigation'
+import { PRIMARY_SIDEBAR_PAGES, PRIMARY_CARETAKER_PAGES, MORE_TOOLS_LINKS, sidebarPagesForRole } from './navigation'
 
 describe('navigation', () => {
   it('primary sidebar has exactly 8 owner items', () => {
@@ -17,8 +17,12 @@ describe('navigation', () => {
     expect(ids).toContain('guided')
   })
 
-  it('caretaker keeps full caretaker page list', () => {
-    const caretakerPages = ['units', 'vacancy', 'maintenance', 'tenants', 'help']
-    expect(sidebarPagesForRole('caretaker', caretakerPages)).toEqual(caretakerPages)
+  it('caretaker sidebar shows 5 essentials only', () => {
+    expect(PRIMARY_CARETAKER_PAGES).toHaveLength(5)
+    const allCaretakerPages = [
+      'units', 'vacancy', 'maintenance', 'tenants', 'help',
+      'payments', 'reports', 'settings',
+    ]
+    expect(sidebarPagesForRole('caretaker', allCaretakerPages)).toEqual(PRIMARY_CARETAKER_PAGES)
   })
 })

@@ -2,6 +2,16 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-brand: #2d6a4f;
+  --color-brand-light: #40916c;
+  --color-brand-dark: #1a2e1a;
+  --color-brand-muted: #d8f3dc;
+  --color-surface: #f8f9fa;
+  --color-danger: #d62828;
+  --color-warning: #e07b00;
+}
+
 :root {
   --primary: #2d6a4f;
   --accent: #40916c;
@@ -119,9 +129,19 @@ body.dark .card {
 
 .card {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   color: var(--text-on-card);
+}
+
+/* Large tap targets for mobile / easy use */
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .table-scroll {

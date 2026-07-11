@@ -6,6 +6,7 @@ import { isOwnerLoginRole } from '../lib/permissions'
 import { validatePortalSignIn, showDemoCredentials, GENERIC_AUTH_ERROR } from '../lib/portalAuth'
 import { isDeployedApp } from '../lib/environment'
 import { getBuildInfo } from '../lib/buildInfo'
+import { inputCls, btnPrimary } from '../lib/formStyles'
 
 export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
   const [mode, setMode] = useState(initialMode === 'signup' ? 'register-owner' : 'signin')
@@ -15,6 +16,7 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const isRegister = mode === 'register-owner'
 
   useEffect(() => {
     seedDemoUsers()
@@ -78,83 +80,93 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#1a1a2e' }}>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-brand-dark">
       {isDeployedApp() && (
-        <p className="fixed bottom-2 right-3 text-[10px] text-gray-400 opacity-70 select-all" title="Deployment build ID">
+        <p className="fixed bottom-2 right-3 text-[10px] text-white/40 opacity-70 select-all" title="Deployment build ID">
           build {getBuildInfo().sha}
         </p>
       )}
       <div className="card w-full max-w-md p-8">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <Home className="text-[#2d6a4f]" size={32} />
-          <h1 className="text-2xl font-bold text-[#2d6a4f]">NyumbaTrack</h1>
+          <Home className="text-brand" size={32} />
+          <h1 className="text-2xl font-bold text-brand">NyumbaTrack</h1>
         </div>
-        <h2 className="text-center text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Welcome back</h2>
-        <p className="text-center text-gray-500 mb-4 text-sm">Sign in to manage your properties</p>
+        <h2 className="text-center text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">
+          {isRegister ? 'Create your account' : 'Welcome back'}
+        </h2>
+        <p className="text-center text-gray-500 dark:text-gray-400 mb-4 text-sm">
+          {isRegister ? 'Start managing your properties in minutes' : 'Sign in to manage your properties'}
+        </p>
 
-        <div className="flex rounded-lg border mb-6 overflow-hidden text-sm">
+        <div className="flex rounded-lg border dark:border-gray-600 mb-6 overflow-hidden text-sm">
           {['signin', 'register-owner'].map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => { setMode(m); setError('') }}
-              className={`flex-1 py-2 px-1 ${mode === m ? 'bg-[#2d6a4f] text-white' : 'bg-gray-50 text-gray-600'}`}
+              className={`tap-target flex-1 py-3 px-1 font-medium ${
+                mode === m
+                  ? 'bg-brand text-white'
+                  : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
+              }`}
             >
               {m === 'signin' ? 'Sign In' : 'Create account'}
             </button>
           ))}
         </div>
 
-        {error && <p className="text-red-600 text-sm mb-3 bg-red-50 p-2 rounded">{error}</p>}
+        {error && <p className="text-red-600 text-sm mb-3 bg-red-50 dark:bg-red-900/30 p-2 rounded-lg">{error}</p>}
 
         <div className="mb-4 space-y-3">
           <GoogleSignInButton
-            label={mode === 'register-owner' ? 'Register with Google' : 'Sign in with Google'}
+            label={isRegister ? 'Register with Google' : 'Sign in with Google'}
             onSuccess={handleGoogle}
             onError={(msg) => setError(msg)}
           />
           <div className="flex items-center gap-2 text-xs text-gray-400">
-            <span className="flex-1 border-t" />
+            <span className="flex-1 border-t dark:border-gray-600" />
             or use email
-            <span className="flex-1 border-t" />
+            <span className="flex-1 border-t dark:border-gray-600" />
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'register-owner' && (
+          {isRegister && (
             <div>
               <label className="block text-sm font-medium mb-1">Full name</label>
-              <input className="w-full border rounded px-3 py-2" value={name} onChange={(e) => setName(e.target.value)} required />
+              <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
           )}
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
-            <input type="email" className="w-full border rounded px-3 py-2" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder={mode === 'signin' && showDemoCredentials() ? 'owner@demo.com' : ''} />
+            <input
+              type="email"
+              className={inputCls}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder={mode === 'signin' && showDemoCredentials() ? 'owner@demo.com' : ''}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Password</label>
             <div className="relative">
               <input
                 type={showPw ? 'text' : 'password'}
-                className="w-full border rounded px-3 py-2 pr-10"
+                className={`${inputCls} pr-10`}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder={mode === 'signin' && showDemoCredentials() ? 'owner123' : ''}
               />
-              <button type="button" className="absolute right-2 top-2.5 text-gray-400" onClick={() => setShowPw(!showPw)}>
+              <button type="button" className="tap-target absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" onClick={() => setShowPw(!showPw)}>
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 rounded text-white font-medium disabled:opacity-50"
-            style={{ background: '#2d6a4f' }}
-          >
-            {loading ? 'Please wait...' : mode === 'signin' ? 'Sign In' : 'Create owner account'}
+          <button type="submit" disabled={loading} className={`w-full ${btnPrimary} disabled:opacity-50`}>
+            {loading ? 'Please wait...' : isRegister ? 'Create owner account' : 'Sign In'}
           </button>
         </form>
 

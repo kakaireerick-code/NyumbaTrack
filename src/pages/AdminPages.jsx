@@ -9,10 +9,10 @@ import {
   ugandaFYOptions,
   daysBetween,
 } from '../utils/helpers'
-import { safeSet } from '../utils/storage'
 import InviteStaffPanel from '../components/InviteStaffPanel'
 import { canManagePortfolio } from '../lib/permissions'
-import { MORE_TOOLS_LINKS } from '../lib/navigation'
+import { MORE_TOOLS_LINKS, MORE_TOOLS_GROUPS } from '../lib/navigation'
+import { resetTour } from '../lib/rolePrompts'
 import { isBillingAdminEmail } from '../lib/billingAdmin'
 import { Badge, EmptyState, LoadingButton, StatCard } from '../components/UI'
 
@@ -658,14 +658,16 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour, 
   }
 
   const restartTour = () => {
-    safeSet('renttrack_tour_seen', false)
+    resetTour(currentRole || 'property_owner')
     onRestartTour?.()
     showToast('Onboarding tour will show on next navigation', 'success')
   }
 
-  const moreTools = MORE_TOOLS_LINKS.filter(
+  const moreToolsById = Object.fromEntries(MORE_TOOLS_LINKS.map((tool) => [tool.id, tool]))
+  const visibleMoreTools = MORE_TOOLS_LINKS.filter(
     (tool) => tool.id !== 'billing-admin' || isBillingAdminEmail(authUser?.email),
   )
+  const visibleIds = new Set(visibleMoreTools.map((t) => t.id))
 
   return (
     <div className="p-4 space-y-6 max-w-3xl">
@@ -677,18 +679,32 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour, 
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Advanced features — billing, import, guided workflows, and more.
           </p>
-          <div className="grid sm:grid-cols-2 gap-2">
-            {moreTools.map((tool) => (
-              <button
-                key={tool.id}
-                type="button"
-                onClick={() => setCurrentPage(tool.id)}
-                className="text-left p-3 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <p className="font-medium text-[#2d6a4f] text-sm">{tool.label}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{tool.description}</p>
-              </button>
-            ))}
+          <div className="space-y-4">
+            {MORE_TOOLS_GROUPS.map((group) => {
+              const tools = group.ids
+                .filter((id) => visibleIds.has(id))
+                .map((id) => moreToolsById[id])
+                .filter(Boolean)
+              if (!tools.length) return null
+              return (
+                <div key={group.title}>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{group.title}</h3>
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    {tools.map((tool) => (
+                      <button
+                        key={tool.id}
+                        type="button"
+                        onClick={() => setCurrentPage(tool.id)}
+                        className="tap-target text-left p-3 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <p className="font-medium text-brand text-sm">{tool.label}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{tool.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

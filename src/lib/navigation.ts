@@ -12,6 +12,15 @@ export const PRIMARY_SIDEBAR_PAGES: PageId[] = [
   'settings',
 ]
 
+/** Caretaker sidebar — 5 essentials only */
+export const PRIMARY_CARETAKER_PAGES: PageId[] = [
+  'units',
+  'maintenance',
+  'tenants',
+  'vacancy',
+  'help',
+]
+
 export type MoreToolLink = { id: PageId; label: string; description: string }
 
 /** Advanced tools — reachable from Settings → More tools */
@@ -35,7 +44,22 @@ export const MORE_TOOLS_LINKS: MoreToolLink[] = [
   { id: 'help', label: 'Help', description: 'Manuals and support' },
 ]
 
+export type MoreToolsGroup = { title: string; ids: PageId[] }
+
+/** Grouped for Settings → More tools (easier to scan) */
+export const MORE_TOOLS_GROUPS: MoreToolsGroup[] = [
+  { title: 'Billing & money', ids: ['subscription', 'billing-admin', 'balance-tracker', 'utilities', 'defaulter-list'] },
+  { title: 'Daily work', ids: ['vacancy', 'lease-manager', 'reminders', 'maintenance', 'messages', 'data-import'] },
+  { title: 'Help', ids: ['guided', 'assistant', 'help'] },
+  { title: 'Documents & legal', ids: ['documents', 'legal-notices', 'blacklist'] },
+]
+
 export const sidebarPagesForRole = (role: string, allPages: PageId[]): PageId[] => {
-  if (role !== 'property_owner') return allPages
-  return PRIMARY_SIDEBAR_PAGES.filter((id) => allPages.includes(id))
+  if (role === 'property_owner') {
+    return PRIMARY_SIDEBAR_PAGES.filter((id) => allPages.includes(id))
+  }
+  if (role === 'caretaker') {
+    return PRIMARY_CARETAKER_PAGES.filter((id) => allPages.includes(id))
+  }
+  return allPages
 }
