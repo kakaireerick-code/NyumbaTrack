@@ -162,9 +162,21 @@ confirm(
     exists('api/push-subscribe.ts') &&
     exists('api/push-notify.ts') &&
     notifLib.includes('actionPage') &&
+    pushClient.includes('getPushCapabilities') &&
     pushClient.includes('subscribeDevicePush') &&
     inbox.includes('Enable phone notifications'),
-  'service worker + VAPID + bell subscribe flow',
+  'service worker + VAPID + cross-browser bell flow',
+)
+
+// F18 VAPID owner tooling
+confirm(
+  'F18',
+  'VAPID setup tooling',
+  exists('SETUP-VAPID.ps1') &&
+    exists('scripts/setup-vapid.mjs') &&
+    pkg.scripts['setup:vapid'] &&
+    read('OWNER-SYNC.ps1').includes('SETUP-VAPID.ps1'),
+  'SETUP-VAPID.ps1 + npm run setup:vapid + OWNER-SYNC hint',
 )
 
 const failed = checks.filter((c) => !c.ok)
@@ -178,6 +190,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F17 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F18 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)
