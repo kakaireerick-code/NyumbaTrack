@@ -1,0 +1,59 @@
+# NyumbaTrack — billing admin env setup (run once on your PC)
+# Saves nothing to disk except this helper output. Add vars in Vercel Dashboard.
+
+$ErrorActionPreference = "Stop"
+Set-Location $PSScriptRoot
+
+Write-Host ""
+Write-Host "NyumbaTrack billing admin setup" -ForegroundColor Cyan
+Write-Host "================================" -ForegroundColor Cyan
+Write-Host ""
+
+# 32-byte secret for api/subscription.ts admin GET (Bearer auth)
+$bytes = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+$billingSecret = [BitConverter]::ToString($bytes).Replace("-", "").ToLower()
+
+$defaultEmail = $env:VITE_BILLING_ADMIN_EMAIL
+if ([string]::IsNullOrWhiteSpace($defaultEmail)) {
+  $defaultEmail = "your.email@gmail.com"
+}
+
+Write-Host "Admin support email (shown in Plans & Billing UI):" -ForegroundColor Yellow
+$adminEmail = Read-Host "VITE_BILLING_ADMIN_EMAIL [$defaultEmail]"
+if ([string]::IsNullOrWhiteSpace($adminEmail)) {
+  $adminEmail = $defaultEmail
+}
+
+Write-Host ""
+Write-Host "--- Copy into Vercel (Production env) ---" -ForegroundColor Green
+Write-Host "Project: nyumbatrack"
+Write-Host "https://vercel.com/dashboard -> nyumbatrack -> Settings -> Environment Variables"
+Write-Host ""
+Write-Host "BILLING_ADMIN_SECRET=$billingSecret"
+Write-Host "VITE_BILLING_ADMIN_EMAIL=$adminEmail"
+Write-Host ""
+
+Write-Host "Also required for subscription claims (if not set yet):" -ForegroundColor Yellow
+Write-Host "  UPSTASH_REDIS_REST_URL     (from https://console.upstash.com REST tab)"
+Write-Host "  UPSTASH_REDIS_REST_TOKEN   (same)"
+Write-Host ""
+
+Write-Host "After adding vars: Redeploy production, then run:" -ForegroundColor Cyan
+Write-Host "  npm run ops:guardrail"
+Write-Host ""
+
+$copy = Read-Host "Copy BILLING_ADMIN_SECRET to clipboard? [Y/n]"
+if ($copy -eq "" -or $copy -match "^[Yy]") {
+  try {
+    Set-Clipboard -Value $billingSecret
+    Write-Host "Secret copied to clipboard." -ForegroundColor Green
+  } catch {
+    Write-Host "Clipboard unavailable — copy the line above manually." -ForegroundColor DarkYellow
+  }
+}
+
+Write-Host ""
+Write-Host "See docs/VERCEL-SECRETS-CHECKLIST.md (steps 5-8)" -ForegroundColor DarkGray
+Write-Host "Press Enter to exit."
+Read-Host | Out-Null

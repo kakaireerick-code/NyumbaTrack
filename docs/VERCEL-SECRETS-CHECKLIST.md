@@ -51,7 +51,7 @@ https://github.com/kakaireerick-code/NyumbaTrack/settings/secrets/actions
 |----------|--------|
 | `UPSTASH_REDIS_REST_URL` | Upstash |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash |
-| `BILLING_ADMIN_SECRET` | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `BILLING_ADMIN_SECRET` | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` or run `SETUP-BILLING-ADMIN.ps1` |
 | `VITE_BILLING_ADMIN_EMAIL` | your Gmail |
 
 ## Step 7 — Deploy
