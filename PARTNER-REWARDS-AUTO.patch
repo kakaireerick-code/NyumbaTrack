@@ -1,0 +1,1360 @@
+diff --git a/.github/workflows/auto-ship.yml b/.github/workflows/auto-ship.yml
+new file mode 100644
+index 0000000..58e789c
+--- /dev/null
++++ b/.github/workflows/auto-ship.yml
+@@ -0,0 +1,120 @@
++# Merge an agent PR to main after CI passes, then verify production deploy.
++# Trigger manually: Actions → Auto-ship to production → Run workflow (optional PR number).
++# Cloud agents can also run: node scripts/ship-to-production.mjs --branch cursor/foo-ae35
++
++name: Auto-ship to production
++
++on:
++  workflow_dispatch:
++    inputs:
++      pr_number:
++        description: PR number to merge (optional if branch is set)
++        required: false
++        type: string
++      branch:
++        description: Head branch to find PR and merge
++        required: false
++        type: string
++        default: ''
++  workflow_run:
++    workflows: [CI]
++    types: [completed]
++
++permissions:
++  contents: write
++  pull-requests: write
++  actions: read
++
++concurrency:
++  group: auto-ship-${{ github.event.workflow_run.head_branch || github.event.inputs.branch || 'manual' }}
++  cancel-in-progress: false
++
++jobs:
++  auto-merge:
++    if: >
++      github.event_name == 'workflow_dispatch' ||
++      (github.event.workflow_run.conclusion == 'success' &&
++       startsWith(github.event.workflow_run.head_branch, 'cursor/') &&
++       endsWith(github.event.workflow_run.head_branch, '-ae35'))
++    runs-on: ubuntu-latest
++    outputs:
++      skip: ${{ steps.meta.outputs.skip }}
++      pr: ${{ steps.meta.outputs.pr }}
++    steps:
++      - name: Resolve branch and PR
++        id: meta
++        env:
++          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
++          INPUT_PR: ${{ github.event.inputs.pr_number }}
++          INPUT_BRANCH: ${{ github.event.inputs.branch }}
++          RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
++        run: |
++          set -euo pipefail
++          BRANCH="${INPUT_BRANCH:-$RUN_BRANCH}"
++          PR="${INPUT_PR:-}"
++
++          if [ -z "$PR" ] && [ -n "$BRANCH" ]; then
++            PR=$(gh pr list --head "$BRANCH" --base main --state open --json number -q '.[0].number' || true)
++          fi
++
++          if [ -z "$PR" ]; then
++            echo "No open PR to merge (branch=${BRANCH:-none})."
++            echo "skip=true" >> "$GITHUB_OUTPUT"
++            exit 0
++          fi
++
++          echo "pr=$PR" >> "$GITHUB_OUTPUT"
++          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
++          echo "skip=false" >> "$GITHUB_OUTPUT"
++          echo "Merging PR #$PR (branch: $BRANCH)"
++
++      - name: Merge pull request
++        if: steps.meta.outputs.skip != 'true'
++        env:
++          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
++        run: |
++          gh pr merge "${{ steps.meta.outputs.pr }}" --merge --delete-branch=false
++
++  verify-deploy:
++    needs: auto-merge
++    if: needs.auto-merge.result == 'success' && needs.auto-merge.outputs.skip != 'true'
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++        with:
++          ref: main
++
++      - uses: actions/setup-node@v4
++        with:
++          node-version: '20'
++          cache: npm
++
++      - name: Wait for Vercel deploy workflow
++        env:
++          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
++        run: |
++          set -euo pipefail
++          echo "Waiting for Deploy to Vercel on main..."
++          for i in $(seq 1 40); do
++            RUN=$(gh run list --workflow=deploy.yml --branch=main --limit=1 --json databaseId,status,conclusion -q '.[0]')
++            STATUS=$(echo "$RUN" | jq -r '.status')
++            CONCLUSION=$(echo "$RUN" | jq -r '.conclusion')
++            if [ "$STATUS" = "completed" ]; then
++              if [ "$CONCLUSION" = "success" ]; then
++                echo "Deploy workflow succeeded."
++                exit 0
++              fi
++              echo "Deploy workflow ended: $CONCLUSION"
++              exit 1
++            fi
++            sleep 15
++          done
++          echo "Timed out waiting for deploy workflow"
++          exit 1
++
++      - run: npm ci
++
++      - name: Production guardrail
++        env:
++          GUARDRAIL_URL: https://nyumbatracker.vercel.app
++        run: npm run ops:guardrail
+diff --git a/APPLY-PARTNER-REWARDS-AUTO.ps1 b/APPLY-PARTNER-REWARDS-AUTO.ps1
+new file mode 100644
+index 0000000..3e206bb
+--- /dev/null
++++ b/APPLY-PARTNER-REWARDS-AUTO.ps1
+@@ -0,0 +1,33 @@
++# Apply Partner Rewards automation (15% credits, tracker, sidebar quick links)
++$ErrorActionPreference = "Stop"
++Set-Location $PSScriptRoot
++
++$Branch = "cursor/partner-rewards-auto-ae35"
++
++git fetch origin main $Branch 2>$null
++git checkout $Branch 2>$null
++if ($LASTEXITCODE -ne 0) { git checkout -b $Branch }
++
++npm test
++if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
++
++npm run test:api-smoke
++if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
++
++npm run verify:features
++if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
++
++npm run build
++if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
++
++git add -A
++$st = git status --porcelain
++if ($st) { git commit -m "Partner Rewards automation: 15% credits, tracker, sidebar quick links" }
++git push -u origin $Branch
++
++$pr = gh pr list --head $Branch --base main --state open --json number -q ".[0].number" 2>$null
++if (-not $pr) {
++  gh pr create --base main --head $Branch --title "Partner Rewards automation" --body "15% billing credit per referral (max 45%), step tracker, auto credit notes, sidebar quick links for Plans/Rewards/Messages/Help."
++}
++
++Write-Host "Pushed $Branch — run .\SHIP-TO-PRODUCTION.ps1 -Branch $Branch to merge and deploy." -ForegroundColor Green
+diff --git a/PUSH-STABLE-INVITES-DISCOVER.ps1 b/PUSH-STABLE-INVITES-DISCOVER.ps1
+index a27576d..949f395 100644
+--- a/PUSH-STABLE-INVITES-DISCOVER.ps1
++++ b/PUSH-STABLE-INVITES-DISCOVER.ps1
+@@ -24,4 +24,13 @@ git add -A
+ $st = git status --porcelain
+ if ($st) { git commit -m "Stable invites + surface product highlights (Partner Rewards copy fix)" }
+ git push -u origin $Branch
+-Write-Host "Pushed $Branch — merge PR #48 to main, then deploy to Vercel." -ForegroundColor Green
++Write-Host "Pushed $Branch" -ForegroundColor Green
++
++$pr = gh pr list --head $Branch --base main --state open --json number -q ".[0].number" 2>$null
++if ($pr) {
++  Write-Host "Open PR #$pr — ship to production:" -ForegroundColor Cyan
++  Write-Host "  .\SHIP-TO-PRODUCTION.ps1 -PrNumber $pr" -ForegroundColor White
++  Write-Host "Or merge on GitHub — push to main auto-deploys via Actions (deploy.yml)." -ForegroundColor DarkGray
++} else {
++  Write-Host "Create PR on GitHub, then: .\SHIP-TO-PRODUCTION.ps1 -Branch $Branch" -ForegroundColor Yellow
++}
+diff --git a/SHIP-TO-PRODUCTION.ps1 b/SHIP-TO-PRODUCTION.ps1
+new file mode 100644
+index 0000000..9677f3c
+--- /dev/null
++++ b/SHIP-TO-PRODUCTION.ps1
+@@ -0,0 +1,52 @@
++# Merge agent PR → auto-deploy main via GitHub Actions → verify production
++# Usage:
++#   .\SHIP-TO-PRODUCTION.ps1 -Branch cursor/stable-invites-discover-ae35
++#   .\SHIP-TO-PRODUCTION.ps1 -PrNumber 48
++param(
++  [string]$Branch = "",
++  [string]$PrNumber = ""
++)
++
++$ErrorActionPreference = "Stop"
++Set-Location $PSScriptRoot
++
++$ProdUrl = "https://nyumbatracker.vercel.app"
++
++if (-not $PrNumber -and $Branch) {
++  $PrNumber = gh pr list --head $Branch --base main --state open --json number -q ".[0].number" 2>$null
++}
++
++if ($PrNumber) {
++  Write-Host "Merging PR #$PrNumber..." -ForegroundColor Cyan
++  gh pr merge $PrNumber --merge --delete-branch=false
++  Write-Host "Merged. Deploy to Vercel starts automatically on push to main." -ForegroundColor Green
++} else {
++  Write-Host "No open PR — assuming main already has latest. Checking deploy..." -ForegroundColor Yellow
++}
++
++Write-Host "Waiting for GitHub Actions deploy (up to 10 min)..." -ForegroundColor Cyan
++$deadline = (Get-Date).AddMinutes(10)
++do {
++  $run = gh run list --workflow=deploy.yml --branch=main --limit=1 --json status,conclusion,url | ConvertFrom-Json
++  if ($run.status -eq "completed") {
++    if ($run.conclusion -ne "success") {
++      Write-Host "Deploy failed: $($run.conclusion) — $($run.url)" -ForegroundColor Red
++      exit 1
++    }
++    Write-Host "Deploy succeeded." -ForegroundColor Green
++    break
++  }
++  if ((Get-Date) -gt $deadline) {
++    Write-Host "Timed out waiting for deploy." -ForegroundColor Red
++    exit 1
++  }
++  Start-Sleep -Seconds 15
++} while ($true)
++
++$env:GUARDRAIL_URL = $ProdUrl
++npm run ops:guardrail
++if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
++
++Write-Host ""
++Write-Host "LIVE: $ProdUrl" -ForegroundColor Green
++Write-Host "Future agent updates: push cursor/*-ae35 branch → CI passes → auto-ship workflow can merge, or run this script." -ForegroundColor DarkGray
+diff --git a/docs/DEPLOY.md b/docs/DEPLOY.md
+index c8bebde..2cf62fd 100644
+--- a/docs/DEPLOY.md
++++ b/docs/DEPLOY.md
+@@ -53,6 +53,31 @@ On push to `main`, `.github/workflows/deploy.yml` builds and deploys. If secrets
+ 
+ You can also trigger manually: **Actions → Deploy to Vercel → Run workflow**.
+ 
++### Automatic ship (cloud agents + owner PC)
++
++After an agent pushes a `cursor/*-ae35` branch:
++
++1. **CI** runs tests on the branch (`.github/workflows/ci.yml`).
++2. When CI succeeds, **Auto-ship to production** (`.github/workflows/auto-ship.yml`) can merge the open PR into `main`.
++3. Merge to `main` triggers **Deploy to Vercel** automatically.
++4. Verify: `npm run ops:guardrail` (expect **8/8**).
++
++**Owner PC — one command after agent work:**
++
++```powershell
++.\SHIP-TO-PRODUCTION.ps1 -Branch cursor/your-feature-ae35
++# or
++.\SHIP-TO-PRODUCTION.ps1 -PrNumber 48
++```
++
++**Cloud agent — end of turn:**
++
++```bash
++node scripts/ship-to-production.mjs --branch cursor/your-feature-ae35
++```
++
++Manual workflow: **Actions → Auto-ship to production → Run workflow** (optional PR number).
++
+ Copy the same billing env vars from Option A into the Vercel project (Actions deploy uses Vercel project env).
+ 
+ ## Local preview (always has latest code)
+diff --git a/package.json b/package.json
+index 75e9b66..20c3c90 100644
+--- a/package.json
++++ b/package.json
+@@ -19,6 +19,7 @@
+     "configure:vapid:ci": "node scripts/configure-vapid-ci.mjs",
+     "check:vapid": "node scripts/check-vapid.mjs",
+     "test:api-smoke": "vitest run api/apiSmoke.test.ts",
++    "ship:production": "node scripts/ship-to-production.mjs",
+     "vercel:setup": "node scripts/vercel-setup-helper.mjs",
+     "billing:admin-docs": "node -e \"console.log('See docs/BILLING-ADMIN.md and run AUTO-PUSH-BILLING.ps1 on Windows')\""
+   },
+diff --git a/scripts/ship-to-production.mjs b/scripts/ship-to-production.mjs
+new file mode 100644
+index 0000000..2195081
+--- /dev/null
++++ b/scripts/ship-to-production.mjs
+@@ -0,0 +1,66 @@
++#!/usr/bin/env node
++/**
++ * Ship agent work to production: merge PR → wait for Vercel deploy → guardrail.
++ * Usage:
++ *   node scripts/ship-to-production.mjs --branch cursor/foo-ae35
++ *   node scripts/ship-to-production.mjs --pr 48
++ * Cloud agents: run at end of a turn after push, or trigger GitHub workflow auto-ship.
++ */
++import { execSync } from 'node:child_process'
++
++const args = process.argv.slice(2)
++const branchIdx = args.indexOf('--branch')
++const prIdx = args.indexOf('--pr')
++const branch = branchIdx >= 0 ? args[branchIdx + 1] : ''
++const pr = prIdx >= 0 ? args[prIdx + 1] : ''
++
++const run = (cmd, opts = {}) => execSync(cmd, { encoding: 'utf8', stdio: 'pipe', ...opts }).trim()
++
++const gh = (cmd) => run(`gh ${cmd}`)
++
++try {
++  gh('auth status')
++} catch {
++  console.error('gh CLI not authenticated — merge manually on GitHub.')
++  process.exit(1)
++}
++
++let prNumber = pr
++if (!prNumber && branch) {
++  try {
++    prNumber = gh(`pr list --head "${branch}" --base main --state open --json number -q '.[0].number'`)
++  } catch {
++    prNumber = ''
++  }
++}
++
++if (!prNumber) {
++  console.log('No open PR to merge. If already on main, checking deploy only...')
++} else {
++  console.log(`Merging PR #${prNumber}...`)
++  gh(`pr merge ${prNumber} --merge --delete-branch=false`)
++  console.log('Merged.')
++}
++
++console.log('Waiting for Deploy to Vercel workflow on main...')
++for (let i = 0; i < 40; i++) {
++  const json = gh('run list --workflow=deploy.yml --branch=main --limit=1 --json status,conclusion')
++  const row = JSON.parse(json)[0]
++  if (row?.status === 'completed') {
++    if (row.conclusion !== 'success') {
++      console.error(`Deploy workflow failed: ${row.conclusion}`)
++      process.exit(1)
++    }
++    console.log('Deploy workflow succeeded.')
++    break
++  }
++  if (i === 39) {
++    console.error('Timed out waiting for deploy.')
++    process.exit(1)
++  }
++  await new Promise((r) => setTimeout(r, 15000))
++}
++
++console.log('Running production guardrail...')
++execSync('npm run ops:guardrail', { stdio: 'inherit' })
++console.log('\nLIVE — https://nyumbatracker.vercel.app')
+diff --git a/scripts/verify-features.mjs b/scripts/verify-features.mjs
+index d088f67..37ae678 100644
+--- a/scripts/verify-features.mjs
++++ b/scripts/verify-features.mjs
+@@ -265,6 +265,25 @@ confirm(
+   'Stable invite reuse + header/discover About, Rewards, Plans, Help + product highlights',
+ )
+ 
++// F24 Partner Rewards automation (15% credits, tracker, sidebar quick links)
++const partnerAuto = exists('src/lib/partnerRewards.ts') ? read('src/lib/partnerRewards.ts') : ''
++const referralsUi = exists('src/pages/ReferralsPage.jsx') ? read('src/pages/ReferralsPage.jsx') : ''
++const sidebarFile = exists('src/components/Sidebar.jsx') ? read('src/components/Sidebar.jsx') : ''
++const navQuick = exists('src/lib/navigation.ts') ? read('src/lib/navigation.ts') : ''
++confirm(
++  'F24',
++  'Partner Rewards automation',
++  partnerAuto.includes('CREDIT_PERCENT_PER_REFERRAL') &&
++    partnerAuto.includes('MAX_CREDIT_PERCENT') &&
++    partnerAuto.includes('processReferrerCreditOnFirstLogin') &&
++    partnerAuto.includes('creditNotes') &&
++    referralsUi.includes('Referral tracker') &&
++    referralsUi.includes('Auto credit notes') &&
++    sidebarFile.includes('SIDEBAR_QUICK_LINKS') &&
++    navQuick.includes('SIDEBAR_QUICK_LINKS'),
++  '15% credits + step tracker + sidebar Plans/Rewards/Messages/Help',
++)
++
+ const failed = checks.filter((c) => !c.ok)
+ const sha = (() => {
+   try {
+@@ -276,6 +295,6 @@ const sha = (() => {
+ 
+ console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
+ if (!failed.length) {
+-  console.log(`\nAll F1–F23 CONFIRMED at ${sha}`)
++  console.log(`\nAll F1–F24 CONFIRMED at ${sha}`)
+ }
+ process.exit(failed.length ? 1 : 0)
+diff --git a/src/App.jsx b/src/App.jsx
+index 37605e2..72d4249 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -60,6 +60,7 @@ import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
+ import { ensureDemoPracticeData } from './lib/demoPractice'
+ import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
+ import { syncInvitesFromUnits, releaseUnitInvite, pushInviteToCloud } from './lib/invites'
++import { processReferrerCreditOnFirstLogin, recordReferralSignup } from './lib/partnerRewards'
+ import { parseEntryPath, getTenantJoinPath, getCaretakerJoinPath, getReceiptPath, getBillingAdminPath } from './lib/routing'
+ import { getCaretakerSafeBuilding, getCaretakerSafeUnit, getCaretakerSafeTenant } from './lib/propertyViews'
+ import NotificationInbox from './components/NotificationInbox'
+@@ -401,7 +402,7 @@ function AppContent() {
+     }
+   }, [isLoggedIn, authUser, currentPage, showToast])
+ 
+-  const handleAuthSuccess = (user, registeredUnit = null, inviteMeta = null) => {
++  const handleAuthSuccess = (user, registeredUnit = null, inviteMeta = null, authMeta = null) => {
+     setAuthUser(user)
+     setIsLoggedIn(true)
+     const role = normalizeRole(user.role)
+@@ -489,6 +490,21 @@ function AppContent() {
+       setCurrentUser({ name, building: 'All Properties', email: user.email })
+     }
+ 
++    const ownerIdForRewards = user.ownerId || user.id
++    if (role === 'property_owner' && ownerIdForRewards) {
++      if (authMeta?.isNew) {
++        recordReferralSignup(ownerIdForRewards, user.email, user.name || name)
++      }
++      const credit = processReferrerCreditOnFirstLogin(
++        ownerIdForRewards,
++        user.name || name,
++        user.email,
++      )
++      if (credit.applied) {
++        showToast(`Partner Rewards: referrer earned ${credit.creditPercent}% billing credit.`, 'success')
++      }
++    }
++
+     let startedTrial = false
+     const ownerIdForSub = user.ownerId || user.id
+     if (needsSubscription(role) && ownerIdForSub) {
+diff --git a/src/components/Sidebar.jsx b/src/components/Sidebar.jsx
+index 177046b..26f3302 100644
+--- a/src/components/Sidebar.jsx
++++ b/src/components/Sidebar.jsx
+@@ -1,6 +1,6 @@
+ import React from 'react'
+ import { pagesForRole, normalizeRole } from '../lib/permissions'
+-import { sidebarPagesForRole } from '../lib/navigation'
++import { sidebarPagesForRole, SIDEBAR_QUICK_LINKS } from '../lib/navigation'
+ import { Icon } from './UI'
+ 
+ const PAGE_META = {
+@@ -28,6 +28,8 @@ const PAGE_META = {
+   assistant: { label: 'Assistant', icon: 'MessageCircle' },
+   messages: { label: 'Inbox', icon: 'MessageCircle' },
+   'data-import': { label: 'Import', icon: 'FileSpreadsheet' },
++  about: { label: 'About', icon: 'HelpCircle' },
++  referrals: { label: 'Rewards', icon: 'Gift' },
+ }
+ 
+ export default function Sidebar({ currentRole, currentPage, setCurrentPage, sidebarOpen, setSidebarOpen }) {
+@@ -38,6 +40,11 @@ export default function Sidebar({ currentRole, currentPage, setCurrentPage, side
+     .filter((id) => PAGE_META[id])
+     .map((id) => ({ id, ...PAGE_META[id] }))
+ 
++  const quickLinks =
++    role === 'property_owner'
++      ? SIDEBAR_QUICK_LINKS.filter((q) => PAGE_META[q.id] && allPages.includes(q.id))
++      : []
++
+   if (role === 'tenant') return null
+ 
+   return (
+@@ -74,6 +81,30 @@ export default function Sidebar({ currentRole, currentPage, setCurrentPage, side
+               {item.label}
+             </button>
+           ))}
++          {quickLinks.length > 0 && (
++            <div className="mt-4 pt-3 border-t border-white/10">
++              <p className="px-4 text-[10px] uppercase tracking-wide text-white/50 mb-2">Quick links</p>
++              {quickLinks.map((item) => (
++                <button
++                  key={item.id}
++                  type="button"
++                  data-nav-id={item.id}
++                  onClick={() => {
++                    setCurrentPage(item.id)
++                    if (window.innerWidth <= 768) setSidebarOpen(false)
++                  }}
++                  className={`tap-target w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-left mb-1 transition-colors ${
++                    currentPage === item.id
++                      ? 'bg-brand/80 text-white font-semibold'
++                      : 'text-white/80 hover:bg-white/10'
++                  }`}
++                >
++                  <Icon name={PAGE_META[item.id].icon} size={18} />
++                  {item.label}
++                </button>
++              ))}
++            </div>
++          )}
+         </nav>
+       </aside>
+     </>
+diff --git a/src/lib/actionGuidance.ts b/src/lib/actionGuidance.ts
+index 7b713ba..1235040 100644
+--- a/src/lib/actionGuidance.ts
++++ b/src/lib/actionGuidance.ts
+@@ -127,7 +127,7 @@ export const getPageGuidance = (
+       return {
+         variant: 'success',
+         headline: 'Partner Rewards',
+-        detail: 'Share your personal link. When another owner completes their first login, you earn discounted billing months toward renewal.',
++        detail: 'Share your personal link. Each referred owner earns you 15% billing credit on first login (max 45%).',
+         nextSteps: ['Copy your referral link', 'Find Rewards in the header or Discover strip', 'Track banked months on Plans & Billing'],
+       }
+     }
+diff --git a/src/lib/navigation.test.ts b/src/lib/navigation.test.ts
+index 10ae456..c38a50b 100644
+--- a/src/lib/navigation.test.ts
++++ b/src/lib/navigation.test.ts
+@@ -4,6 +4,7 @@ import {
+   PRIMARY_CARETAKER_PAGES,
+   MORE_TOOLS_LINKS,
+   DISCOVER_STRIP_LINKS,
++  SIDEBAR_QUICK_LINKS,
+   sidebarPagesForRole,
+ } from './navigation'
+ 
+@@ -47,4 +48,9 @@ describe('navigation', () => {
+     const ownerLinks = DISCOVER_STRIP_LINKS.filter((l) => l.roles.includes('property_owner'))
+     expect(ownerLinks.length).toBeGreaterThanOrEqual(4)
+   })
++
++  it('owner sidebar quick links promote plans rewards messages help', () => {
++    const ids = SIDEBAR_QUICK_LINKS.map((l) => l.id)
++    expect(ids).toEqual(['subscription', 'referrals', 'messages', 'help'])
++  })
+ })
+diff --git a/src/lib/navigation.ts b/src/lib/navigation.ts
+index a1c2381..302dda5 100644
+--- a/src/lib/navigation.ts
++++ b/src/lib/navigation.ts
+@@ -102,6 +102,14 @@ export const MORE_TOOLS_GROUPS: MoreToolsGroup[] = [
+   { title: 'Documents & legal', ids: ['documents', 'legal-notices', 'blacklist'] },
+ ]
+ 
++/** Quick links below primary nav — Plans, Rewards, Messages, Help (not replacing 8 core items) */
++export const SIDEBAR_QUICK_LINKS: Array<{ id: PageId; label: string }> = [
++  { id: 'subscription', label: 'Plans' },
++  { id: 'referrals', label: 'Rewards' },
++  { id: 'messages', label: 'Messages' },
++  { id: 'help', label: 'Help' },
++]
++
+ export const sidebarPagesForRole = (role: string, allPages: PageId[]): PageId[] => {
+   if (role === 'property_owner') {
+     return PRIMARY_SIDEBAR_PAGES.filter((id) => allPages.includes(id))
+diff --git a/src/lib/partnerRewards.test.ts b/src/lib/partnerRewards.test.ts
+index 6501371..524e2eb 100644
+--- a/src/lib/partnerRewards.test.ts
++++ b/src/lib/partnerRewards.test.ts
+@@ -5,6 +5,15 @@ import {
+   getReferralShareMessage,
+   savePartnerRewards,
+   seedDemoPartnerReward,
++  captureReferralFromUrl,
++  stashReferralCode,
++  clearStashedReferralCode,
++  recordReferralSignup,
++  processReferrerCreditOnFirstLogin,
++  applyPartnerCreditToAmount,
++  markReferralLinkShared,
++  CREDIT_PERCENT_PER_REFERRAL,
++  MAX_CREDIT_PERCENT,
+ } from './partnerRewards'
+ 
+ describe('partnerRewards', () => {
+@@ -28,17 +37,91 @@ describe('partnerRewards', () => {
+   it('includes code in WhatsApp message', () => {
+     const msg = getReferralShareMessage('REF-ABCD', 'Erik')
+     expect(msg).toContain('REF-ABCD')
+-    expect(msg).toContain('NyumbaTrack')
++    expect(msg).toContain('15%')
+   })
+ 
+-  it('persists banked months', () => {
++  it('persists credit percent and notes', () => {
+     const base = getPartnerRewards('owner-2')
+-    savePartnerRewards({ ...base, bankedMonths: 2, successfulReferrals: 2 })
+-    expect(getPartnerRewards('owner-2').bankedMonths).toBe(2)
++    savePartnerRewards({
++      ...base,
++      creditPercent: 30,
++      bankedMonths: 2,
++      successfulReferrals: 2,
++      creditNotes: [
++        {
++          id: 'cn-1',
++          date: '2026-07-11',
++          percent: 15,
++          note: 'Test',
++          referralId: 'ref-1',
++        },
++      ],
++    })
++    expect(getPartnerRewards('owner-2').creditPercent).toBe(30)
++    expect(getPartnerRewards('owner-2').creditNotes).toHaveLength(1)
+   })
+ 
+-  it('seedDemoPartnerReward banks at least one month', () => {
++  it('seedDemoPartnerReward banks credit and steps', () => {
+     const s = seedDemoPartnerReward('owner-3')
+-    expect(s.bankedMonths).toBeGreaterThanOrEqual(1)
++    expect(s.creditPercent).toBeGreaterThanOrEqual(15)
++    expect(s.referrals[0]?.steps.every((step) => step.done)).toBe(true)
++  })
++
++  it('stashes referral code from URL', () => {
++    stashReferralCode('REF-ABC1')
++    expect(localStorage.getItem('rt_pending_ref_code')).toContain('REF-ABC1')
++    clearStashedReferralCode()
++  })
++
++  it('records signup against referrer and credits on first login', () => {
++    const referrer = getPartnerRewards('referrer-1')
++    const code = referrer.referralCode
++    stashReferralCode(code)
++
++    const signup = recordReferralSignup('new-owner-1', 'new@landlord.ug', 'New Owner')
++    expect(signup.referrerOwnerId).toBe('referrer-1')
++
++    const refState = getPartnerRewards('referrer-1')
++    expect(refState.pendingReferrals).toBeGreaterThanOrEqual(1)
++
++    const credit = processReferrerCreditOnFirstLogin('new-owner-1', 'New Owner', 'new@landlord.ug')
++    expect(credit.applied).toBe(true)
++    expect(credit.creditPercent).toBe(CREDIT_PERCENT_PER_REFERRAL)
++
++    const after = getPartnerRewards('referrer-1')
++    expect(after.creditPercent).toBe(15)
++    expect(after.creditNotes[0]?.percent).toBe(15)
++    expect(after.referrals[0]?.steps.find((s) => s.id === 'credited')?.done).toBe(true)
++  })
++
++  it('caps total credit at 45%', () => {
++    const referrer = getPartnerRewards('referrer-cap')
++    savePartnerRewards({
++      ...referrer,
++      creditPercent: 40,
++      referrals: [],
++      creditNotes: [],
++    })
++
++    stashReferralCode(referrer.referralCode)
++    recordReferralSignup('o2', 'a@x.ug', 'A')
++    processReferrerCreditOnFirstLogin('o2', 'A', 'a@x.ug')
++
++    stashReferralCode(referrer.referralCode)
++    recordReferralSignup('o3', 'b@x.ug', 'B')
++    processReferrerCreditOnFirstLogin('o3', 'B', 'b@x.ug')
++
++    expect(getPartnerRewards('referrer-cap').creditPercent).toBe(MAX_CREDIT_PERCENT)
++  })
++
++  it('applyPartnerCreditToAmount discounts invoice total', () => {
++    const result = applyPartnerCreditToAmount(100000, 15)
++    expect(result.discount).toBe(15000)
++    expect(result.total).toBe(85000)
++  })
++
++  it('markReferralLinkShared tracks link_shared step', () => {
++    const next = markReferralLinkShared('owner-share')
++    expect(next.referrals[0]?.steps.find((s) => s.id === 'link_shared')?.done).toBe(true)
+   })
+ })
+diff --git a/src/lib/partnerRewards.ts b/src/lib/partnerRewards.ts
+index 6c9e1dd..9fe7cc4 100644
+--- a/src/lib/partnerRewards.ts
++++ b/src/lib/partnerRewards.ts
+@@ -1,14 +1,53 @@
+ import { safeGet, safeSet } from './storage'
+ 
++export const CREDIT_PERCENT_PER_REFERRAL = 15
++export const MAX_CREDIT_PERCENT = 45
++
++export type ReferralStepId = 'link_shared' | 'signed_up' | 'first_login' | 'credited'
++
++export type ReferralStep = {
++  id: ReferralStepId
++  label: string
++  done: boolean
++  at?: string | null
++}
++
++export type ReferralRecord = {
++  id: string
++  referredOwnerId?: string
++  referredEmail?: string
++  referredName?: string
++  steps: ReferralStep[]
++  creditPercent: number
++  status: 'pending' | 'qualified' | 'credited'
++  createdAt: string
++  qualifiedAt?: string | null
++}
++
++export type CreditNote = {
++  id: string
++  date: string
++  percent: number
++  note: string
++  referralId: string
++  referredName?: string
++}
++
+ export type PartnerRewardsState = {
+   ownerId: string
+   referralCode: string
+   bankedMonths: number
++  creditPercent: number
+   successfulReferrals: number
+   pendingReferrals: number
++  referrals: ReferralRecord[]
++  creditNotes: CreditNote[]
+ }
+ 
+ const KEY = (ownerId: string) => `rt_partner_rewards_${ownerId}`
++const STASH_KEY = 'rt_pending_ref_code'
++const SEEN_KEY = (ownerId: string) => `rt_owner_seen_${ownerId}`
++const REFERRER_KEY = (referredOwnerId: string) => `rt_referred_by_${referredOwnerId}`
+ 
+ const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+ 
+@@ -24,22 +63,276 @@ const randomSuffix = (len = 4): string => {
+   return s
+ }
+ 
++const defaultSteps = (opts: { linkShared?: boolean; signedUp?: boolean } = {}): ReferralStep[] => [
++  {
++    id: 'link_shared',
++    label: 'Link shared',
++    done: !!opts.linkShared,
++    at: opts.linkShared ? new Date().toISOString() : null,
++  },
++  {
++    id: 'signed_up',
++    label: 'Owner signed up',
++    done: !!opts.signedUp,
++    at: opts.signedUp ? new Date().toISOString() : null,
++  },
++  { id: 'first_login', label: 'First login complete', done: false, at: null },
++  { id: 'credited', label: 'Credit applied', done: false, at: null },
++]
++
++const normalizeState = (ownerId: string, raw: Partial<PartnerRewardsState> | null): PartnerRewardsState => ({
++  ownerId,
++  referralCode: raw?.referralCode || `REF-${randomSuffix(4)}`,
++  bankedMonths: raw?.bankedMonths ?? 0,
++  creditPercent: Math.min(MAX_CREDIT_PERCENT, raw?.creditPercent ?? 0),
++  successfulReferrals: raw?.successfulReferrals ?? 0,
++  pendingReferrals: raw?.pendingReferrals ?? 0,
++  referrals: raw?.referrals ?? [],
++  creditNotes: raw?.creditNotes ?? [],
++})
++
+ export const getPartnerRewards = (ownerId: string): PartnerRewardsState => {
+-  const stored = safeGet<PartnerRewardsState | null>(KEY(ownerId), null)
+-  if (stored?.referralCode) return { ...stored, ownerId }
+-  const record: PartnerRewardsState = {
+-    ownerId,
+-    referralCode: `REF-${randomSuffix(4)}`,
+-    bankedMonths: 0,
+-    successfulReferrals: 0,
+-    pendingReferrals: 0,
+-  }
++  const stored = safeGet<Partial<PartnerRewardsState> | null>(KEY(ownerId), null)
++  if (stored?.referralCode) return normalizeState(ownerId, stored)
++  const record = normalizeState(ownerId, null)
+   safeSet(KEY(ownerId), record)
+   return record
+ }
+ 
+ export const savePartnerRewards = (state: PartnerRewardsState): void => {
+-  safeSet(KEY(state.ownerId), state)
++  safeSet(KEY(state.ownerId), {
++    ...state,
++    creditPercent: Math.min(MAX_CREDIT_PERCENT, state.creditPercent),
++  })
++}
++
++export const findReferrerOwnerIdByCode = (code: string): string | null => {
++  const norm = String(code || '').trim().toUpperCase()
++  if (!norm) return null
++  if (typeof localStorage === 'undefined') return null
++  for (let i = 0; i < localStorage.length; i++) {
++    const k = localStorage.key(i)
++    if (!k?.startsWith('rt_partner_rewards_')) continue
++    const ownerId = k.slice('rt_partner_rewards_'.length)
++    const state = getPartnerRewards(ownerId)
++    if (state.referralCode.toUpperCase() === norm) return ownerId
++  }
++  return null
++}
++
++export const parseReferralCodeFromLocation = (
++  search = typeof window !== 'undefined' ? window.location.search : '',
++): string => {
++  const params = new URLSearchParams(search)
++  return String(params.get('ref') || '').trim().toUpperCase()
++}
++
++export const stashReferralCode = (code: string): void => {
++  const norm = String(code || '').trim().toUpperCase()
++  if (!norm) return
++  safeSet(STASH_KEY, norm)
++}
++
++export const peekStashedReferralCode = (): string =>
++  String(safeGet<string>(STASH_KEY, '') || '').trim().toUpperCase()
++
++export const clearStashedReferralCode = (): void => safeSet(STASH_KEY, '')
++
++export const captureReferralFromUrl = (): string => {
++  const code = parseReferralCodeFromLocation()
++  if (code) stashReferralCode(code)
++  return code
++}
++
++export const markReferralLinkShared = (ownerId: string): PartnerRewardsState => {
++  const state = getPartnerRewards(ownerId)
++  const draft = state.referrals.find((r) => r.status === 'pending' && !r.referredOwnerId)
++  if (draft) {
++    const steps = draft.steps.map((s) =>
++      s.id === 'link_shared' ? { ...s, done: true, at: new Date().toISOString() } : s,
++    )
++    const referrals = state.referrals.map((r) => (r.id === draft.id ? { ...r, steps } : r))
++    const next = { ...state, referrals }
++    savePartnerRewards(next)
++    return next
++  }
++  const record: ReferralRecord = {
++    id: `ref-${Date.now()}`,
++    steps: defaultSteps({ linkShared: true }),
++    creditPercent: 0,
++    status: 'pending',
++    createdAt: new Date().toISOString(),
++  }
++  const next = { ...state, referrals: [record, ...state.referrals] }
++  savePartnerRewards(next)
++  return next
++}
++
++export const recordReferralSignup = (
++  referredOwnerId: string,
++  email: string,
++  name: string,
++): { credited: boolean; referrerOwnerId?: string } => {
++  const code = peekStashedReferralCode()
++  if (!code) return { credited: false }
++  const referrerOwnerId = findReferrerOwnerIdByCode(code)
++  clearStashedReferralCode()
++  if (!referrerOwnerId || referrerOwnerId === referredOwnerId) return { credited: false }
++
++  safeSet(REFERRER_KEY(referredOwnerId), referrerOwnerId)
++  const referrer = getPartnerRewards(referrerOwnerId)
++  const now = new Date().toISOString()
++
++  let referrals = [...referrer.referrals]
++  const open = referrals.find((r) => r.status === 'pending' && !r.referredOwnerId)
++  const record: ReferralRecord = open
++    ? {
++        ...open,
++        referredOwnerId,
++        referredEmail: email,
++        referredName: name,
++        steps: open.steps.map((s) =>
++          s.id === 'signed_up' ? { ...s, done: true, at: now } : s.id === 'link_shared' && !s.done ? { ...s, done: true, at: now } : s,
++        ),
++      }
++    : {
++        id: `ref-${Date.now()}`,
++        referredOwnerId,
++        referredEmail: email,
++        referredName: name,
++        steps: defaultSteps({ linkShared: true, signedUp: true }),
++        creditPercent: 0,
++        status: 'pending',
++        createdAt: now,
++      }
++
++  referrals = open
++    ? referrals.map((r) => (r.id === open.id ? record : r))
++    : [record, ...referrals]
++
++  const next: PartnerRewardsState = {
++    ...referrer,
++    referrals,
++    pendingReferrals: referrer.pendingReferrals + (open ? 0 : 1),
++  }
++  savePartnerRewards(next)
++  return { credited: false, referrerOwnerId }
++}
++
++export const applyReferralCredit = (
++  referrerOwnerId: string,
++  referralId: string,
++  referredName: string,
++): PartnerRewardsState | null => {
++  const state = getPartnerRewards(referrerOwnerId)
++  if (state.creditPercent >= MAX_CREDIT_PERCENT) return null
++
++  const referral = state.referrals.find((r) => r.id === referralId)
++  if (!referral || referral.status === 'credited') return null
++
++  const add = Math.min(CREDIT_PERCENT_PER_REFERRAL, MAX_CREDIT_PERCENT - state.creditPercent)
++  const now = new Date().toISOString()
++  const note: CreditNote = {
++    id: `cn-${Date.now()}`,
++    date: now.split('T')[0],
++    percent: add,
++    note: `Partner Rewards: +${add}% billing credit — ${referredName || 'referred owner'} completed first login.`,
++    referralId,
++    referredName,
++  }
++
++  const referrals = state.referrals.map((r) =>
++    r.id === referralId
++      ? {
++          ...r,
++          status: 'credited' as const,
++          creditPercent: add,
++          qualifiedAt: now,
++          steps: r.steps.map((s) => ({
++            ...s,
++            done: true,
++            at: s.at || now,
++          })),
++        }
++      : r,
++  )
++
++  const next: PartnerRewardsState = {
++    ...state,
++    referrals,
++    creditPercent: state.creditPercent + add,
++    bankedMonths: state.bankedMonths + (add >= 15 ? 1 : 0),
++    successfulReferrals: state.successfulReferrals + 1,
++    pendingReferrals: Math.max(0, state.pendingReferrals - 1),
++    creditNotes: [note, ...state.creditNotes],
++  }
++  savePartnerRewards(next)
++  return next
++}
++
++export const processReferrerCreditOnFirstLogin = (
++  referredOwnerId: string,
++  referredName: string,
++  referredEmail: string,
++): { applied: boolean; creditPercent?: number } => {
++  if (safeGet<boolean>(SEEN_KEY(referredOwnerId), false)) {
++    return { applied: false }
++  }
++  safeSet(SEEN_KEY(referredOwnerId), true)
++
++  const referrerOwnerId = safeGet<string | null>(REFERRER_KEY(referredOwnerId), null)
++  if (!referrerOwnerId) return { applied: false }
++
++  const referrer = getPartnerRewards(referrerOwnerId)
++  const referral =
++    referrer.referrals.find((r) => r.referredOwnerId === referredOwnerId) ||
++    referrer.referrals.find((r) => r.status === 'pending' && r.referredEmail === referredEmail)
++
++  if (!referral) return { applied: false }
++
++  const now = new Date().toISOString()
++  let referrals = referrer.referrals.map((r) =>
++    r.id === referral.id
++      ? {
++          ...r,
++          referredOwnerId,
++          referredName,
++          referredEmail,
++          status: 'qualified' as const,
++          qualifiedAt: now,
++          steps: r.steps.map((s) =>
++            s.id === 'first_login' ? { ...s, done: true, at: now } : s,
++          ),
++        }
++      : r,
++  )
++
++  savePartnerRewards({ ...referrer, referrals })
++  const credited = applyReferralCredit(referrerOwnerId, referral.id, referredName)
++  return credited
++    ? { applied: true, creditPercent: credited.creditPercent }
++    : { applied: false }
++}
++
++export const applyPartnerCreditToAmount = (amount: number, creditPercent: number): {
++  original: number
++  discount: number
++  total: number
++  creditPercent: number
++} => {
++  const pct = Math.min(MAX_CREDIT_PERCENT, Math.max(0, creditPercent))
++  const discount = Math.round((amount * pct) / 100)
++  return {
++    original: amount,
++    discount,
++    total: Math.max(0, amount - discount),
++    creditPercent: pct,
++  }
++}
++
++export const formatCreditSummary = (state: PartnerRewardsState): string => {
++  if (state.creditPercent <= 0) return 'No Partner Rewards credit yet — share your link.'
++  return `${state.creditPercent}% billing credit active (max ${MAX_CREDIT_PERCENT}%). ${state.creditNotes.length} credit note(s) on file.`
+ }
+ 
+ export const getReferralLink = (code: string): string => {
+@@ -49,7 +342,7 @@ export const getReferralLink = (code: string): string => {
+ 
+ export const getReferralShareMessage = (code: string, name = 'A landlord'): string => {
+   const link = getReferralLink(code)
+-  return `${name} uses NyumbaTrack to manage rent in Uganda. Join with my Partner Rewards link: ${link} (code ${code}). Complete your first owner login and we both earn discounted billing months.`
++  return `${name} uses NyumbaTrack to manage rent in Uganda. Join with my Partner Rewards link: ${link} (code ${code}). Complete your first owner login — I earn 15% billing credit (up to 45%).`
+ }
+ 
+ /** Demo / training — bank one month for UI practice */
+@@ -58,7 +351,38 @@ export const seedDemoPartnerReward = (ownerId: string): PartnerRewardsState => {
+   const demo: PartnerRewardsState = {
+     ...base,
+     bankedMonths: Math.max(base.bankedMonths, 1),
++    creditPercent: Math.max(base.creditPercent, 15),
+     successfulReferrals: Math.max(base.successfulReferrals, 1),
++    referrals: base.referrals.length
++      ? base.referrals
++      : [
++          {
++            id: 'ref-demo',
++            referredName: 'Demo Landlord',
++            referredEmail: 'demo@landlord.ug',
++            steps: defaultSteps({ linkShared: true, signedUp: true }).map((s) => ({
++              ...s,
++              done: true,
++              at: new Date().toISOString(),
++            })),
++            creditPercent: 15,
++            status: 'credited',
++            createdAt: new Date().toISOString(),
++            qualifiedAt: new Date().toISOString(),
++          },
++        ],
++    creditNotes: base.creditNotes.length
++      ? base.creditNotes
++      : [
++          {
++            id: 'cn-demo',
++            date: new Date().toISOString().split('T')[0],
++            percent: 15,
++            note: 'Partner Rewards: +15% billing credit — Demo Landlord completed first login.',
++            referralId: 'ref-demo',
++            referredName: 'Demo Landlord',
++          },
++        ],
+   }
+   savePartnerRewards(demo)
+   return demo
+diff --git a/src/lib/productHighlights.ts b/src/lib/productHighlights.ts
+index cdbffaa..6681101 100644
+--- a/src/lib/productHighlights.ts
++++ b/src/lib/productHighlights.ts
+@@ -74,7 +74,7 @@ export const PRODUCT_HIGHLIGHTS: ProductHighlight[] = [
+   {
+     id: 'partner-rewards',
+     title: 'Partner Rewards',
+-    detail: 'Refer another landlord — they qualify on first owner login and you earn discounted billing months.',
++    detail: 'Refer another landlord — earn 15% billing credit per first login (max 45%).',
+     pageId: 'referrals',
+     ctaLabel: 'Get your link',
+     icon: 'referral',
+diff --git a/src/pages/LoginPage.jsx b/src/pages/LoginPage.jsx
+index 4dc4e5a..3b1de8b 100644
+--- a/src/pages/LoginPage.jsx
++++ b/src/pages/LoginPage.jsx
+@@ -1,6 +1,7 @@
+ import React, { useState, useEffect } from 'react'
+ import { Home, Eye, EyeOff } from 'lucide-react'
+ import { seedDemoUsers, registerOwner, login, loginOrRegisterWithGoogle } from '../lib/auth'
++import { captureReferralFromUrl } from '../lib/partnerRewards'
+ import GoogleSignInButton from '../components/GoogleSignInButton'
+ import { isOwnerLoginRole } from '../lib/permissions'
+ import { validatePortalSignIn, showDemoCredentials, GENERIC_AUTH_ERROR } from '../lib/portalAuth'
+@@ -21,6 +22,7 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
+ 
+   useEffect(() => {
+     seedDemoUsers()
++    captureReferralFromUrl()
+   }, [])
+ 
+   const handleGoogle = (profile) => {
+@@ -39,7 +41,7 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
+       setError(portalCheck.error)
+       return
+     }
+-    onAuthSuccess(result.user)
++    onAuthSuccess(result.user, null, null, { isNew: !!result.isNew })
+   }
+ 
+   const handleSubmit = (e) => {
+@@ -74,7 +76,7 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
+           setLoading(false)
+           return
+         }
+-        onAuthSuccess(result.user)
++        onAuthSuccess(result.user, null, null, { isNew: true })
+       }
+       setLoading(false)
+     }, 300)
+diff --git a/src/pages/ReferralsPage.jsx b/src/pages/ReferralsPage.jsx
+index 5ee3598..784d222 100644
+--- a/src/pages/ReferralsPage.jsx
++++ b/src/pages/ReferralsPage.jsx
+@@ -1,17 +1,21 @@
+ import React, { useState } from 'react'
+-import { Gift, Copy, Link2, Users } from 'lucide-react'
++import { Gift, Copy, Link2, Users, CheckCircle2, Circle } from 'lucide-react'
+ import GuidancePanel from '../components/GuidancePanel'
+ import { getPageGuidance } from '../lib/actionGuidance'
+ import {
+   getPartnerRewards,
+   getReferralLink,
+   getReferralShareMessage,
++  markReferralLinkShared,
++  formatCreditSummary,
++  MAX_CREDIT_PERCENT,
++  CREDIT_PERCENT_PER_REFERRAL,
+ } from '../lib/partnerRewards'
+ import { btnPrimary } from '../lib/formStyles'
+ 
+ export default function ReferralsPage({ activeOwnerId, authUser, showToast, setCurrentPage }) {
+   const ownerId = activeOwnerId || authUser?.ownerId || authUser?.id || ''
+-  const [rewards] = useState(() => (ownerId ? getPartnerRewards(ownerId) : null))
++  const [rewards, setRewards] = useState(() => (ownerId ? getPartnerRewards(ownerId) : null))
+ 
+   const guidance = getPageGuidance('property_owner', 'referrals', {})
+ 
+@@ -35,30 +39,42 @@ export default function ReferralsPage({ activeOwnerId, authUser, showToast, setC
+     }
+   }
+ 
++  const onCopyLink = () => {
++    const next = markReferralLinkShared(ownerId)
++    setRewards(next)
++    copy(link, 'Link')
++  }
++
+   return (
+     <div className="max-w-2xl mx-auto space-y-6 pb-24 p-4">
+       <div className="flex items-center gap-3">
+         <Gift className="text-brand" size={28} />
+         <div>
+           <h1 className="text-2xl font-bold">Partner Rewards</h1>
+-          <p className="text-sm text-gray-500 dark:text-gray-400">Refer landlords · earn free months</p>
++          <p className="text-sm text-gray-500 dark:text-gray-400">
++            {CREDIT_PERCENT_PER_REFERRAL}% credit per referral · max {MAX_CREDIT_PERCENT}%
++          </p>
+         </div>
+       </div>
+ 
+       <GuidancePanel guidance={guidance} />
+ 
++      <div className="card p-4 bg-brand/5 border border-brand/20 text-sm text-gray-700 dark:text-gray-300">
++        {formatCreditSummary(rewards)}
++      </div>
++
+       <div className="card p-5 border-2 border-brand/25 space-y-4">
+         <h2 className="font-semibold flex items-center gap-2">
+           <Users size={18} /> Your invite link
+         </h2>
+         <p className="text-sm text-gray-600 dark:text-gray-300">
+-          Share this with another property owner. When they complete their first owner login via your link, you earn discounted billing months toward renewal.
++          When a referred owner completes their first login, you automatically earn {CREDIT_PERCENT_PER_REFERRAL}% billing credit (up to {MAX_CREDIT_PERCENT}% total).
+         </p>
+         <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg font-mono text-center text-lg tracking-widest">
+           {rewards.referralCode}
+         </div>
+         <div className="flex flex-wrap gap-2">
+-          <button type="button" onClick={() => copy(link, 'Link')} className={`tap-target flex items-center gap-1 px-3 py-2 text-xs ${btnPrimary}`}>
++          <button type="button" onClick={onCopyLink} className={`tap-target flex items-center gap-1 px-3 py-2 text-xs ${btnPrimary}`}>
+             <Link2 size={14} /> Copy referral link
+           </button>
+           <button type="button" onClick={() => copy(rewards.referralCode, 'Code')} className="tap-target flex items-center gap-1 px-3 py-2 text-xs border rounded-lg">
+@@ -73,12 +89,12 @@ export default function ReferralsPage({ activeOwnerId, authUser, showToast, setC
+ 
+       <div className="grid sm:grid-cols-3 gap-3">
+         <div className="card p-4 text-center">
+-          <p className="text-2xl font-bold text-brand">{rewards.bankedMonths}</p>
+-          <p className="text-xs text-gray-500 mt-1">Months banked</p>
++          <p className="text-2xl font-bold text-brand">{rewards.creditPercent}%</p>
++          <p className="text-xs text-gray-500 mt-1">Billing credit</p>
+         </div>
+         <div className="card p-4 text-center">
+           <p className="text-2xl font-bold text-brand">{rewards.successfulReferrals}</p>
+-          <p className="text-xs text-gray-500 mt-1">Successful referrals</p>
++          <p className="text-xs text-gray-500 mt-1">Credited referrals</p>
+         </div>
+         <div className="card p-4 text-center">
+           <p className="text-2xl font-bold text-brand">{rewards.pendingReferrals}</p>
+@@ -86,12 +102,54 @@ export default function ReferralsPage({ activeOwnerId, authUser, showToast, setC
+         </div>
+       </div>
+ 
++      {rewards.referrals.length > 0 && (
++        <div className="space-y-3">
++          <h3 className="font-semibold text-sm">Referral tracker</h3>
++          {rewards.referrals.map((ref) => (
++            <div key={ref.id} className="card p-4 space-y-2">
++              <p className="font-medium text-sm">
++                {ref.referredName || ref.referredEmail || 'Shared link'}
++                <span className="ml-2 text-xs text-gray-500 capitalize">({ref.status})</span>
++              </p>
++              <ul className="space-y-1">
++                {ref.steps.map((step) => (
++                  <li key={step.id} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
++                    {step.done ? (
++                      <CheckCircle2 size={14} className="text-brand shrink-0" />
++                    ) : (
++                      <Circle size={14} className="text-gray-400 shrink-0" />
++                    )}
++                    {step.label}
++                    {step.at && <span className="text-gray-400">· {step.at.split('T')[0]}</span>}
++                  </li>
++                ))}
++              </ul>
++              {ref.creditPercent > 0 && (
++                <p className="text-xs text-brand">+{ref.creditPercent}% credit applied</p>
++              )}
++            </div>
++          ))}
++        </div>
++      )}
++
++      {rewards.creditNotes.length > 0 && (
++        <div className="card p-4 space-y-2">
++          <h3 className="font-semibold text-sm">Auto credit notes</h3>
++          {rewards.creditNotes.map((note) => (
++            <div key={note.id} className="text-xs border-l-2 border-brand/40 pl-3 py-1">
++              <p className="font-medium">{note.date} · +{note.percent}%</p>
++              <p className="text-gray-600 dark:text-gray-400">{note.note}</p>
++            </div>
++          ))}
++        </div>
++      )}
++
+       <div className="card p-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+         <h3 className="font-semibold text-gray-800 dark:text-gray-100">How it works</h3>
+         <ol className="list-decimal pl-5 space-y-1">
+           <li>Copy your link and send it to a fellow landlord.</li>
+-          <li>They create an owner account and complete their first login.</li>
+-          <li>You earn discounted billing months — applied on your next renewal.</li>
++          <li>They create an owner account (signup tracked automatically).</li>
++          <li>On their first login you earn {CREDIT_PERCENT_PER_REFERRAL}% — auto-applied to your next invoice.</li>
+         </ol>
+       </div>
+ 
+diff --git a/src/pages/SubscriptionPage.jsx b/src/pages/SubscriptionPage.jsx
+index f6885e4..0a1c729 100644
+--- a/src/pages/SubscriptionPage.jsx
++++ b/src/pages/SubscriptionPage.jsx
+@@ -36,7 +36,7 @@ import {
+   checkUnitLimit,
+ } from '../utils/subscription'
+ import { ADMIN_MOMO_LINE, ADMIN_MOMO_DISPLAY, subscriptionPaymentReference } from '../lib/billing'
+-import { getPartnerRewards } from '../lib/partnerRewards'
++import { getPartnerRewards, applyPartnerCreditToAmount } from '../lib/partnerRewards'
+ import { verifyMomoReference, collectSubscriptionReferences } from '../lib/momoVerification'
+ import { buildSubscriptionInvoice, queueInvoiceEmail, downloadInvoice } from '../lib/subscriptionInvoice'
+ import { submitCloudSubscriptionClaim } from '../lib/subscriptionCloud'
+@@ -121,7 +121,10 @@ export default function SubscriptionPage({
+   }
+ 
+   const subscribe = async (plan) => {
+-    const amount = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice
++    const baseAmount = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice
++    const creditPct = partnerRewards?.creditPercent || 0
++    const priced = applyPartnerCreditToAmount(baseAmount, creditPct)
++    const amount = priced.total
+     const ref = momoReference.trim()
+     const verify = verifyMomoReference(ref, collectSubscriptionReferences(paymentHistory))
+     if (!verify.ok) {
+@@ -191,6 +194,11 @@ export default function SubscriptionPage({
+       : confirmPlan.monthlyPrice
+     : 0
+ 
++  const partnerCredit = partnerRewards?.creditPercent
++    ? applyPartnerCreditToAmount(payAmount, partnerRewards.creditPercent)
++    : null
++  const amountDue = partnerCredit?.total ?? payAmount
++
+   const payRefHint = confirmPlan ? subscriptionPaymentReference(confirmPlan.id, customerName) : ''
+ 
+   const cycleBtn = (cycle) =>
+@@ -230,14 +238,25 @@ export default function SubscriptionPage({
+                 <Gift size={22} />
+                 Partner Rewards
+               </h2>
+-              {partnerRewards.bankedMonths > 0 ? (
++              {partnerRewards.bankedMonths > 0 || partnerRewards.creditPercent > 0 ? (
+                 <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+-                  You have <strong>{partnerRewards.bankedMonths}</strong> free month
+-                  {partnerRewards.bankedMonths === 1 ? '' : 's'} banked toward your next renewal.
++                  {partnerRewards.creditPercent > 0 && (
++                    <>
++                      You have <strong>{partnerRewards.creditPercent}%</strong> Partner Rewards billing credit
++                      {partnerRewards.bankedMonths > 0 && (
++                        <>
++                          {' '}
++                          and <strong>{partnerRewards.bankedMonths}</strong> banked month
++                          {partnerRewards.bankedMonths === 1 ? '' : 's'}
++                        </>
++                      )}
++                      .
++                    </>
++                  )}
+                 </p>
+               ) : (
+                 <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+-                  Refer another landlord — when they complete their first owner login, you earn discounted billing months.
++                  Refer another landlord — when they complete their first owner login, you earn {15}% billing credit (max 45%).
+                 </p>
+               )}
+               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+@@ -777,7 +796,12 @@ export default function SubscriptionPage({
+             <p className="text-xs text-gray-500 dark:text-gray-400">{confirmPlan.tagline}</p>
+ 
+             <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded text-sm space-y-1">
+-              <p className="text-2xl font-bold text-[#2d6a4f]">{fmtUGX(payAmount)}</p>
++              <p className="text-2xl font-bold text-[#2d6a4f]">{fmtUGX(amountDue)}</p>
++              {partnerCredit && partnerCredit.discount > 0 && (
++                <p className="text-brand text-xs">
++                  Partner Rewards credit: −{fmtUGX(partnerCredit.discount)} ({partnerCredit.creditPercent}% off {fmtUGX(payAmount)})
++                </p>
++              )}
+               {billingCycle === 'yearly' ? (
+                 <>
+                   <p className="text-green-600 dark:text-green-400">
+@@ -808,7 +832,7 @@ export default function SubscriptionPage({
+             <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded text-sm space-y-2">
+               <p className="font-semibold">Step 1 — Send money now</p>
+               <p>
+-                Open MTN MoMo and send <strong>{fmtUGX(payAmount)}</strong> to:
++                Open MTN MoMo and send <strong>{fmtUGX(amountDue)}</strong> to:
+               </p>
+               <p className="text-xl font-bold font-mono">{ADMIN_MOMO_LINE}</p>
+               <p className="text-xs text-gray-500 dark:text-gray-400">
