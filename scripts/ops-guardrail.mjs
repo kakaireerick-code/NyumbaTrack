@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * Production guardrail — fails if nyumbatrack.vercel.app serves stale/wrong app.
- * Run after Vercel redeploy: npm run ops:guardrail
+ * Production guardrail — checks live NyumbaTrack deployment.
+ * Default: https://nyumbatracker.vercel.app (ricorp-ug/nyumba-track)
+ * Override: GUARDRAIL_URL=https://… npm run ops:guardrail
  */
 
-const PROD_URL = process.env.GUARDRAIL_URL || 'https://nyumbatrack.vercel.app'
+const PROD_URL = process.env.GUARDRAIL_URL || 'https://nyumbatracker.vercel.app'
 const STALE_BUNDLE = 'index-B0iUFD94.js'
 const KENYA_MARKERS = ['Kenyan Landlords', 'Kenyan landlords']
 

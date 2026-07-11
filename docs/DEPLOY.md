@@ -2,7 +2,9 @@
 
 ## Why you might not see updates
 
-If [nyumbatrack.vercel.app](https://nyumbatrack.vercel.app/) still shows a **marketing landing page** (“Welcome back / Get Started”), **Kenyan** copy, or `/login` returns a **404**, Vercel is **not** serving this repository (`kakaireerick-code/NyumbaTrack`). GitHub `main` has the RBAC app; the live domain is linked to a different project or an old deployment.
+If [nyumbatracker.vercel.app](https://nyumbatracker.vercel.app/) (or legacy [nyumbatrack.vercel.app](https://nyumbatrack.vercel.app/)) still shows a **marketing landing page** (“Welcome back / Get Started”), **Kenyan** copy, or `/login` returns a **404**, Vercel is **not** serving this repository (`kakaireerick-code/NyumbaTrack`). GitHub `main` has the RBAC app; the live domain may be linked to a different project or an old deployment.
+
+**Canonical production:** https://nyumbatracker.vercel.app
 
 After a correct deploy:
 

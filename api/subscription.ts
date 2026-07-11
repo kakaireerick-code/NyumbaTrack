@@ -73,6 +73,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ ok: false, error: 'action and momoReference required' })
     }
 
+    const reviewAction: 'approve' | 'reject' = action
+
     const key = claimKey(momoReference)
     const existing = await r.get<StoredClaim>(key)
     if (!existing) {
@@ -82,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(409).json({ ok: false, error: `Claim already ${existing.status}` })
     }
 
-    const updated = applyReview(existing, action, note)
+    const updated = applyReview(existing, reviewAction, note)
     await r.set(key, updated)
     return res.status(200).json({ ok: true, claim: updated })
   }

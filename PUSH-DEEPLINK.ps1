@@ -14,6 +14,14 @@ Write-Host "PUSH-DEEPLINK" -ForegroundColor Cyan
 Write-Host "=============" -ForegroundColor Cyan
 Write-Host ""
 
+git fetch origin main 2>$null
+$routing = git show "origin/main:src/lib/routing.ts" 2>$null
+if ($LASTEXITCODE -eq 0 -and $routing -match "billing-admin") {
+  Write-Host "SKIP — /billing-admin deep link already on main (PR #32 merged)." -ForegroundColor Green
+  Write-Host "Open: https://nyumbatracker.vercel.app/billing-admin" -ForegroundColor Cyan
+  exit 0
+}
+
 $url = git remote get-url origin 2>$null
 if ($url -match "ultt|land-tax" -and $url -notmatch "Nyumba|nyumba") {
   Write-Host "Fixing wrong origin: $url" -ForegroundColor Yellow

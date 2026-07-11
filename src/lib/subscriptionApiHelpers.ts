@@ -12,7 +12,11 @@ export type StoredClaim = {
   reviewNote?: string
 }
 
-export const parseReviewBody = (body: Record<string, unknown>) => {
+export const parseReviewBody = (body: Record<string, unknown>): {
+  action: 'approve' | 'reject' | ''
+  momoReference: string
+  note: string
+} => {
   const action = body.action === 'reject' ? 'reject' : body.action === 'approve' ? 'approve' : ''
   const momoReference = String(body.momoReference || '').trim()
   const note = String(body.note || '').trim()

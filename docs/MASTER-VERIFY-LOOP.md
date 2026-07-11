@@ -5,7 +5,7 @@ Run every turn:
 ```bash
 npm run verify:features   # F1–F15 local checks
 npm test && npm run build
-npm run ops:guardrail     # production (after deploy)
+npm run ops:guardrail     # production (default: nyumbatracker.vercel.app)
 ```
 
 ## Feature checklist

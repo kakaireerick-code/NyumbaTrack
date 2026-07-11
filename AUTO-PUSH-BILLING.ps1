@@ -14,6 +14,14 @@ Write-Host "AUTO-PUSH-BILLING" -ForegroundColor Cyan
 Write-Host "=================" -ForegroundColor Cyan
 Write-Host ""
 
+git fetch origin main 2>$null
+$onMain = git show "origin/main:src/pages/BillingAdminPage.jsx" 2>$null
+if ($LASTEXITCODE -eq 0 -and $onMain) {
+  Write-Host "SKIP — BillingAdminPage.jsx already on main (PR #31 merged)." -ForegroundColor Green
+  Write-Host "Use .\OWNER-SYNC.ps1 for daily sync." -ForegroundColor Cyan
+  exit 0
+}
+
 $url = git remote get-url origin 2>$null
 if ($url -match "ultt|land-tax" -and $url -notmatch "Nyumba|nyumba") {
   Write-Host "Fixing wrong origin: $url" -ForegroundColor Yellow

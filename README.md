@@ -50,7 +50,9 @@ Hidden in production builds.
 
 ## Production (Vercel)
 
-GitHub `main` has the full RBAC app. If [nyumbatrack.vercel.app](https://nyumbatrack.vercel.app/) still shows an old marketing page or `/login` 404s, Vercel is not linked to this repo — see **[docs/DEPLOY.md](docs/DEPLOY.md)** to reconnect.
+GitHub `main` has the full RBAC app. **Production:** [nyumbatracker.vercel.app](https://nyumbatracker.vercel.app/). Legacy [nyumbatrack.vercel.app](https://nyumbatrack.vercel.app/) may still show an old Kenyan build — see **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+
+**Owner PC:** `OWNER-SYNC.ps1` + **[docs/POWERSHELL-OWNER.md](docs/POWERSHELL-OWNER.md)**
 
 After a correct deploy, `/login` shows owner sign-in and a small **build** stamp (git SHA) in the bottom-right corner so you can confirm the live site matches `main`.
 
