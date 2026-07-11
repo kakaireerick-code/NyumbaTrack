@@ -1,9 +1,9 @@
-# Master verify loop — F1–F17
+# Master verify loop — F1–F18
 
 Run every turn:
 
 ```bash
-npm run verify:features   # F1–F17 local checks
+npm run verify:features   # F1–F18 local checks
 npm test && npm run build
 npm run ops:guardrail     # production (default: nyumbatracker.vercel.app)
 ```
@@ -28,15 +28,23 @@ npm run ops:guardrail     # production (default: nyumbatracker.vercel.app)
 | F14 | Guardrail script | `scripts/ops-guardrail.mjs` + npm script |
 | F15 | Billing admin panel | `BillingAdminPage.jsx` + PATCH `/api/subscription` |
 | F16 | Cloud tenant invites | `api/invite.ts` + cross-device join |
-| F17 | Web push notifications | `sw.js` + push APIs + bell subscribe |
+| F17 | Web push notifications | `sw.js` + push APIs + cross-browser bell |
+| F18 | VAPID setup tooling | `SETUP-VAPID.ps1` + `npm run setup:vapid` |
 
-## F17 — Web push (after VAPID on Vercel)
+## F17 — Web push (browsers)
 
-1. `npm run generate:vapid` on PC → add keys to Vercel Production
-2. Redeploy → `npm run check:vapid` → `/api/health` shows `vapid: true`, `push: true`
-3. Bell → **Enable phone notifications** → **When app is closed (PWA)**
+Chrome, Firefox, Edge, Safari — tab-hidden alerts work without VAPID. Closed-app push needs VAPID + PWA (iPhone: Add to Home Screen).
 
 See `docs/PUSH-NOTIFICATIONS.md`.
+
+## F18 — VAPID keys (owner PC)
+
+```powershell
+.\SETUP-VAPID.ps1
+# or: $env:VERCEL_TOKEN="..." ; npm run setup:vapid
+```
+
+Pass: `npm run check:vapid` → `vapid: true`, `push: true`
 
 ## F15 — Billing admin (PC operator)
 
@@ -55,7 +63,7 @@ Log: CONFIRMED F# at <commit-sha>
 
 ## Done when
 
-- All F1–F15 CONFIRMED locally
+- All F1–F18 CONFIRMED locally
 - `npm run ops:guardrail` → 4/4 PASS on production
 - Bundle ≠ `index-B0iUFD94.js`
 - `/api/health` returns JSON

@@ -10,7 +10,9 @@ import {
 } from '../lib/notifications'
 import {
   getPushPrefs,
+  getPushCapabilities,
   isPushSupported,
+  isClosedAppPushSupported,
   setClosedAppPush,
   subscribeDevicePush,
   unsubscribeDevicePush,
@@ -30,6 +32,8 @@ export default function NotificationInbox({
   const [pushPrefs, setPushPrefs] = useState(() => getPushPrefs(pushUserId))
   const [pushBusy, setPushBusy] = useState(false)
   const [pushMsg, setPushMsg] = useState('')
+  const caps = getPushCapabilities()
+  const closedAppOk = isClosedAppPushSupported()
 
   useEffect(() => {
     return subscribeNotificationUpdates(() => setTick((t) => t + 1))
@@ -64,16 +68,32 @@ export default function NotificationInbox({
     setPushMsg('')
     const r = await subscribeDevicePush(ownerId, role, pushUserId)
     setPushPrefs(getPushPrefs(pushUserId))
-    setPushMsg(r.ok ? 'Phone notifications enabled.' : r.error || 'Could not enable.')
+    if (r.ok) {
+      const mode =
+        r.mode === 'pwa'
+          ? 'Phone + closed-app notifications enabled.'
+          : 'Tab-hidden notifications enabled.'
+      setPushMsg(r.error ? `${mode} ${r.error}` : mode)
+    } else {
+      setPushMsg(r.error || 'Could not enable.')
+    }
     setPushBusy(false)
   }
 
   const toggleClosedApp = async (on) => {
+    if (!closedAppOk) {
+      setPushMsg(caps.hint || 'Closed-app push not supported in this browser.')
+      return
+    }
     setPushBusy(true)
     setPushMsg('')
     if (on) {
       const r = await subscribeDevicePush(ownerId, role, pushUserId)
-      setPushMsg(r.ok ? 'PWA push enabled.' : r.error || 'Enable failed.')
+      setPushMsg(
+        r.ok && r.mode === 'pwa'
+          ? 'PWA push enabled.'
+          : r.error || 'Enable failed — check VAPID on server or Add to Home Screen.',
+      )
     } else {
       setClosedAppPush(pushUserId, false)
       setPushMsg('Closed-app push turned off (tab notifications still work).')
@@ -127,11 +147,19 @@ export default function NotificationInbox({
                   <input
                     type="checkbox"
                     checked={pushPrefs.closedApp}
-                    disabled={pushBusy || !pushPrefs.enabled}
+                    disabled={pushBusy || !pushPrefs.enabled || !closedAppOk}
                     onChange={(e) => toggleClosedApp(e.target.checked)}
                   />
                   When app is closed (PWA)
                 </label>
+                {caps.hint && (
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 px-1 leading-snug">{caps.hint}</p>
+                )}
+                {!closedAppOk && pushPrefs.enabled && (
+                  <p className="text-[10px] text-emerald-700 dark:text-emerald-400 px-1">
+                    Tab-hidden alerts active on {caps.browser}.
+                  </p>
+                )}
                 {pushPrefs.enabled && (
                   <button
                     type="button"

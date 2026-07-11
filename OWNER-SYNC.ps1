@@ -63,15 +63,38 @@ if (Test-Path package.json) {
 }
 Write-Host ""
 
+Write-Host "6) Web Push / VAPID status" -ForegroundColor Yellow
+$vapidOk = $false
+try {
+  $health = Invoke-RestMethod -Uri "$ProdUrl/api/health" -TimeoutSec 15
+  $pushRedis = $health.push -eq $true
+  $vapidOk = $health.vapid -eq $true
+  if ($pushRedis -and $vapidOk) {
+    Write-Host "   push: true, vapid: true — closed-app push ready" -ForegroundColor Green
+  } elseif ($pushRedis) {
+    Write-Host "   push: true, vapid: false — tab-hidden works; run .\SETUP-VAPID.ps1 for closed-app push" -ForegroundColor Yellow
+  } else {
+    Write-Host "   push: false — check UPSTASH_REDIS on Vercel" -ForegroundColor Red
+  }
+} catch {
+  Write-Host "   Could not read /api/health" -ForegroundColor DarkYellow
+}
+Write-Host ""
+
 Write-Host "--- Owner quick links ---" -ForegroundColor Cyan
 Write-Host "  Billing admin: $BillingAdminUrl"
 Write-Host "  MoMo line:     0793068911"
 Write-Host "  Setup secret:  .\SETUP-BILLING-ADMIN.ps1"
+Write-Host "  Web Push keys: .\SETUP-VAPID.ps1"
 Write-Host "  Docs:          docs\POWERSHELL-OWNER.md"
 Write-Host ""
 
 if ($guardOk) {
-  Write-Host "SYNC OK — production guardrail passed." -ForegroundColor Green
+  if (-not $vapidOk) {
+    Write-Host "SYNC OK — guardrail passed. VAPID not set yet (optional for closed-app push)." -ForegroundColor Yellow
+  } else {
+    Write-Host "SYNC OK — production guardrail passed." -ForegroundColor Green
+  }
 } else {
   Write-Host "SYNC WARN — guardrail failed. Check deploy or GUARDRAIL_URL." -ForegroundColor Yellow
   exit 1

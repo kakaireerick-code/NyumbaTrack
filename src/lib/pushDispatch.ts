@@ -55,7 +55,7 @@ export const dispatchPushForNotification = (
   if (typeof document !== 'undefined' && document.hidden) {
     import('./pushClient').then(({ showLocalNotification, getPushPrefs }) => {
       const prefs = getPushPrefs(userId || n.ownerId)
-      if (prefs.enabled) showLocalNotification(n.title, n.body, url)
+      if (prefs.enabled) void showLocalNotification(n.title, n.body, url)
     })
   }
 
