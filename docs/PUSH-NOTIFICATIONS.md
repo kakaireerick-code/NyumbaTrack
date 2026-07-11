@@ -65,6 +65,15 @@ npm run check:vapid
 
 ### One-shot with Vercel token
 
+Upload **existing** `vapid-keys.local` (keeps your keys):
+
+```powershell
+$env:VERCEL_TOKEN = "your_token"
+npm run upload:vapid
+```
+
+Generate new keys + upload:
+
 ```powershell
 $env:VERCEL_TOKEN = "your_token"
 $env:VAPID_SUBJECT = "mailto:you@domain.com"

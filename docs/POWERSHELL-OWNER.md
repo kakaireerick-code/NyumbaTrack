@@ -25,6 +25,7 @@ Set-ExecutionPolicy -Scope Process RemoteSigned
 |--------|-------------|
 | `SETUP-BILLING-ADMIN.ps1` | Generate `BILLING_ADMIN_SECRET` + admin email for Vercel |
 | `SETUP-VAPID.ps1` / `SETUP-VAPID.cmd` | **One-time** — Web Push VAPID keys on Vercel |
+| `UPLOAD-VAPID.ps1` | Upload existing `vapid-keys.local` with `VERCEL_TOKEN` |
 | `CHECK-VAPID.ps1` | Quick `npm run check:vapid` against production |
 | `SETUP-VERCEL-NYUMBA.cmd` | Find `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` |
 | `OWNER-SYNC.ps1` | **Daily** — sync + production check |

@@ -15,6 +15,7 @@
     "verify:features": "node scripts/verify-features.mjs",
     "generate:vapid": "node scripts/generate-vapid.mjs",
     "setup:vapid": "node scripts/setup-vapid.mjs",
+    "upload:vapid": "node scripts/upload-vapid.mjs",
     "check:vapid": "node scripts/check-vapid.mjs",
     "vercel:setup": "node scripts/vercel-setup-helper.mjs",
     "billing:admin-docs": "node -e \"console.log('See docs/BILLING-ADMIN.md and run AUTO-PUSH-BILLING.ps1 on Windows')\""
