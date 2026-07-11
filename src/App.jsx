@@ -890,7 +890,6 @@ function AppContent() {
           setCurrentPage={setPageSafe}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
-          theme={theme}
         />
       )}
       <div className="flex-1 flex flex-col min-w-0">
@@ -928,7 +927,7 @@ function AppContent() {
         {needsSubscription(currentRole) && (
           <SubscriptionBanner subscription={subscription} setCurrentPage={setPageSafe} />
         )}
-        <main className={`flex-1 p-4 overflow-auto relative ${isTenant ? 'pb-20' : ''}`}>
+        <main className={`flex-1 p-4 overflow-auto relative ${isTenant ? 'max-md:pb-20' : ''}`}>
           {subGate ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
               <h2 className="text-xl font-bold mb-2">Subscription Required</h2>
