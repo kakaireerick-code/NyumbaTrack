@@ -38,6 +38,8 @@ git checkout cursor/integrate-patch-features-5791
 **GitHub secrets:** `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`  
 **Vercel env:** `UPSTASH_REDIS_*`, `BILLING_ADMIN_SECRET`, `VITE_BILLING_ADMIN_EMAIL`
 
+Full steps: **`docs/VERCEL-SECRETS-CHECKLIST.md`** (issue #24)
+
 ## Acknowledgment
 
 Comment on issue #17 with:

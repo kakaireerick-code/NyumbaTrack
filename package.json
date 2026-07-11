@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "ops:guardrail": "node scripts/ops-guardrail.mjs",
-    "verify:features": "node scripts/verify-features.mjs"
+    "verify:features": "node scripts/verify-features.mjs",
+    "vercel:setup": "node scripts/vercel-setup-helper.mjs"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
