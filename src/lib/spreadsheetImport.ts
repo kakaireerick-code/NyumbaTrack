@@ -3,18 +3,42 @@ import { generateInviteCode } from './invites'
 import { isoToday } from './dates'
 
 export const IMPORT_COLUMNS = [
+  'property_name',
+  'unit_label',
   'tenant_name',
+  'monthly_rent',
   'phone',
   'email',
-  'unit_label',
-  'property_name',
-  'monthly_rent',
   'lease_start',
   'lease_end',
   'deposit',
+  'rent_due_day',
+  'guarantor_name',
+  'guarantor_phone',
+  'nin',
+  'bedrooms',
+  'notes',
 ] as const
 
 export type ColumnKey = (typeof IMPORT_COLUMNS)[number]
+
+export const COLUMN_LABELS: Record<ColumnKey, string> = {
+  property_name: 'Property',
+  unit_label: 'Unit',
+  tenant_name: 'Tenant',
+  monthly_rent: 'Monthly rent',
+  phone: 'Phone',
+  email: 'Email',
+  lease_start: 'Lease start',
+  lease_end: 'Lease end',
+  deposit: 'Deposit',
+  rent_due_day: 'Rent due day',
+  guarantor_name: 'Guarantor name',
+  guarantor_phone: 'Guarantor phone',
+  nin: 'NIN',
+  bedrooms: 'Bedrooms',
+  notes: 'Notes',
+}
 
 export type ColumnMapping = Partial<Record<ColumnKey, number>>
 
@@ -29,6 +53,12 @@ export type ParsedImportRow = {
   leaseStart: string
   leaseEnd: string
   deposit: number
+  rentDueDay: number
+  guarantorName: string
+  guarantorPhone: string
+  nin: string
+  bedrooms: number
+  notes: string
   errors: string[]
   warnings: string[]
   status: 'ok' | 'review' | 'error'
@@ -38,6 +68,7 @@ export type ImportPreview = {
   rows: ParsedImportRow[]
   mappedColumns: ColumnMapping
   headers: string[]
+  table: string[][]
 }
 
 export type ImportResult = {
@@ -58,9 +89,11 @@ const HEADER_ALIASES: Record<string, ColumnKey> = {
   tenant: 'tenant_name',
   name: 'tenant_name',
   tenantname: 'tenant_name',
+  full_name: 'tenant_name',
   phone: 'phone',
   mobile: 'phone',
   telephone: 'phone',
+  contact: 'phone',
   email: 'email',
   unit_label: 'unit_label',
   unit: 'unit_label',
@@ -81,6 +114,22 @@ const HEADER_ALIASES: Record<string, ColumnKey> = {
   end_date: 'lease_end',
   deposit: 'deposit',
   deposit_amount: 'deposit',
+  rent_due_day: 'rent_due_day',
+  due_day: 'rent_due_day',
+  rent_day: 'rent_due_day',
+  guarantor_name: 'guarantor_name',
+  guarantor: 'guarantor_name',
+  guarantor_phone: 'guarantor_phone',
+  guarantor_mobile: 'guarantor_phone',
+  nin: 'nin',
+  national_id: 'nin',
+  id_number: 'nin',
+  bedrooms: 'bedrooms',
+  br: 'bedrooms',
+  beds: 'bedrooms',
+  notes: 'notes',
+  comments: 'notes',
+  remarks: 'notes',
 }
 
 export const parseCsvText = (text: string): string[][] => {
@@ -127,15 +176,17 @@ const parseNumber = (val: string): number => {
   return Number.isNaN(n) ? 0 : n
 }
 
-export const buildImportPreview = (text: string): ImportPreview => {
-  const table = parseCsvText(text)
-  if (table.length < 2) {
-    return { rows: [], mappedColumns: {}, headers: [] }
-  }
-  const headers = table[0]
-  const mappedColumns = autoMapColumns(headers)
-  const rows: ParsedImportRow[] = []
+const parseDueDay = (val: string): number => {
+  const n = parseInt(val.replace(/[^\d]/g, ''), 10)
+  if (Number.isNaN(n) || n < 1 || n > 28) return 5
+  return n
+}
 
+export const buildRowsFromTable = (
+  table: string[][],
+  mappedColumns: ColumnMapping,
+): ParsedImportRow[] => {
+  const rows: ParsedImportRow[] = []
   for (let i = 1; i < table.length; i++) {
     const row = table[i]
     if (row.every((c) => !c)) continue
@@ -166,13 +217,29 @@ export const buildImportPreview = (text: string): ImportPreview => {
       leaseStart: cell(row, mappedColumns, 'lease_start') || isoToday(),
       leaseEnd: cell(row, mappedColumns, 'lease_end') || '',
       deposit: parseNumber(cell(row, mappedColumns, 'deposit')),
+      rentDueDay: parseDueDay(cell(row, mappedColumns, 'rent_due_day')),
+      guarantorName: cell(row, mappedColumns, 'guarantor_name'),
+      guarantorPhone: cell(row, mappedColumns, 'guarantor_phone'),
+      nin: cell(row, mappedColumns, 'nin'),
+      bedrooms: parseNumber(cell(row, mappedColumns, 'bedrooms')) || 1,
+      notes: cell(row, mappedColumns, 'notes'),
       errors,
       warnings,
       status,
     })
   }
+  return rows
+}
 
-  return { rows, mappedColumns, headers }
+export const buildImportPreview = (text: string, columnMapping?: ColumnMapping): ImportPreview => {
+  const table = parseCsvText(text)
+  if (table.length < 2) {
+    return { rows: [], mappedColumns: {}, headers: [], table: [] }
+  }
+  const headers = table[0]
+  const mappedColumns = columnMapping ?? autoMapColumns(headers)
+  const rows = buildRowsFromTable(table, mappedColumns)
+  return { rows, mappedColumns, headers, table }
 }
 
 const findBuilding = (buildings: Record<string, unknown>[], name: string) =>
@@ -224,21 +291,20 @@ export const commitImport = (
     }
 
     let unit = findUnit(units, String(building.id), row.unitLabel)
-    const isUpdate = !!unit
     if (!unit) {
       unit = {
         id: `u-import-${Date.now()}-${row.rowIndex}`,
         buildingId: building.id,
         unitNumber: row.unitLabel,
-        bedrooms: 1,
+        bedrooms: row.bedrooms || 1,
         monthlyRent: row.monthlyRent,
         depositAmount: row.deposit || row.monthlyRent * 2,
-        rentDueDay: 5,
+        rentDueDay: row.rentDueDay || 5,
         status: 'occupied',
         floorLevel: 0,
         currentTenantId: null,
         squareMeters: 0,
-        notes: '',
+        notes: row.notes || '',
         inviteCode: generateInviteCode(),
         ownerNotes: '',
       }
@@ -248,6 +314,9 @@ export const commitImport = (
         ...unit,
         monthlyRent: row.monthlyRent || unit.monthlyRent,
         depositAmount: row.deposit || unit.depositAmount,
+        bedrooms: row.bedrooms || unit.bedrooms,
+        rentDueDay: row.rentDueDay || unit.rentDueDay,
+        notes: row.notes || unit.notes,
         status: 'occupied',
       }
       const idx = units.findIndex((u) => u.id === unit!.id)
@@ -268,10 +337,16 @@ export const commitImport = (
       lastName,
       phone: row.phone,
       email: row.email,
+      whatsapp: row.phone,
+      nin: row.nin,
+      guarantorName: row.guarantorName,
+      guarantorPhone: row.guarantorPhone,
       rentAmount: row.monthlyRent || unit.monthlyRent,
+      rentDueDay: row.rentDueDay || unit.rentDueDay,
       leaseStart: row.leaseStart,
       leaseEnd,
       depositAmount: row.deposit || row.monthlyRent * 2,
+      notes: row.notes,
       dataSource: 'spreadsheet',
       importSourcePath: sourceFileName,
       importHistory: [
@@ -290,13 +365,17 @@ export const commitImport = (
       tenants[tIdx] = { ...existingTenant, ...tenantPayload }
       updated++
     } else {
-      const created = buildQuickTenant(unit, {
-        name: row.tenantName,
-        phone: row.phone,
-        monthlyRent: row.monthlyRent || Number(unit.monthlyRent),
-        moveInDate: row.leaseStart,
-        deposit: row.deposit,
-      }, 'spreadsheet')
+      const created = buildQuickTenant(
+        unit,
+        {
+          name: row.tenantName,
+          phone: row.phone,
+          monthlyRent: row.monthlyRent || Number(unit.monthlyRent),
+          moveInDate: row.leaseStart,
+          deposit: row.deposit,
+        },
+        'spreadsheet',
+      )
       tenantId = String(created.id)
       tenants.push({ ...created, ...tenantPayload })
       linked++

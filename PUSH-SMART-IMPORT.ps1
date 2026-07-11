@@ -1,4 +1,4 @@
-# Ship smart spreadsheet + bulk agreement import
+# Ship ULTT-style smart spreadsheet import (+ agreement scan)
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
@@ -22,7 +22,8 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 git add -A
 $st = git status --porcelain
-if ($st) { git commit -m "Smart import: xlsx spreadsheet + bulk PDF/Word agreement scan" }
+if ($st) { git commit -m "ULTT spreadsheet import: column mapping, expanded columns, reject pdf/docx" }
 git push -u origin $Branch
 
 Write-Host "Pushed $Branch — run .\SHIP-TO-PRODUCTION.ps1 -Branch $Branch" -ForegroundColor Green
+Write-Host "If push fails with 403, run: git push -u origin $Branch from your PC" -ForegroundColor Yellow

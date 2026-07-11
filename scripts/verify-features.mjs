@@ -346,11 +346,15 @@ const dataImportPage = exists('src/pages/DataImportPage.jsx') ? read('src/pages/
 const fileImportTs = exists('src/lib/fileImport.ts') ? read('src/lib/fileImport.ts') : ''
 confirm(
   'F28',
-  'Smart spreadsheet import with native xlsx',
-  dataImportPage.includes('Spreadsheet') &&
+  'Smart spreadsheet import with native xlsx + column mapping',
+  dataImportPage.includes('Map columns') &&
+    dataImportPage.includes('IMPORT_COLUMNS') &&
     fileImportTs.includes('readXlsxAsCsvText') &&
-    fileImportTs.includes("kind === 'xlsx'"),
-  'Excel .xlsx reads via SheetJS + column auto-map',
+    fileImportTs.includes('validateSpreadsheetFile') &&
+    fileImportTs.includes('REJECTED_SPREADSHEET_EXTENSIONS') &&
+    exists('src/lib/spreadsheetImport.ts') &&
+    read('src/lib/spreadsheetImport.ts').includes('guarantor_name'),
+  'Excel .xlsx + dropdown column map + reject pdf/docx on spreadsheet tab',
 )
 
 // F29 Bulk agreement PDF/Word scan import

@@ -1,24 +1,46 @@
 /**
- * Excel/Word-friendly import — CSV, TSV, XLSX, and plain-text exports.
- * Word agreements use agreementScan.ts (mammoth for .docx).
+ * Excel/Word-friendly spreadsheet import — CSV, TSV, XLSX, plain-text exports.
+ * PDF and .docx are rejected on the spreadsheet tab (use Agreements tab or Excel).
  */
 
-export type ImportFileKind = 'csv' | 'tsv' | 'text' | 'xlsx' | 'unknown'
+export type ImportFileKind = 'csv' | 'tsv' | 'text' | 'xlsx' | 'rejected' | 'unknown'
+
+export const REJECTED_SPREADSHEET_EXTENSIONS = ['pdf', 'docx'] as const
 
 export const detectImportFileKind = (fileName: string): ImportFileKind => {
   const ext = String(fileName || '').split('.').pop()?.toLowerCase() || ''
+  if (REJECTED_SPREADSHEET_EXTENSIONS.includes(ext as typeof REJECTED_SPREADSHEET_EXTENSIONS[number])) {
+    return 'rejected'
+  }
   if (ext === 'csv') return 'csv'
   if (ext === 'tsv' || ext === 'tab') return 'tsv'
   if (ext === 'txt' || ext === 'doc') return 'text'
   if (ext === 'xlsx' || ext === 'xls') return 'xlsx'
-  if (ext === 'docx') return 'text'
   return 'unknown'
 }
 
 export const ACCEPT_IMPORT_TYPES = '.csv,.tsv,.txt,.xls,.xlsx'
 export const ACCEPT_AGREEMENT_TYPES = '.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
-/** Parse Excel workbook to CSV-like text (first sheet) */
+export const validateSpreadsheetFile = (file: File): { ok: boolean; error?: string } => {
+  const kind = detectImportFileKind(file.name)
+  if (kind === 'rejected') {
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    return {
+      ok: false,
+      error:
+        ext === 'pdf'
+          ? 'PDF cannot be imported as a spreadsheet. Copy the table to Excel and upload .xlsx, or use the Agreements tab for single PDF agreements.'
+          : 'Word .docx cannot be imported as a spreadsheet. Save your tenant list as Plain Text (.txt) or copy to Excel (.xlsx), or use the Agreements tab.',
+    }
+  }
+  if (kind === 'unknown') {
+    return { ok: false, error: 'Unsupported file type. Use .xlsx, .csv, .tsv, or Word saved as Plain Text (.txt).' }
+  }
+  return { ok: true }
+}
+
+/** Parse Excel workbook to CSV-like text (first sheet) — xlsx lazy-loaded */
 export const readXlsxAsCsvText = async (file: File): Promise<string> => {
   const XLSX = await import('xlsx')
   const buffer = await file.arrayBuffer()
@@ -30,6 +52,8 @@ export const readXlsxAsCsvText = async (file: File): Promise<string> => {
 
 /** Read uploaded spreadsheet or Word text export into delimited text for preview */
 export const readImportFileAsText = async (file: File): Promise<string> => {
+  const check = validateSpreadsheetFile(file)
+  if (!check.ok) throw new Error(check.error)
   const kind = detectImportFileKind(file.name)
   if (kind === 'xlsx') return readXlsxAsCsvText(file)
   return new Promise((resolve, reject) => {

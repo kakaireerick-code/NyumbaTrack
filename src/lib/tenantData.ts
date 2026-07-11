@@ -122,7 +122,7 @@ export const assignTenantToUnit = (
   inviteCode: inviteCode || unit.inviteCode || generateInviteCode(),
 })
 
-export const CSV_TEMPLATE = `tenant_name,phone,email,unit_label,property_name,monthly_rent,lease_start,lease_end,deposit
-John Okello,+256700111222,john@email.com,Flat 2B,Nakawa Business Arcade,450000,2025-01-01,2026-12-31,900000
-Mary Namukasa,+256700333444,,Shop G1,Nakawa Business Arcade,800000,2025-03-01,2026-02-28,1600000
+export const CSV_TEMPLATE = `property_name,unit_label,tenant_name,monthly_rent,phone,email,lease_start,lease_end,deposit,rent_due_day,guarantor_name,guarantor_phone,nin,bedrooms,notes
+Nakawa Business Arcade,Flat 2B,John Okello,450000,+256700111222,john@email.com,2025-01-01,2026-12-31,900000,5,Robert Ssempijja,+256702111001,CM12345678ABCD,2,Quiet tenant
+Nakawa Business Arcade,Shop G1,Mary Namukasa,800000,+256700333444,,2025-03-01,2026-02-28,1600000,5,Mary Nakato,+256773222002,,1,Retail shop
 `

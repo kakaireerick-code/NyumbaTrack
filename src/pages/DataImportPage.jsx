@@ -1,9 +1,14 @@
-import React, { useState } from 'react'
-import { Download, Upload, FileSpreadsheet, FileText } from 'lucide-react'
+import React, { useState, useMemo } from 'react'
+import { Download, Upload, FileSpreadsheet, FileText, CheckCircle2 } from 'lucide-react'
 import GuidancePanel from '../components/GuidancePanel'
 import { getPageGuidance } from '../lib/actionGuidance'
 import { CSV_TEMPLATE } from '../lib/tenantData'
-import { buildImportPreview, commitImport } from '../lib/spreadsheetImport'
+import {
+  buildImportPreview,
+  commitImport,
+  IMPORT_COLUMNS,
+  COLUMN_LABELS,
+} from '../lib/spreadsheetImport'
 import {
   ACCEPT_IMPORT_TYPES,
   ACCEPT_AGREEMENT_TYPES,
@@ -17,6 +22,13 @@ import { downloadText } from '../utils/helpers'
 import { Badge, EmptyState, LoadingButton } from '../components/UI'
 
 const STATUS_COLOR = { ok: 'green', review: 'orange', error: 'red' }
+
+const STEPS = [
+  { id: 1, label: 'Upload' },
+  { id: 2, label: 'Map columns' },
+  { id: 3, label: 'Preview' },
+  { id: 4, label: 'Confirm' },
+]
 
 export default function DataImportPage({
   currentRole,
@@ -32,12 +44,15 @@ export default function DataImportPage({
   setCurrentPage,
 }) {
   const [tab, setTab] = useState('spreadsheet')
-  const [preview, setPreview] = useState(null)
+  const [importText, setImportText] = useState('')
+  const [columnMapping, setColumnMapping] = useState({})
+  const [headers, setHeaders] = useState([])
   const [agreementPreview, setAgreementPreview] = useState(null)
   const [fileName, setFileName] = useState('')
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(false)
   const [scanning, setScanning] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
 
   const guidance = getPageGuidance(currentRole, 'data-import', {
     buildings,
@@ -46,13 +61,19 @@ export default function DataImportPage({
     selectedBuilding,
   })
 
+  const preview = useMemo(() => {
+    if (!importText) return null
+    return buildImportPreview(importText, columnMapping)
+  }, [importText, columnMapping])
+
+  const currentStep = !importText ? 1 : preview?.rows?.length ? 3 : 2
+
   const downloadTemplate = () => {
     downloadText('nyumbatrack-tenant-import-template.csv', CSV_TEMPLATE)
     showToast?.('Template downloaded', 'success')
   }
 
-  const handleSpreadsheetFile = async (e) => {
-    const file = e.target.files?.[0]
+  const loadSpreadsheetFile = async (file) => {
     if (!file) return
     setFileName(file.name)
     setSummary(null)
@@ -61,14 +82,38 @@ export default function DataImportPage({
       const raw = await readImportFileAsText(file)
       const text = prepareImportText(file.name, raw)
       const built = buildImportPreview(text)
-      setPreview(built)
+      setImportText(text)
+      setColumnMapping(built.mappedColumns)
+      setHeaders(built.headers)
       if (built.rows.length === 0) {
         showToast?.('No data rows found. Check headers or try Excel .xlsx / CSV.', 'error')
       }
-    } catch {
-      showToast?.('Could not read file.', 'error')
+    } catch (err) {
+      showToast?.(err.message || 'Could not read file.', 'error')
     }
+  }
+
+  const handleSpreadsheetFile = async (e) => {
+    await loadSpreadsheetFile(e.target.files?.[0])
     e.target.value = ''
+  }
+
+  const handleDrop = async (e) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (tab !== 'spreadsheet') return
+    const file = e.dataTransfer.files?.[0]
+    await loadSpreadsheetFile(file)
+  }
+
+  const handleMappingChange = (key, headerIndex) => {
+    const next = { ...columnMapping }
+    if (headerIndex === '' || headerIndex === undefined) {
+      delete next[key]
+    } else {
+      next[key] = Number(headerIndex)
+    }
+    setColumnMapping(next)
   }
 
   const handleAgreementFiles = async (e) => {
@@ -76,7 +121,7 @@ export default function DataImportPage({
     if (!files.length) return
     setScanning(true)
     setSummary(null)
-    setPreview(null)
+    setImportText('')
     const rows = []
     try {
       for (const file of files) {
@@ -86,7 +131,6 @@ export default function DataImportPage({
       }
       setAgreementPreview({ rows })
       setFileName(`${files.length} agreement(s)`)
-      if (!rows.length) showToast?.('No files processed', 'error')
     } catch (err) {
       showToast?.(err.message || 'Could not scan agreements', 'error')
     }
@@ -100,7 +144,8 @@ export default function DataImportPage({
     setTimeout(() => {
       const result = commitImport(preview, { buildings, units, tenants }, fileName || 'import.csv')
       applyImportResult(result, fileName || 'import.csv')
-      setPreview(null)
+      setImportText('')
+      setColumnMapping({})
       setLoading(false)
     }, 300)
   }
@@ -145,7 +190,7 @@ export default function DataImportPage({
         <FileSpreadsheet className="text-brand" size={28} />
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Data Import</h1>
-          <p className="text-sm text-gray-500">Spreadsheets or bulk PDF/Word tenancy agreements</p>
+          <p className="text-sm text-gray-500">ULTT-style spreadsheet import + optional agreement scan</p>
         </div>
       </div>
 
@@ -174,47 +219,66 @@ export default function DataImportPage({
 
       {tab === 'spreadsheet' && (
         <>
-          <div className="card p-4 flex flex-wrap gap-3">
-            <button type="button" onClick={downloadTemplate} className="flex items-center gap-2 px-4 py-2 border rounded text-sm tap-target">
-              <Download size={16} /> Download sample template
-            </button>
-            <label className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded text-sm cursor-pointer tap-target">
-              <Upload size={16} /> Upload Excel / CSV / TSV
-              <input type="file" accept={ACCEPT_IMPORT_TYPES} className="hidden" onChange={handleSpreadsheetFile} />
-            </label>
+          <div className="flex flex-wrap gap-2">
+            {STEPS.map((step) => (
+              <div
+                key={step.id}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full ${
+                  currentStep >= step.id
+                    ? 'bg-brand/10 text-brand font-medium'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                }`}
+              >
+                {currentStep > step.id ? <CheckCircle2 size={14} /> : <span className="font-bold">{step.id}</span>}
+                {step.label}
+              </div>
+            ))}
           </div>
-          <p className="text-xs text-gray-400">
-            Supports .xlsx, .csv, .tsv, and Word saved as .txt. Column mapping is automatic from headers.
-          </p>
+
+          <div
+            className={`card p-6 border-2 border-dashed transition-colors ${
+              dragOver ? 'border-brand bg-brand/5' : 'border-gray-200 dark:border-gray-700'
+            }`}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+          >
+            <div className="flex flex-wrap gap-3 justify-center">
+              <button type="button" onClick={downloadTemplate} className="flex items-center gap-2 px-4 py-2 border rounded text-sm tap-target">
+                <Download size={16} /> Download template
+              </button>
+              <label className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded text-sm cursor-pointer tap-target">
+                <Upload size={16} /> Pick file
+                <input type="file" accept={ACCEPT_IMPORT_TYPES} className="hidden" onChange={handleSpreadsheetFile} />
+              </label>
+            </div>
+            <p className="text-center text-sm text-gray-500 mt-3">
+              Drag-and-drop <strong>.xlsx</strong>, <strong>.csv</strong>, <strong>.tsv</strong>, or Word saved as <strong>Plain Text (.txt)</strong>
+            </p>
+            <p className="text-center text-xs text-amber-700 dark:text-amber-300 mt-2">
+              PDF and .docx are not accepted here — copy tables to Excel, save Word as .txt, or use the Agreements tab.
+            </p>
+          </div>
         </>
       )}
 
       {tab === 'agreements' && (
-        <>
-          <div className="card p-4 space-y-3">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Upload <strong>one tenant per file</strong>. We scan for name, unit, property, rent, deposit, phone, and lease dates, then attach the document to each tenant.
-            </p>
-            <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 tap-target">
-              <Upload className="text-brand mb-2" size={28} />
-              <span className="text-sm font-medium">Drop or select multiple PDF / .docx files</span>
-              <span className="text-xs text-gray-400 mt-1">Text-based PDFs work best — image-only scans need OCR (coming later)</span>
-              <input
-                type="file"
-                accept={ACCEPT_AGREEMENT_TYPES}
-                multiple
-                className="hidden"
-                onChange={handleAgreementFiles}
-              />
-            </label>
-            {scanning && <p className="text-sm text-gray-500">Scanning agreements…</p>}
-          </div>
-        </>
+        <div className="card p-4 space-y-3">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Bulk scan: upload <strong>one tenant per PDF or .docx</strong>. For tabular Word lists, copy to Excel and use the Spreadsheet tab.
+          </p>
+          <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 tap-target">
+            <Upload className="text-brand mb-2" size={28} />
+            <span className="text-sm font-medium">Drop or select multiple PDF / .docx files</span>
+            <input type="file" accept={ACCEPT_AGREEMENT_TYPES} multiple className="hidden" onChange={handleAgreementFiles} />
+          </label>
+          {scanning && <p className="text-sm text-gray-500">Scanning agreements…</p>}
+        </div>
       )}
 
       {summary && (
         <div className="card p-4 border-l-4 border-green-500 space-y-2">
-          <h2 className="font-semibold">Import complete</h2>
+          <h2 className="font-semibold flex items-center gap-2"><CheckCircle2 size={18} className="text-green-600" /> Import complete</h2>
           <p className="text-sm">
             <strong>{summary.linked}</strong> tenants linked, <strong>{summary.updated}</strong> updated
             {summary.needsReview > 0 && (
@@ -229,21 +293,38 @@ export default function DataImportPage({
         </div>
       )}
 
+      {tab === 'spreadsheet' && importText && headers.length > 0 && (
+        <div className="card p-4 space-y-3">
+          <h2 className="font-semibold text-sm">Map columns — {fileName}</h2>
+          <p className="text-xs text-gray-500">Headers auto-aligned. Adjust any field using the dropdowns below.</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {IMPORT_COLUMNS.map((key) => (
+              <div key={key} className="flex items-center gap-2 text-sm">
+                <label className="w-32 shrink-0 text-gray-600 dark:text-gray-400">{COLUMN_LABELS[key]}</label>
+                <select
+                  className="flex-1 border rounded px-2 py-1.5 text-sm dark:bg-gray-800 dark:border-gray-600"
+                  value={columnMapping[key] ?? ''}
+                  onChange={(e) => handleMappingChange(key, e.target.value)}
+                >
+                  <option value="">— not mapped —</option>
+                  {headers.map((h, idx) => (
+                    <option key={`${key}-${idx}`} value={idx}>{h || `Column ${idx + 1}`}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {tab === 'spreadsheet' && preview && preview.rows.length > 0 && (
         <div className="space-y-3">
           <div className="flex justify-between items-center flex-wrap gap-2">
-            <h2 className="font-semibold">Preview — {fileName}</h2>
-            <LoadingButton
-              loading={loading}
-              onClick={handleSpreadsheetCommit}
-              className="px-4 py-2 bg-brand text-white rounded text-sm"
-            >
+            <h2 className="font-semibold">Preview — {preview.rows.length} row(s)</h2>
+            <LoadingButton loading={loading} onClick={handleSpreadsheetCommit} className="px-4 py-2 bg-brand text-white rounded text-sm">
               Confirm import
             </LoadingButton>
           </div>
-          <p className="text-xs text-gray-500">
-            Mapped columns: {Object.keys(preview.mappedColumns).join(', ') || 'none — check headers'}
-          </p>
           <PreviewTable
             rows={preview.rows.map((row) => ({
               key: `import-row-${row.rowIndex}`,
@@ -252,10 +333,12 @@ export default function DataImportPage({
               unitLabel: row.unitLabel,
               propertyName: row.propertyName,
               monthlyRent: row.monthlyRent,
+              phone: row.phone,
               status: row.status,
               errors: row.errors,
               warnings: row.warnings,
             }))}
+            showPhone
           />
         </div>
       )}
@@ -264,11 +347,7 @@ export default function DataImportPage({
         <div className="space-y-3">
           <div className="flex justify-between items-center flex-wrap gap-2">
             <h2 className="font-semibold">Agreement preview — {fileName}</h2>
-            <LoadingButton
-              loading={loading}
-              onClick={handleAgreementCommit}
-              className="px-4 py-2 bg-brand text-white rounded text-sm"
-            >
+            <LoadingButton loading={loading} onClick={handleAgreementCommit} className="px-4 py-2 bg-brand text-white rounded text-sm">
               Confirm import
             </LoadingButton>
           </div>
@@ -288,8 +367,8 @@ export default function DataImportPage({
         </div>
       )}
 
-      {tab === 'spreadsheet' && !preview && !summary && (
-        <EmptyState message="Download the template, fill your tenant list, then upload Excel or CSV." />
+      {tab === 'spreadsheet' && !importText && !summary && (
+        <EmptyState message="Download the template, fill your tenant list, then upload Excel (.xlsx) or CSV." />
       )}
       {tab === 'agreements' && !agreementPreview && !summary && !scanning && (
         <EmptyState message="Upload PDF or Word (.docx) agreements — one tenant per file." />
@@ -298,7 +377,7 @@ export default function DataImportPage({
   )
 }
 
-function PreviewTable({ rows }) {
+function PreviewTable({ rows, showPhone = false }) {
   return (
     <div className="card table-scroll">
       <table className="w-full text-sm">
@@ -309,6 +388,7 @@ function PreviewTable({ rows }) {
             <th className="p-2">Unit</th>
             <th className="p-2">Property</th>
             <th className="p-2">Rent</th>
+            {showPhone && <th className="p-2">Phone</th>}
             <th className="p-2">Status</th>
           </tr>
         </thead>
@@ -320,14 +400,11 @@ function PreviewTable({ rows }) {
               <td className="p-2">{row.unitLabel || '—'}</td>
               <td className="p-2">{row.propertyName || '—'}</td>
               <td className="p-2">{row.monthlyRent ? row.monthlyRent.toLocaleString() : '—'}</td>
+              {showPhone && <td className="p-2 text-xs">{row.phone || '—'}</td>}
               <td className="p-2">
                 <Badge color={STATUS_COLOR[row.status]}>{row.status}</Badge>
-                {row.errors?.length > 0 && (
-                  <p className="text-xs text-red-600 mt-1">{row.errors.join('; ')}</p>
-                )}
-                {row.warnings?.length > 0 && (
-                  <p className="text-xs text-orange-600 mt-1">{row.warnings.join('; ')}</p>
-                )}
+                {row.errors?.length > 0 && <p className="text-xs text-red-600 mt-1">{row.errors.join('; ')}</p>}
+                {row.warnings?.length > 0 && <p className="text-xs text-orange-600 mt-1">{row.warnings.join('; ')}</p>}
               </td>
             </tr>
           ))}

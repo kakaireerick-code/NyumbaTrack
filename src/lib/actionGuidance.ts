@@ -38,9 +38,9 @@ export const getPageGuidance = (
       }
       return {
         variant: 'info',
-        headline: 'Import spreadsheets or agreements',
-        detail: 'Spreadsheet tab: Excel .xlsx, CSV, TSV. Agreements tab: bulk PDF/Word — one tenant per file, auto-scan fields, attach document.',
-        nextSteps: ['Download the sample template for spreadsheets', 'Or upload PDF/.docx agreements in bulk', 'Review preview before confirming'],
+        headline: 'ULTT-style spreadsheet import',
+        detail: 'Upload Excel .xlsx, CSV, or Word saved as Plain Text. Map columns, preview rows, then confirm. PDF/.docx lists: copy to Excel or save as .txt.',
+        nextSteps: ['Download the expanded template', 'Upload and adjust column mapping', 'Review preview before confirming'],
       }
     }
     if (pageId === 'tenants') {
