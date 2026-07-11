@@ -12,10 +12,10 @@ export const PRIMARY_SIDEBAR_PAGES: PageId[] = [
   'settings',
 ]
 
-/** Caretaker sidebar — 5 essentials only */
+/** Caretaker sidebar — maintenance-first workflow */
 export const PRIMARY_CARETAKER_PAGES: PageId[] = [
-  'units',
   'maintenance',
+  'units',
   'tenants',
   'vacancy',
   'help',

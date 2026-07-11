@@ -169,6 +169,7 @@ export const initialSettings = {
   whatsappNumber: '+256 700 000 000',
   mtnMomo: '+256 770 123 456',
   airtelMoney: '+256 750 987 654',
+  bankAccount: '',
   logoDataUrl: '',
   managerName: 'Property Manager',
   stampText: 'RentTrack Uganda — Official',

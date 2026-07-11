@@ -65,6 +65,7 @@ export const buildQuickTenant = (
   unit: Record<string, unknown>,
   input: QuickTenantInput,
   source: DataSource = 'manual',
+  ownerId?: string,
 ): Record<string, unknown> => {
   const { firstName, lastName } = splitName(input.name || '')
   const tenantId = `t-${Date.now()}`
@@ -75,6 +76,7 @@ export const buildQuickTenant = (
 
   return {
     id: tenantId,
+    ownerId: ownerId || unit.ownerId || '',
     unitId: unit.id,
     buildingId: unit.buildingId,
     firstName,

@@ -241,9 +241,9 @@ function AppContent() {
 
   const tenantUser = useMemo(() => {
     if (normalizeRole(currentRole) !== 'tenant') return null
-    if (authUser?.tenantId) return tenants.find((t) => t.id === authUser.tenantId) || null
-    if (authUser?.unitId) return tenants.find((t) => t.unitId === authUser.unitId) || null
-    return tenants.find((t) => t.userId === authUser?.id) || null
+    if (authUser?.tenantId) return tenants.find((t) => String(t.id) === String(authUser.tenantId)) || null
+    if (authUser?.unitId) return tenants.find((t) => String(t.unitId) === String(authUser.unitId)) || null
+    return tenants.find((t) => String(t.userId) === String(authUser?.id)) || null
   }, [currentRole, authUser, tenants])
 
   const isOwnerRole = normalizeRole(currentRole) === 'property_owner'
@@ -651,8 +651,8 @@ function AppContent() {
 
     if (normalizeRole(currentRole) === 'tenant') {
       const t = tenantUser
-      const u = units.find((un) => un.id === t?.unitId)
-      const b = buildings.find((bd) => bd.id === t?.buildingId)
+      const u = units.find((un) => String(un.id) === String(t?.unitId))
+      const b = buildings.find((bd) => String(bd.id) === String(t?.buildingId))
       const tenantPayments = payments.filter((p) => p.tenantId === t?.id)
 
       if (currentPage === 'about') {
@@ -981,15 +981,19 @@ function AppContent() {
             ) : null
           }
         />
+        {!isTenant && (
         <DiscoverStrip
           currentRole={currentRole}
           setCurrentPage={setPageSafe}
           currentPage={currentPage}
         />
+        )}
+        {!isTenant && (
         <div className="flex items-center justify-between px-4 py-1 border-b dark:border-gray-700">
           <span className="text-xs text-gray-500 capitalize">{currentRole} portal</span>
           <button type="button" onClick={handleLogout} className="text-xs text-red-600 hover:underline">Logout</button>
         </div>
+        )}
         {needsSubscription(currentRole) && (
           <SubscriptionBanner subscription={subscription} setCurrentPage={setPageSafe} />
         )}
@@ -1012,9 +1016,16 @@ function AppContent() {
             renderPage()
           )}
         </main>
-      </div>
 
-      {isTenant && <TenantBottomNav currentPage={currentPage} setCurrentPage={setPageSafe} />}
+        {isTenant && (
+          <TenantBottomNav
+            currentPage={currentPage}
+            setCurrentPage={setPageSafe}
+            tenantId={tenantUser?.id}
+            unitId={tenantUser?.unitId ?? authUser?.unitId}
+          />
+        )}
+      </div>
 
       {currentRole !== 'tenant' && !isTenantRole(currentRole) && (
         <QuickActions

@@ -670,9 +670,57 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour, 
   )
   const visibleIds = new Set(visibleMoreTools.map((t) => t.id))
 
+  const paymentConfigured = !!(settings.mtnMomo?.trim() || settings.airtelMoney?.trim() || settings.bankAccount?.trim())
+
   return (
     <div className="p-4 space-y-6 max-w-3xl">
       <h1 className="text-2xl font-bold">Settings</h1>
+
+      {canManagePortfolio(currentRole || '') && !paymentConfigured && (
+        <div className="card p-4 border-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 space-y-2">
+          <p className="font-semibold text-amber-900 dark:text-amber-100">Add rent payment numbers</p>
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            Tenants need your MTN MoMo and Airtel Money numbers to pay rent. Add them below so they appear on the tenant portal and in reminders.
+          </p>
+        </div>
+      )}
+
+      {canManagePortfolio(currentRole || '') && (
+        <div className="card p-4 space-y-4 border-2 border-brand/25 bg-brand/5">
+          <h2 className="font-semibold text-brand">Rent payment numbers</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            These numbers appear on your tenant portal, payment reminders, and receipts. Tenants tap to open WhatsApp with a pre-filled message.
+          </p>
+          <div>
+            <label className="block text-sm mb-1 font-medium">MTN MoMo Number</label>
+            <input
+              className={inputCls}
+              placeholder="e.g. +256 770 123 456"
+              value={settings.mtnMomo || ''}
+              onChange={(e) => setSettings((s) => ({ ...s, mtnMomo: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1 font-medium">Airtel Money Number</label>
+            <input
+              className={inputCls}
+              placeholder="e.g. +256 750 987 654"
+              value={settings.airtelMoney || ''}
+              onChange={(e) => setSettings((s) => ({ ...s, airtelMoney: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1 font-medium">Bank account (optional)</label>
+            <input
+              className={inputCls}
+              placeholder="e.g. Stanbic — 1234567890 — John Okello"
+              value={settings.bankAccount || ''}
+              onChange={(e) => setSettings((s) => ({ ...s, bankAccount: e.target.value }))}
+            />
+          </div>
+          <p className="text-xs text-gray-500">Used in tenant portal, reminders, and subscription billing messages.</p>
+        </div>
+      )}
 
       {setCurrentPage && (
         <div className="card p-4 space-y-3">
@@ -816,18 +864,6 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour, 
         <p className="text-xs text-gray-500">Per-tenant override is set in Tenant Profile.</p>
       </div>
 
-      <div className="card p-4 space-y-4">
-        <h2 className="font-semibold">Section 5: MoMo Payment Numbers</h2>
-        <div>
-          <label className="block text-sm mb-1">MTN MoMo Number</label>
-          <input className={inputCls} value={settings.mtnMomo} onChange={(e) => setSettings((s) => ({ ...s, mtnMomo: e.target.value }))} />
-        </div>
-        <div>
-          <label className="block text-sm mb-1">Airtel Money Number</label>
-          <input className={inputCls} value={settings.airtelMoney} onChange={(e) => setSettings((s) => ({ ...s, airtelMoney: e.target.value }))} />
-        </div>
-        <p className="text-xs text-gray-500">These appear in all reminder messages automatically.</p>
-      </div>
 
       <button type="button" className={btnSecondary} onClick={restartTour}>Restart Tour</button>
     </div>

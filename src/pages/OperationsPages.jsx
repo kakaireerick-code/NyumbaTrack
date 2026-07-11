@@ -677,10 +677,12 @@ export function MaintenancePage({
     return ''
   }
 
+  const pageTitle = currentRole === 'caretaker' ? 'Repairs' : 'Maintenance'
+
   return (
     <div className="p-4 space-y-6">
       <div className="flex flex-wrap gap-2 items-center justify-between">
-        <h1 className="text-2xl font-bold">Maintenance</h1>
+        <h1 className="text-2xl font-bold">{pageTitle}</h1>
         <button type="button" className={btnPrimary} onClick={() => setShowForm(true)}>Log Issue</button>
       </div>
 
@@ -707,7 +709,36 @@ export function MaintenancePage({
       {visibleMaintenance.length === 0 ? (
         <EmptyState message="No maintenance issues recorded." />
       ) : (
-        <div className="card table-scroll">
+        <>
+          <div className="md:hidden space-y-3">
+            {visibleMaintenance.map((m) => {
+              const unit = lookupUnit(units, m.unitId)
+              const building = lookupBuilding(buildings, m.buildingId)
+              const openDays = daysOpen(m.reportedDate)
+              return (
+                <div
+                  key={`maint-card-${m.id}`}
+                  className={`card p-4 space-y-2 ${escalationClass(m.reportedDate, m.status)}`}
+                >
+                  <div className="flex justify-between items-start gap-2">
+                    <p className="font-medium text-sm">{m.issue}</p>
+                    {statusBadge(m.status)}
+                  </div>
+                  <p className="text-xs text-gray-500">{building?.name} · {unit?.unitNumber}</p>
+                  <div className="flex flex-wrap gap-2 text-xs text-gray-600 dark:text-gray-400">
+                    <span>{fmtDate(m.reportedDate)}</span>
+                    <span>· {m.priority}</span>
+                    <span>· {openDays}d open</span>
+                    {showMaintenanceCost && m.cost > 0 && <span>· {fmtUGX(m.cost)}</span>}
+                  </div>
+                  <button type="button" className="text-brand text-xs font-medium tap-target" onClick={() => setUpdateRow(m)}>
+                    Update
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+          <div className="hidden md:block card table-scroll">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b dark:border-gray-700 text-left">
@@ -741,7 +772,7 @@ export function MaintenancePage({
                       {openDays >= 14 && m.status !== 'resolved' && <Badge color="darkred">OVERDUE</Badge>}
                     </td>
                     <td className="p-2">
-                      <button type="button" className="text-sm text-[#2d6a4f]" onClick={() => setUpdateRow({ ...m })}>Update</button>
+                      <button type="button" className="text-sm text-brand" onClick={() => setUpdateRow({ ...m })}>Update</button>
                     </td>
                   </tr>
                 )
@@ -749,6 +780,7 @@ export function MaintenancePage({
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {showMaintenanceCost && (

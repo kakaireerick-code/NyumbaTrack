@@ -299,6 +299,30 @@ confirm(
   'Submit works + stable invite copy + one-time login wipe',
 )
 
+// F26 Tenant messaging + layout + landlord payment numbers
+const tenantPortal = exists('src/pages/TenantPortalPage.jsx') ? read('src/pages/TenantPortalPage.jsx') : ''
+const messagesLib = exists('src/lib/messages.ts') ? read('src/lib/messages.ts') : ''
+const tenantNav = exists('src/components/TenantBottomNav.jsx') ? read('src/components/TenantBottomNav.jsx') : ''
+const tenantData = exists('src/lib/tenantData.ts') ? read('src/lib/tenantData.ts') : ''
+const adminPages = exists('src/pages/AdminPages.jsx') ? read('src/pages/AdminPages.jsx') : ''
+const navTs = exists('src/lib/navigation.ts') ? read('src/lib/navigation.ts') : ''
+confirm(
+  'F26',
+  'Tenant messaging fix + layout + landlord payment numbers',
+  tenantPortal.includes('authUser') &&
+    tenantPortal.includes('useMemo') &&
+    tenantPortal.includes('effectiveOwnerId') &&
+    messagesLib.includes('idStr') &&
+    tenantNav.includes('countUnreadForTenant') &&
+    tenantData.includes('ownerId?: string') &&
+    tenantData.includes('ownerId || unit.ownerId') &&
+    adminPages.includes('Rent payment numbers') &&
+    adminPages.includes('bankAccount') &&
+    navTs.includes('PRIMARY_CARETAKER_PAGES') &&
+    navTs.includes("'maintenance',\n  'units'"),
+  'Tenants can message + nav/layout + MoMo settings prominent',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -310,6 +334,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F25 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F26 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)

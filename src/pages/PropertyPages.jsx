@@ -15,7 +15,7 @@ import { fmtUGX, fmtDate } from '../utils/helpers'
 import { createInviteForUnit } from '../lib/invites'
 import { scopeRecord } from '../lib/scope'
 import { computeDataQuality, displayTenantName } from '../lib/tenantData'
-import { canSeeFinancials, canManagePortfolio } from '../lib/permissions'
+import { canSeeFinancials, canManagePortfolio, isCaretakerRole } from '../lib/permissions'
 import { Badge, Modal, EmptyState, ProgressBar } from '../components/UI'
 import DataQualityBadge from '../components/DataQualityBadge'
 import InviteTenantPanel from '../components/InviteTenantPanel'
@@ -236,6 +236,7 @@ export function UnitsPage({
 }) {
   const showFinancial = canSeeFinancials(currentRole || '')
   const canManage = canManagePortfolio(currentRole || '')
+  const isCaretaker = isCaretakerRole(currentRole || '')
   const [viewMode, setViewMode] = useState('grid')
   const [statusFilter, setStatusFilter] = useState('all')
   const [modalOpen, setModalOpen] = useState(false)
@@ -268,7 +269,8 @@ export function UnitsPage({
   }
 
   const handleQuickSave = ({ tenant, unit: updatedUnit }) => {
-    setTenants((prev) => [...prev, tenant])
+    const scoped = activeOwnerId ? scopeRecord(tenant, activeOwnerId) : tenant
+    setTenants((prev) => [...prev, scoped])
     setUnits((prev) => prev.map((u) => (u.id === updatedUnit.id ? updatedUnit : u)))
   }
 
@@ -418,10 +420,19 @@ export function UnitsPage({
                   <button
                     type="button"
                     onClick={() => openHistory(unit)}
-                    className="text-xs text-[#2d6a4f] hover:underline"
+                    className="text-xs text-brand hover:underline"
                   >
                     View history
                   </button>
+                  )}
+                  {isCaretaker && (
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage('maintenance')}
+                      className="text-xs px-2 py-1 border border-brand text-brand rounded"
+                    >
+                      Log repair
+                    </button>
                   )}
                   {canManage && unit.status === 'vacant' && !unit.currentTenantId && (
                     <>
@@ -460,7 +471,7 @@ export function UnitsPage({
                 {showFinancial && <th className="p-3">Rent</th>}
                 <th className="p-3">Tenant</th>
                 <th className="p-3">BR</th>
-                <th className="p-3">Actions</th>
+                {(canManage || isCaretaker) && <th className="p-3">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -474,14 +485,20 @@ export function UnitsPage({
                   {showFinancial && <td className="p-3">{fmtUGX(unit.monthlyRent)}</td>}
                   <td className="p-3">{getTenantName(unit) || '—'}</td>
                   <td className="p-3">{unit.bedrooms}</td>
+                  {(canManage || isCaretaker) && (
                   <td className="p-3">
                     {canManage && (
-                    <button type="button" onClick={() => openHistory(unit)} className="text-[#2d6a4f] hover:underline text-xs">
+                    <button type="button" onClick={() => openHistory(unit)} className="text-brand hover:underline text-xs">
                       History
                     </button>
                     )}
-                    {!canManage && '—'}
+                    {isCaretaker && (
+                      <button type="button" onClick={() => setCurrentPage('maintenance')} className="text-brand hover:underline text-xs ml-2">
+                        Log repair
+                      </button>
+                    )}
                   </td>
+                  )}
                 </tr>
               ))}
             </tbody>

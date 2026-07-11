@@ -3,6 +3,7 @@ import { Copy, Link2 } from 'lucide-react'
 import { Modal, LoadingButton } from './UI'
 import GuidancePanel from './GuidancePanel'
 import { buildQuickTenant, assignTenantToUnit } from '../lib/tenantData'
+import { scopeRecord } from '../lib/scope'
 import {
   getOrCreateTenantInvite,
   getJoinUrl,
@@ -59,12 +60,20 @@ export default function QuickAddTenantModal({
     setLoading(true)
     setTimeout(async () => {
       const rent = parseInt(form.monthlyRent, 10) || Number(unit.monthlyRent) || 0
-      const tenant = buildQuickTenant(unit, {
-        name: form.name,
-        phone: form.phone,
-        monthlyRent: rent,
-        moveInDate: form.moveInDate || undefined,
-      })
+      const tenant = scopeRecord(
+        buildQuickTenant(
+          unit,
+          {
+            name: form.name,
+            phone: form.phone,
+            monthlyRent: rent,
+            moveInDate: form.moveInDate || undefined,
+          },
+          'manual',
+          ownerId,
+        ),
+        ownerId,
+      )
       const inv = getOrCreateTenantInvite(
         ownerId,
         String(unit.buildingId),
