@@ -22,6 +22,7 @@ describe('permissions', () => {
     expect(canAccessPage('tenant', 'subscription')).toBe(false)
     expect(canAccessPage('tenant', 'billing-admin')).toBe(false)
     expect(canAccessPage('tenant', 'payments')).toBe(false)
+    expect(canAccessPage('tenant', 'my-dashboard')).toBe(true)
     expect(canAccessPage('tenant', 'my-balance')).toBe(true)
     expect(canAccessPage('tenant', 'my-receipts')).toBe(true)
   })

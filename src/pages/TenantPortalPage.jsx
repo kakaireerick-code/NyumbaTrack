@@ -7,8 +7,10 @@ import { buildReceiptData } from '../utils/receipts'
 import ReceiptViewerModal from '../components/ReceiptViewerModal'
 import GuidancePanel from '../components/GuidancePanel'
 import ProductHighlights from '../components/ProductHighlights'
+import TenantBehaviorDashboard from '../components/TenantBehaviorDashboard'
 import { getPageGuidance } from '../lib/actionGuidance'
 import { Smartphone, Copy, MessageCircle, Send } from 'lucide-react'
+import { computeTenantBehavior } from '../lib/tenantBehavior'
 import {
   getThread,
   postMessage,
@@ -67,7 +69,7 @@ export default function TenantPortalPage({
   )
   const rentPayments = tenantPayments.filter((p) => p.type === 'rent').sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 12)
   const dueDate = nextDueDate(unit?.rentDueDay || tenant.rentDueDay || 5)
-  const guidance = getPageGuidance('tenant', currentPage || 'my-balance', {})
+  const guidance = getPageGuidance('tenant', currentPage || 'my-dashboard', {})
 
   const hasMtn = !!String(settings.mtnMomo || settings.paymentMtn || '').trim()
   const hasAirtel = !!String(settings.airtelMoney || settings.paymentAirtel || '').trim()
@@ -247,36 +249,56 @@ export default function TenantPortalPage({
     return null
   }
 
-  if (currentPage === 'my-balance' || !currentPage) {
+  if (currentPage === 'my-dashboard' || currentPage === 'my-balance' || !currentPage) {
+    const behaviorStats = computeTenantBehavior({
+      tenant: {
+        id: effectiveTenantId,
+        leaseStart: String(tenant.leaseStart || ''),
+        leaseEnd: tenant.leaseEnd ? String(tenant.leaseEnd) : undefined,
+        rentAmount: Number(safeTenant.rentAmount || tenant.rentAmount || 0),
+        rentDueDay: unit?.rentDueDay || tenant.rentDueDay || 5,
+        depositPaid: Number(tenant.depositPaid || 0),
+        depositAmount: Number(tenant.depositAmount || 0),
+        status: String(tenant.status || ''),
+      },
+      payments: tenantPayments,
+      balance,
+      messagesSent: thread.filter((m) => m.fromRole === 'tenant').length,
+    })
+
     return (
       <>
       <div className="space-y-5 pb-24 max-w-2xl mx-auto w-full">
         <GuidancePanel guidance={guidance} />
+        <TenantBehaviorDashboard
+          stats={behaviorStats}
+          balance={balance}
+          dueDate={dueDate}
+          rentAmount={safeTenant.rentAmount}
+          firstName={String(safeTenant.firstName || 'Tenant')}
+          unitLabel={safeUnit?.unitNumber}
+          buildingName={safeBuilding?.name}
+          onPay={() => setPageSafe?.('my-payments')}
+          onMessages={() => setPageSafe?.('my-messages')}
+        />
         <ProductHighlights
           currentRole="tenant"
           surface="tenant-home"
           setCurrentPage={setPageSafe}
           variant="compact"
         />
-        <div>
-          <h1 className="text-xl font-bold">
-            Hello, {String(safeTenant.firstName || 'Tenant')}
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">{safeUnit?.unitNumber} · {safeBuilding?.name}</p>
-        </div>
+      </div>
+      {receiptModal}
+      </>
+    )
+  }
 
-        <div className={`card p-6 text-center rounded-2xl ${balance.isInArrears ? 'ring-2 ring-red-400/60 bg-red-50/50 dark:bg-red-950/20' : 'ring-2 ring-brand/30 bg-brand/5'}`}>
-          <p className="text-sm text-gray-500">What I owe</p>
-          <p className={`text-3xl font-bold mt-1 ${balance.isInArrears ? 'text-red-600' : 'text-brand'}`}>
-            {formatCurrency(balance.balance)}
-          </p>
-          <Badge color={balance.isInArrears ? 'red' : 'green'}>{balance.isInArrears ? 'AMOUNT DUE' : 'UP TO DATE'}</Badge>
-        </div>
-
-        <div className="card p-4">
-          <h2 className="font-semibold mb-1">Next payment</h2>
-          <p className="text-lg">{formatDate(dueDate)} — {formatCurrency(safeTenant.rentAmount)}</p>
-        </div>
+  if (currentPage === 'my-payments') {
+    return (
+      <>
+      <div className="space-y-4 pb-24 max-w-2xl mx-auto w-full">
+        <GuidancePanel guidance={guidance} />
+        <h1 className="text-xl font-bold">My Payments</h1>
 
         <div className="card p-4 space-y-3">
           <h2 className="font-semibold flex items-center gap-2"><Smartphone size={18} /> Pay rent</h2>
@@ -309,30 +331,6 @@ export default function TenantPortalPage({
             <button type="button" onClick={copyRef} className="ml-auto p-1 tap-target"><Copy size={16} /></button>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setPageSafe?.('my-messages')}
-          className="w-full card p-4 text-left flex items-center gap-3 hover:ring-2 hover:ring-brand/30 transition-shadow"
-        >
-          <MessageCircle className="text-brand" size={22} />
-          <div>
-            <p className="font-semibold text-sm">Contact landlord</p>
-            <p className="text-xs text-gray-500">Wrong amount? Send a message</p>
-          </div>
-        </button>
-      </div>
-      {receiptModal}
-      </>
-    )
-  }
-
-  if (currentPage === 'my-payments') {
-    return (
-      <>
-      <div className="space-y-4 pb-24 max-w-2xl mx-auto w-full">
-        <GuidancePanel guidance={guidance} />
-        <h1 className="text-xl font-bold">My Payments</h1>
 
         <form onSubmit={handleIPaid} className="card p-4 space-y-3">
           <h2 className="font-semibold text-sm">I paid — notify landlord</h2>

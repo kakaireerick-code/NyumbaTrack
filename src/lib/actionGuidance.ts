@@ -150,12 +150,12 @@ export const getPageGuidance = (
   }
 
   if (r === 'tenant') {
-    if (pageId === 'my-balance') {
+    if (pageId === 'my-dashboard' || pageId === 'my-balance') {
       return {
         variant: 'info',
-        headline: 'What you owe',
-        detail: 'This shows your rent for your unit only. Other tenants and owner records are never visible to you.',
-        nextSteps: ['Pay using the MoMo numbers shown', 'Tap Payments to tell your landlord you paid'],
+        headline: 'Your tenant dashboard',
+        detail: 'See your rent standing, payment habits, and tips — based on your unit only. No other tenants are visible.',
+        nextSteps: ['Check your tenant score', 'Pay rent from quick actions', 'Message your landlord with questions'],
       }
     }
     if (pageId === 'my-payments') {

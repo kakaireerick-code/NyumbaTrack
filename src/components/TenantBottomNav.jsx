@@ -3,7 +3,7 @@ import { Home, CreditCard, FileText, HelpCircle, MessageCircle } from 'lucide-re
 import { countUnreadForTenant } from '../lib/messages'
 
 const TABS = [
-  { id: 'my-balance', label: 'Home', icon: Home },
+  { id: 'my-dashboard', label: 'Home', icon: Home },
   { id: 'my-payments', label: 'Pay', icon: CreditCard },
   { id: 'my-messages', label: 'Messages', icon: MessageCircle },
   { id: 'my-lease', label: 'Lease', icon: FileText },
@@ -56,7 +56,7 @@ export default function TenantBottomNav({ currentPage, setCurrentPage, tenantId,
         {TABS.map(({ id, label, icon: Icon }) => {
           const active =
             currentPage === id ||
-            (id === 'my-balance' && (currentPage === 'my-receipts' || currentPage === 'guided' || currentPage === 'assistant'))
+            (id === 'my-dashboard' && (currentPage === 'my-receipts' || currentPage === 'my-balance' || currentPage === 'guided' || currentPage === 'assistant'))
           return renderTab(id, label, Icon, active, false)
         })}
       </nav>
@@ -69,7 +69,7 @@ export default function TenantBottomNav({ currentPage, setCurrentPage, tenantId,
           {TABS.map(({ id, label, icon: Icon }) => {
             const active =
               currentPage === id ||
-              (id === 'my-balance' && currentPage === 'my-receipts')
+              (id === 'my-dashboard' && (currentPage === 'my-receipts' || currentPage === 'my-balance'))
             return renderTab(id, label, Icon, active, true)
           })}
         </div>

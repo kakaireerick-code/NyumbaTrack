@@ -92,7 +92,7 @@ import { initialSubscription } from './data/subscriptionPlans'
 const ROLE_DEFAULT_PAGE = {
   property_owner: 'dashboard',
   caretaker: 'units',
-  tenant: 'my-balance',
+  tenant: 'my-dashboard',
 }
 
 function AppContent() {

@@ -323,6 +323,24 @@ confirm(
   'Tenants can message + nav/layout + MoMo settings prominent',
 )
 
+// F27 Tenant behavioral dashboard
+const tenantBehavior = exists('src/lib/tenantBehavior.ts') ? read('src/lib/tenantBehavior.ts') : ''
+const behaviorDash = exists('src/components/TenantBehaviorDashboard.jsx') ? read('src/components/TenantBehaviorDashboard.jsx') : ''
+const permissionsTs = exists('src/lib/permissions.ts') ? read('src/lib/permissions.ts') : ''
+confirm(
+  'F27',
+  'Tenant behavioral stats dashboard',
+  tenantPortal.includes('my-dashboard') &&
+    tenantPortal.includes('computeTenantBehavior') &&
+    tenantPortal.includes('TenantBehaviorDashboard') &&
+    tenantBehavior.includes('overallScore') &&
+    tenantBehavior.includes('onTimePaymentRate') &&
+    behaviorDash.includes('tenant score') &&
+    tenantNav.includes('my-dashboard') &&
+    permissionsTs.includes('my-dashboard'),
+  'Tenants see score, on-time %, streak, and tips on Home dashboard',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -334,6 +352,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F26 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F27 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)

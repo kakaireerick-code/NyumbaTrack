@@ -33,6 +33,7 @@ export type PageId =
   | 'messages'
   | 'my-messages'
   | 'my-balance'
+  | 'my-dashboard'
   | 'my-payments'
   | 'my-lease'
   | 'my-receipts'
@@ -98,7 +99,7 @@ const CARETAKER_PAGES: PageId[] = [
 ]
 
 const TENANT_PAGES: PageId[] = [
-  'my-balance', 'my-payments', 'my-lease', 'my-receipts', 'my-messages',
+  'my-dashboard', 'my-balance', 'my-payments', 'my-lease', 'my-receipts', 'my-messages',
   'help', 'guided', 'assistant', 'receipt-view', 'about',
 ]
 
