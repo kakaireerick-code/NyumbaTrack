@@ -3,7 +3,6 @@ import { Bell, Smartphone } from 'lucide-react'
 import {
   getFilteredNotifications,
   markNotificationRead,
-  unreadCountForRole,
   subscribeNotificationUpdates,
   getNotificationPrefs,
   saveNotificationPrefs,
@@ -24,6 +23,7 @@ export default function NotificationInbox({
   userId,
   showToast,
   setCurrentPage,
+  excludePractice = false,
 }) {
   const [open, setOpen] = useState(false)
   const [tick, setTick] = useState(0)
@@ -44,8 +44,8 @@ export default function NotificationInbox({
     setPushPrefs(getPushPrefs(pushUserId))
   }, [role, ownerId, userId, tick, pushUserId])
 
-  const items = getFilteredNotifications(role, ownerId, userId)
-  const unread = unreadCountForRole(role, ownerId, userId)
+  const items = getFilteredNotifications(role, ownerId, userId, { excludePractice })
+  const unread = items.filter((n) => !n.read).length
 
   const togglePref = (key) => {
     const next = { ...prefs, [key]: !prefs[key] }

@@ -57,7 +57,13 @@ import { workflowsForRole } from './lib/guidedWorkflows'
 import { getAppMode, setAppMode, appModeLabel } from './lib/appMode'
 import { getTourSteps, isTourComplete } from './lib/rolePrompts'
 import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
-import { ensureDemoPracticeData } from './lib/demoPractice'
+import { ensureDemoPracticeData, purgeDemoPracticeData } from './lib/demoPractice'
+import {
+  createGuardedSetter,
+  filterOwnerMaintenance,
+  filterOwnerUtilities,
+  paymentTouchesDemo,
+} from './lib/demoLiveSeparation'
 import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
 import { syncInvitesFromUnits, releaseUnitInvite, pushInviteToCloud } from './lib/invites'
 import { processReferrerCreditOnFirstLogin, recordReferralSignup } from './lib/partnerRewards'
@@ -264,6 +270,40 @@ function AppContent() {
   const effectiveTenants = useMemo(
     () => (showDemoData ? [...ownerTenants, ...DEMO_TENANTS] : ownerTenants),
     [showDemoData, ownerTenants],
+  )
+
+  const ownerBuildingIds = useMemo(
+    () => new Set(ownerBuildings.map((b) => b.id)),
+    [ownerBuildings],
+  )
+  const ownerUnitIds = useMemo(
+    () => new Set(ownerUnits.map((u) => u.id)),
+    [ownerUnits],
+  )
+  const ownerMaintenance = useMemo(
+    () => filterOwnerMaintenance(maintenance, ownerBuildingIds, ownerUnitIds),
+    [maintenance, ownerBuildingIds, ownerUnitIds],
+  )
+  const ownerUtilities = useMemo(
+    () => filterOwnerUtilities(utilities, ownerBuildingIds),
+    [utilities, ownerBuildingIds],
+  )
+
+  const guardedSetBuildings = useMemo(
+    () => createGuardedSetter(setBuildings, showDemoData, showToast, 'change buildings'),
+    [showDemoData, showToast, setBuildings],
+  )
+  const guardedSetUnits = useMemo(
+    () => createGuardedSetter(setUnits, showDemoData, showToast, 'change units'),
+    [showDemoData, showToast, setUnits],
+  )
+  const guardedSetTenants = useMemo(
+    () => createGuardedSetter(setTenants, showDemoData, showToast, 'change tenants'),
+    [showDemoData, showToast, setTenants],
+  )
+  const guardedSetPayments = useMemo(
+    () => createGuardedSetter(setPayments, showDemoData, showToast, 'record payments'),
+    [showDemoData, showToast, setPayments],
   )
 
   const isCaretaker = isCaretakerRole(currentRole)
@@ -538,6 +578,10 @@ function AppContent() {
   }
 
   const showReceipt = useCallback((payment, tenant, unit, building) => {
+    if (paymentTouchesDemo(payment) || (tenant && paymentTouchesDemo(tenant))) {
+      showToast('Demo sample payments cannot generate live receipts. Turn Demo OFF for real receipts.', 'error')
+      return
+    }
     const bal = getTenantBalance(tenant?.id, tenants, payments)
     const receiptData = issueReceipt(payment, tenant, unit, building, settings, bal.balance, activeOwnerId)
     const text = buildReceiptText(payment, tenant, unit, building, settings, bal.balance)
@@ -566,15 +610,23 @@ function AppContent() {
         })
       }
     }
-  }, [tenants, payments, settings, activeOwnerId])
+  }, [tenants, payments, settings, activeOwnerId, showToast])
+
+  const handleToggleDemoMode = useCallback(() => {
+    setDemoMode((wasOn) => {
+      const next = !wasOn
+      if (wasOn && activeOwnerId) purgeDemoPracticeData(activeOwnerId)
+      return next
+    })
+  }, [activeOwnerId, setDemoMode])
 
   const sharedProps = {
     buildings: portalBuildings,
     units: portalUnits,
     tenants: portalTenants,
     payments: filterPaymentsForRole(currentRole, ownerPayments),
-    maintenance,
-    utilities,
+    maintenance: ownerMaintenance,
+    utilities: ownerUtilities,
     notices,
     notifications,
     depositHistory,
@@ -588,10 +640,10 @@ function AppContent() {
     selectedBuilding,
     selectedUnit,
     selectedTenant,
-    setBuildings,
-    setUnits,
-    setTenants,
-    setPayments,
+    setBuildings: guardedSetBuildings,
+    setUnits: guardedSetUnits,
+    setTenants: guardedSetTenants,
+    setPayments: guardedSetPayments,
     setMaintenance,
     setUtilities,
     setNotices,
@@ -803,7 +855,17 @@ function AppContent() {
       case 'data-import':
         return wrapWithGuidance(
           'data-import',
-          <DataImportPage {...sharedProps} selectedBuilding={selectedBuilding} setCurrentPage={setPageSafe} />,
+          <DataImportPage
+            {...sharedProps}
+            buildings={ownerBuildings}
+            units={ownerUnits}
+            tenants={ownerTenants}
+            setBuildings={setBuildings}
+            setUnits={setUnits}
+            setTenants={setTenants}
+            selectedBuilding={selectedBuilding}
+            setCurrentPage={setPageSafe}
+          />,
         )
       case 'vacancy':
         return <VacancyBoardPage {...sharedProps} />
@@ -841,6 +903,7 @@ function AppContent() {
           <MessagesPage
             currentRole={currentRole}
             ownerId={activeOwnerId}
+            demoMode={showDemoData}
             tenants={effectiveTenants}
             units={effectiveUnits}
             buildings={effectiveBuildings}
@@ -860,6 +923,7 @@ function AppContent() {
         return (
           <SettingsPage
             {...sharedProps}
+            demoMode={showDemoData}
             onRestartTour={() => setShowTour(true)}
             setCurrentPage={setPageSafe}
             authUser={authUser}
@@ -875,7 +939,7 @@ function AppContent() {
             subscription={subscription}
             setSubscription={setSubscription}
             showToast={showToast}
-            units={units}
+            units={ownerUnits}
             currentUser={currentUser}
             authUser={authUser}
             settings={settings}
@@ -961,13 +1025,13 @@ function AppContent() {
           setSidebarOpen={setSidebarOpen}
           showBrandingBanner={showBrandingBanner}
           demoMode={demoMode}
-          onToggleDemoMode={isOwnerRole ? () => setDemoMode((d) => !d) : undefined}
+          onToggleDemoMode={isOwnerRole ? handleToggleDemoMode : undefined}
           appModeLabel={isOwnerRole ? appModeLabel(getAppMode()) : undefined}
           onOpenGuide={() => setPageSafe('help')}
           onNavigate={setPageSafe}
           currentPage={currentPage}
           isTenant={isTenant}
-          unreadMessages={!isTenant && activeOwnerId ? countUnreadForOwner(activeOwnerId) : 0}
+          unreadMessages={!isTenant && activeOwnerId ? countUnreadForOwner(activeOwnerId, { excludeDemo: !showDemoData }) : 0}
           onOpenMessages={!isTenant ? () => setPageSafe('messages') : undefined}
           notificationInbox={
             (activeOwnerId || authUser?.id) ? (
@@ -977,6 +1041,7 @@ function AppContent() {
                 userId={authUser?.id}
                 showToast={showToast}
                 setCurrentPage={setPageSafe}
+                excludePractice={!showDemoData}
               />
             ) : null
           }

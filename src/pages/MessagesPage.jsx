@@ -10,11 +10,13 @@ import {
   countUnreadForOwner,
 } from '../lib/messages'
 import { displayTenantName } from '../lib/tenantData'
+import { isDemoId } from '../lib/demoLiveSeparation'
 import { Badge } from '../components/UI'
 
 export default function MessagesPage({
   currentRole,
   ownerId,
+  demoMode,
   tenants,
   units,
   buildings,
@@ -30,7 +32,7 @@ export default function MessagesPage({
   const guidance = getPageGuidance(currentRole, 'messages', {})
 
   const threads = useMemo(() => {
-    const inbox = getOwnerInbox(ownerId)
+    const inbox = getOwnerInbox(ownerId, { excludeDemo: !demoMode })
     const map = new Map()
     for (const msg of inbox) {
       const key = `${msg.unitId}-${msg.tenantId}`
@@ -47,10 +49,12 @@ export default function MessagesPage({
     return [...map.values()].sort(
       (a, b) => new Date(b.last.createdAt).getTime() - new Date(a.last.createdAt).getTime(),
     )
-  }, [ownerId, tenants, units, buildings, unreadRefresh])
+  }, [ownerId, tenants, units, buildings, unreadRefresh, demoMode])
 
   const activeThread = selected
-    ? getThread(selected.unitId, selected.tenantId)
+    ? getThread(selected.unitId, selected.tenantId).filter(
+        (m) => demoMode || (!String(m.id).startsWith('demo-msg-') && !isDemoId(m.unitId) && !isDemoId(m.tenantId)),
+      )
     : []
 
   useEffect(() => {
@@ -62,22 +66,31 @@ export default function MessagesPage({
 
   const sendReply = () => {
     if (!reply.trim() || !selected) return
-    postMessage({
-      ownerId,
-      unitId: selected.unitId,
-      tenantId: selected.tenantId,
-      buildingId: selected.building?.id || selected.tenant?.buildingId,
-      fromRole: 'owner',
-      authorName: currentUser?.name || 'Landlord',
-      body: reply.trim(),
-    })
+    if (isDemoId(selected.unitId) || isDemoId(selected.tenantId)) {
+      showToast?.('Practice threads are read-only — explore messages in Demo, then turn Demo OFF for real replies.', 'error')
+      return
+    }
+    try {
+      postMessage({
+        ownerId,
+        unitId: selected.unitId,
+        tenantId: selected.tenantId,
+        buildingId: selected.building?.id || selected.tenant?.buildingId,
+        fromRole: 'owner',
+        authorName: currentUser?.name || 'Landlord',
+        body: reply.trim(),
+      })
+    } catch (err) {
+      showToast?.(err instanceof Error ? err.message : 'Could not send reply', 'error')
+      return
+    }
     setReply('')
     setTick((t) => t + 1)
     setUnreadRefresh?.((n) => n + 1)
     showToast?.('Reply sent', 'success')
   }
 
-  const unreadTotal = countUnreadForOwner(ownerId)
+  const unreadTotal = countUnreadForOwner(ownerId, { excludeDemo: !demoMode })
 
   return (
     <div className="space-y-4 p-4 max-w-4xl mx-auto">

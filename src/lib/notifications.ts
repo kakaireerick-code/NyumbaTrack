@@ -1,7 +1,5 @@
-/**
- * Role-safe notification payloads — caretakers never receive amount fields.
- */
 import { safeGet, safeSet } from './storage'
+import { isPracticeNotification } from './demoLiveSeparation'
 import { normalizeRole } from './permissions'
 import type { Role } from './permissions'
 import { dispatchPushForNotification } from './pushDispatch'
@@ -111,14 +109,17 @@ export const getFilteredNotifications = (
   role: string,
   ownerId: string,
   userId?: string,
+  opts?: { excludePractice?: boolean },
 ): AppNotification[] => {
   const prefs = getNotificationPrefs(role, userId || ownerId)
-  return getRoleSafeNotifications(role, ownerId, userId).filter((n) => {
-    if (n.kind === 'maintenance') return prefs.maintenance
-    if (n.kind === 'message') return prefs.messages
-    if (n.kind === 'payment') return prefs.payments
-    return prefs.system
-  })
+  return getRoleSafeNotifications(role, ownerId, userId)
+    .filter((n) => {
+      if (opts?.excludePractice && isPracticeNotification(n)) return false
+      if (n.kind === 'maintenance') return prefs.maintenance
+      if (n.kind === 'message') return prefs.messages
+      if (n.kind === 'payment') return prefs.payments
+      return prefs.system
+    })
 }
 
 /** Cross-tab sync via storage event */
