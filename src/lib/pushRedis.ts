@@ -19,3 +19,10 @@ export const vapidConfigured = () =>
       process.env.VAPID_PRIVATE_KEY &&
       process.env.VAPID_SUBJECT,
   )
+
+/** Safe diagnostic — booleans only, never secret values */
+export const vapidEnvStatus = () => ({
+  publicKey: Boolean(process.env.VAPID_PUBLIC_KEY?.trim()),
+  privateKey: Boolean(process.env.VAPID_PRIVATE_KEY?.trim()),
+  subject: Boolean(process.env.VAPID_SUBJECT?.trim()),
+})
