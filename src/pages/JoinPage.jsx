@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Home, Eye, EyeOff, MessageCircle } from 'lucide-react'
-import { seedDemoUsers, registerTenant, login } from '../lib/auth'
+import { seedDemoUsers, registerTenantAsync, login } from '../lib/auth'
 import { validateInviteForRole } from '../lib/invites'
+import { fetchCloudInvite } from '../lib/inviteCloud'
 import { normalizeInviteCode } from '../lib/routing'
 import { validatePortalSignIn, showDemoCredentials, GENERIC_AUTH_ERROR } from '../lib/portalAuth'
 import { checkJoinRateLimit, recordJoinFailure, clearJoinFailures } from '../lib/joinRateLimit'
@@ -31,25 +32,43 @@ export default function TenantJoinPage({
   }, [initialCode])
 
   useEffect(() => {
-    if (!inviteCode || inviteCode.length < 6) {
-      setCodeHint('')
-      return
+    let cancelled = false
+    const run = async () => {
+      if (!inviteCode || inviteCode.length < 6) {
+        setCodeHint('')
+        return
+      }
+      const v = validateInviteForRole(inviteCode, 'tenant')
+      if (v.ok) {
+        const unit = units?.find((u) => u.id === v.invite.unitId)
+        const building = buildings?.find((b) => b.id === v.invite.propertyId)
+        if (!cancelled) {
+          setCodeHint(
+            unit
+              ? `Code accepted — Unit ${unit.unitNumber}${building ? ` at ${building.name}` : ''}`
+              : 'Code accepted',
+          )
+        }
+        return
+      }
+      const cloud = await fetchCloudInvite(inviteCode, 'tenant')
+      if (!cancelled) {
+        if (cloud) {
+          setCodeHint(
+            `Code accepted — Unit ${cloud.unitNumber || 'assigned'}${cloud.buildingName ? ` at ${cloud.buildingName}` : ''}`,
+          )
+        } else {
+          setCodeHint('')
+        }
+      }
     }
-    const v = validateInviteForRole(inviteCode, 'tenant')
-    if (v.ok) {
-      const unit = units?.find((u) => u.id === v.invite.unitId)
-      const building = buildings?.find((b) => b.id === v.invite.propertyId)
-      setCodeHint(
-        unit
-          ? `Code accepted — Unit ${unit.unitNumber}${building ? ` at ${building.name}` : ''}`
-          : 'Code accepted',
-      )
-    } else {
-      setCodeHint('')
+    run()
+    return () => {
+      cancelled = true
     }
   }, [inviteCode, units, buildings])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     const limit = checkJoinRateLimit()
@@ -59,37 +78,42 @@ export default function TenantJoinPage({
     }
     setLoading(true)
 
-    setTimeout(() => {
+    try {
       if (mode === 'signin') {
         const result = login(email, password)
         if (!result.ok) {
           recordJoinFailure()
           setError(GENERIC_AUTH_ERROR)
-          setLoading(false)
           return
         }
         const portalCheck = validatePortalSignIn('tenant', result.user?.role || '')
         if (!portalCheck.ok) {
           recordJoinFailure()
           setError(portalCheck.error)
-          setLoading(false)
           return
         }
         clearJoinFailures()
         onAuthSuccess(result.user)
       } else {
-        const result = registerTenant(email, password, name, inviteCode, units || [], buildings || [])
+        const result = await registerTenantAsync(
+          email,
+          password,
+          name,
+          inviteCode,
+          units || [],
+          buildings || [],
+        )
         if (!result.ok) {
           recordJoinFailure()
           setError(result.error || GENERIC_AUTH_ERROR)
-          setLoading(false)
           return
         }
         clearJoinFailures()
         onAuthSuccess(result.user, result.unit, result.invite)
       }
+    } finally {
       setLoading(false)
-    }, 300)
+    }
   }
 
   return (
