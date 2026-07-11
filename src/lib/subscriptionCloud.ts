@@ -1,6 +1,7 @@
 export type SubscriptionClaimPayload = {
   customerEmail: string
   customerName: string
+  ownerId?: string
   planId: string
   billingCycle: string
   amount: number

@@ -133,6 +133,7 @@ export default function SubscriptionPage({
     const claimResult = await submitCloudSubscriptionClaim({
       customerEmail,
       customerName,
+      ownerId: authUser?.ownerId || authUser?.id,
       planId: plan.id,
       billingCycle,
       amount,

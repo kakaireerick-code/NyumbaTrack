@@ -7,6 +7,7 @@ import {
   validateClaimPayload,
   type StoredClaim,
 } from '../src/lib/subscriptionApiHelpers.js'
+import { sendPushMessage } from './lib/pushSend'
 
 type ClaimBody = {
   customerEmail?: string
@@ -86,6 +87,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const updated = applyReview(existing, reviewAction, note)
     await r.set(key, updated)
+
+    if (reviewAction === 'approve' && updated.ownerId) {
+      void sendPushMessage({
+        ownerId: updated.ownerId,
+        role: 'property_owner',
+        userId: updated.ownerId,
+        title: 'Subscription approved',
+        body: 'Your MoMo payment was verified. Your plan is now active.',
+        url: '/subscription',
+        tag: `sub-approved-${updated.momoReference}`,
+      })
+    }
+
     return res.status(200).json({ ok: true, claim: updated })
   }
 
@@ -105,6 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     id: `claim-${Date.now()}`,
     customerEmail,
     customerName: String(body.customerName || 'Customer'),
+    ownerId: String(body.ownerId || '').trim() || undefined,
     planId,
     billingCycle,
     amount,

@@ -60,7 +60,8 @@ import { parseEntryPath, getTenantJoinPath, getCaretakerJoinPath, getReceiptPath
 import { getCaretakerSafeBuilding, getCaretakerSafeUnit, getCaretakerSafeTenant } from './lib/propertyViews'
 import NotificationInbox from './components/NotificationInbox'
 import { addNotification } from './lib/notifications'
-import { countUnreadForOwner } from './lib/messages'
+import { runAutoNotifications } from './lib/autoNotifications'
+import { countUnreadForOwner, countUnreadForTenant } from './lib/messages'
 import { getUsers, saveUsers } from './lib/auth'
 import { isoToday } from './lib/dates'
 import { getStoredTheme, persistTheme } from './lib/theme'
@@ -281,6 +282,55 @@ function AppContent() {
 
   const roleKey = normalizeRole(currentRole)
 
+  useEffect(() => {
+    if (!isLoggedIn || !authUser) return
+    const ownerId = activeOwnerId || authUser.ownerId || ''
+    if (!ownerId) return
+
+    const tenantRecord = isTenantRole(roleKey)
+      ? tenants.find((t) => t.userId === authUser.id || t.id === authUser.tenantId)
+      : null
+    const unreadMessages = isTenantRole(roleKey) && tenantRecord
+      ? countUnreadForTenant(String(tenantRecord.id), String(tenantRecord.unitId || ''))
+      : countUnreadForOwner(ownerId)
+
+    const run = () => {
+      runAutoNotifications({
+        role: roleKey,
+        ownerId,
+        userId: authUser.id,
+        buildings: portalBuildings,
+        units: portalUnits,
+        tenants: portalTenants,
+        payments: ownerPayments,
+        maintenance,
+        subscription,
+        settings,
+        demoMode: showDemoData,
+        unreadMessages,
+      })
+    }
+
+    run()
+    const timer = window.setInterval(run, 60_000)
+    return () => window.clearInterval(timer)
+  }, [
+    isLoggedIn,
+    authUser,
+    roleKey,
+    activeOwnerId,
+    portalBuildings,
+    portalUnits,
+    portalTenants,
+    ownerPayments,
+    maintenance,
+    subscription,
+    settings,
+    showDemoData,
+    tenants,
+    unreadRefresh,
+  ])
+
   const activeWorkflow = useMemo(() => {
     if (!activeWorkflowId || !isOwnerRole) return null
     return workflowsForRole(roleKey).find((w) => w.id === activeWorkflowId) || null
@@ -392,6 +442,17 @@ function AppContent() {
         window.history.replaceState({}, '', getTenantJoinPath())
       }
       showToast(`Welcome! You are registered for unit ${unit.unitNumber}.`, 'success')
+      const oid = newTenant.ownerId
+      if (oid) {
+        addNotification({
+          ownerId: oid,
+          role: 'property_owner',
+          title: 'New tenant joined',
+          body: `${user.name || 'A tenant'} joined unit ${unit.unitNumber}.`,
+          kind: 'system',
+          actionPage: 'tenants',
+        })
+      }
       return
     }
 
@@ -456,6 +517,7 @@ function AppContent() {
         title: 'Receipt issued',
         body: `Receipt ${receiptData.receiptNo} for ${receiptData.tenantName}`,
         kind: 'payment',
+        actionPage: 'payments',
       })
       if (tenant?.id) {
         addNotification({
@@ -465,6 +527,7 @@ function AppContent() {
           title: 'New receipt available',
           body: `Your receipt ${receiptData.receiptNo} is ready to view.`,
           kind: 'payment',
+          actionPage: 'my-payments',
         })
       }
     }
@@ -519,6 +582,7 @@ function AppContent() {
     setImportHistory,
     activeOwnerId,
     ownerId: activeOwnerId,
+    userId: authUser?.id,
     unreadRefresh,
     setUnreadRefresh,
   }
@@ -852,6 +916,7 @@ function AppContent() {
                 ownerId={activeOwnerId || authUser?.ownerId}
                 userId={authUser?.id}
                 showToast={showToast}
+                setCurrentPage={setPageSafe}
               />
             ) : null
           }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Bell } from 'lucide-react'
+import { Bell, Smartphone } from 'lucide-react'
 import {
   getFilteredNotifications,
   markNotificationRead,
@@ -8,16 +8,28 @@ import {
   getNotificationPrefs,
   saveNotificationPrefs,
 } from '../lib/notifications'
+import {
+  getPushPrefs,
+  isPushSupported,
+  setClosedAppPush,
+  subscribeDevicePush,
+  unsubscribeDevicePush,
+} from '../lib/pushClient'
 
 export default function NotificationInbox({
   role,
   ownerId,
   userId,
   showToast,
+  setCurrentPage,
 }) {
   const [open, setOpen] = useState(false)
   const [tick, setTick] = useState(0)
   const [prefs, setPrefs] = useState(() => getNotificationPrefs(role, userId || ownerId))
+  const pushUserId = userId || ownerId
+  const [pushPrefs, setPushPrefs] = useState(() => getPushPrefs(pushUserId))
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushMsg, setPushMsg] = useState('')
 
   useEffect(() => {
     return subscribeNotificationUpdates(() => setTick((t) => t + 1))
@@ -25,7 +37,8 @@ export default function NotificationInbox({
 
   useEffect(() => {
     setPrefs(getNotificationPrefs(role, userId || ownerId))
-  }, [role, ownerId, userId, tick])
+    setPushPrefs(getPushPrefs(pushUserId))
+  }, [role, ownerId, userId, tick, pushUserId])
 
   const items = getFilteredNotifications(role, ownerId, userId)
   const unread = unreadCountForRole(role, ownerId, userId)
@@ -36,6 +49,40 @@ export default function NotificationInbox({
     saveNotificationPrefs(role, userId || ownerId, next)
     showToast?.('Notification preferences saved', 'success')
   }
+
+  const openItem = (n) => {
+    markNotificationRead(n.id)
+    setTick((t) => t + 1)
+    if (n.actionPage && setCurrentPage) {
+      setCurrentPage(n.actionPage)
+      setOpen(false)
+    }
+  }
+
+  const enablePhone = async () => {
+    setPushBusy(true)
+    setPushMsg('')
+    const r = await subscribeDevicePush(ownerId, role, pushUserId)
+    setPushPrefs(getPushPrefs(pushUserId))
+    setPushMsg(r.ok ? 'Phone notifications enabled.' : r.error || 'Could not enable.')
+    setPushBusy(false)
+  }
+
+  const toggleClosedApp = async (on) => {
+    setPushBusy(true)
+    setPushMsg('')
+    if (on) {
+      const r = await subscribeDevicePush(ownerId, role, pushUserId)
+      setPushMsg(r.ok ? 'PWA push enabled.' : r.error || 'Enable failed.')
+    } else {
+      setClosedAppPush(pushUserId, false)
+      setPushMsg('Closed-app push turned off (tab notifications still work).')
+    }
+    setPushPrefs(getPushPrefs(pushUserId))
+    setPushBusy(false)
+  }
+
+  const supported = isPushSupported()
 
   return (
     <div className="relative">
@@ -62,6 +109,49 @@ export default function NotificationInbox({
               <span className="font-semibold text-sm">Notifications</span>
               <span className="text-xs text-gray-500">{unread} unread</span>
             </div>
+
+            {supported && (
+              <div className="px-3 py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 space-y-2">
+                <button
+                  type="button"
+                  disabled={pushBusy || pushPrefs.enabled}
+                  onClick={enablePhone}
+                  className="w-full text-left text-xs flex items-center gap-2 px-2 py-2 rounded-lg bg-white dark:bg-gray-800 border dark:border-gray-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-60"
+                >
+                  <Smartphone className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>
+                    {pushPrefs.enabled ? 'Phone notifications on' : 'Enable phone notifications'}
+                  </span>
+                </button>
+                <label className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 px-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={pushPrefs.closedApp}
+                    disabled={pushBusy || !pushPrefs.enabled}
+                    onChange={(e) => toggleClosedApp(e.target.checked)}
+                  />
+                  When app is closed (PWA)
+                </label>
+                {pushPrefs.enabled && (
+                  <button
+                    type="button"
+                    className="text-[10px] text-red-600 hover:underline px-1"
+                    disabled={pushBusy}
+                    onClick={async () => {
+                      setPushBusy(true)
+                      await unsubscribeDevicePush(pushUserId)
+                      setPushPrefs(getPushPrefs(pushUserId))
+                      setPushMsg('Phone notifications disabled.')
+                      setPushBusy(false)
+                    }}
+                  >
+                    Turn off phone notifications
+                  </button>
+                )}
+                {pushMsg && <p className="text-[11px] text-gray-600 dark:text-gray-400 px-1">{pushMsg}</p>}
+              </div>
+            )}
+
             <div className="max-h-64 overflow-y-auto">
               {items.length === 0 ? (
                 <p className="p-4 text-sm text-gray-500 text-center">No notifications</p>
@@ -70,14 +160,14 @@ export default function NotificationInbox({
                   <button
                     key={n.id}
                     type="button"
-                    onClick={() => {
-                      markNotificationRead(n.id)
-                      setTick((t) => t + 1)
-                    }}
+                    onClick={() => openItem(n)}
                     className={`w-full text-left p-3 border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${n.read ? 'opacity-70' : ''}`}
                   >
                     <p className="text-sm font-medium">{n.title}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
+                    {n.actionPage && (
+                      <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-1">Tap to open</p>
+                    )}
                     <p className="text-[10px] text-gray-400 mt-1">
                       {new Date(n.createdAt).toLocaleDateString()}
                     </p>
