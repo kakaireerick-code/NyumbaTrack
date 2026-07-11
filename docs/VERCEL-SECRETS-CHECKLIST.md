@@ -54,6 +54,16 @@ https://github.com/kakaireerick-code/NyumbaTrack/settings/secrets/actions
 | `BILLING_ADMIN_SECRET` | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` or run `SETUP-BILLING-ADMIN.ps1` |
 | `VITE_BILLING_ADMIN_EMAIL` | your Gmail |
 
+**Web Push (closed-app notifications):** run `SETUP-VAPID.ps1` or `SETUP-VAPID.cmd` — adds:
+
+| Variable | Value |
+|----------|--------|
+| `VAPID_PUBLIC_KEY` | from `npm run generate:vapid` |
+| `VAPID_PRIVATE_KEY` | from `npm run generate:vapid` |
+| `VAPID_SUBJECT` | `mailto:you@domain.com` |
+
+Pass: `npm run check:vapid` → `/api/health` shows `vapid: true`, `push: true`
+
 ## Step 7 — Deploy
 
 - **Actions** → **Deploy to Vercel** → **Run workflow** → `main`
@@ -81,6 +91,25 @@ After deploy, open **Settings → More tools → Billing admin** (admin email on
 See `docs/BILLING-ADMIN.md` and run `AUTO-PUSH-BILLING.ps1` if the panel is not on `main` yet.
 
 **Deep link:** https://nyumbatracker.vercel.app/billing-admin (sign in as admin email first).
+
+## Step 10 — Web Push VAPID (2 min)
+
+```powershell
+.\SETUP-VAPID.ps1
+# or double-click SETUP-VAPID.cmd
+```
+
+With Vercel token (auto-upload + redeploy):
+
+```powershell
+$env:VERCEL_TOKEN = "your_token"
+$env:VAPID_SUBJECT = "mailto:you@domain.com"
+npm run setup:vapid
+```
+
+See `docs/PUSH-NOTIFICATIONS.md`.
+
+---
 
 ## Tell the agent when done
 

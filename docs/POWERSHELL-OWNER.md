@@ -24,6 +24,8 @@ Set-ExecutionPolicy -Scope Process RemoteSigned
 | Script | When to use |
 |--------|-------------|
 | `SETUP-BILLING-ADMIN.ps1` | Generate `BILLING_ADMIN_SECRET` + admin email for Vercel |
+| `SETUP-VAPID.ps1` / `SETUP-VAPID.cmd` | **One-time** — Web Push VAPID keys on Vercel |
+| `CHECK-VAPID.ps1` | Quick `npm run check:vapid` against production |
 | `SETUP-VERCEL-NYUMBA.cmd` | Find `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` |
 | `OWNER-SYNC.ps1` | **Daily** — sync + production check |
 
@@ -70,6 +72,22 @@ npm run ops:guardrail
 ```
 
 Target: **4/4 PASS**
+
+---
+
+## Web Push VAPID (one-time)
+
+Production shows `vapid: false` until you add three env vars — **not a bug**.
+
+```powershell
+git pull origin main
+.\SETUP-VAPID.ps1
+# or double-click SETUP-VAPID.cmd
+```
+
+Pass: `npm run check:vapid` → `vapid: true`, `push: true`. Then `.\OWNER-SYNC.ps1` stops warning.
+
+Tab-hidden notifications work **before** VAPID. Closed-app push needs VAPID + Add to Home Screen.
 
 ---
 
