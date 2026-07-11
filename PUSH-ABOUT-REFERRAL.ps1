@@ -22,6 +22,6 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 git add -A
 $st = git status --porcelain
-if ($st) { git commit -m "About page + Partner Rewards referral program" }
+if ($st) { git commit -m "About page + Partner Rewards + ULTT-inspired boot loading screen" }
 git push -u origin $Branch
 Write-Host "Open PR and merge to main — then run Deploy to Vercel." -ForegroundColor Green
