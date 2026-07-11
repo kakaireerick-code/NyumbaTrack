@@ -171,6 +171,7 @@ export const registerCaretaker = (
     name: name.trim(),
     role: 'caretaker',
     ownerId: invite.ownerId,
+    buildingId: invite.propertyId ? String(invite.propertyId) : undefined,
   }
 
   saveUsers([...users, user])
@@ -353,6 +354,7 @@ export const seedDemoUsers = (): void => {
       name: 'James Okello',
       role: 'caretaker',
       ownerId,
+      buildingId: 'demo-b1',
     },
     {
       id: 'u-tenant-demo',
@@ -361,9 +363,9 @@ export const seedDemoUsers = (): void => {
       name: 'David Ssempijja',
       role: 'tenant',
       ownerId,
-      tenantId: 't1',
-      unitId: 'u1',
-      buildingId: 'b1',
+      tenantId: 'demo-t1',
+      unitId: 'demo-u1',
+      buildingId: 'demo-b1',
     },
   ])
   seedDemoInvites(ownerId)

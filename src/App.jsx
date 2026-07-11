@@ -54,6 +54,7 @@ import { workflowsForRole } from './lib/guidedWorkflows'
 import { getAppMode, setAppMode, appModeLabel } from './lib/appMode'
 import { getTourSteps, isTourComplete } from './lib/rolePrompts'
 import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
+import { ensureDemoPracticeData } from './lib/demoPractice'
 import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
 import { syncInvitesFromUnits } from './lib/invites'
 import { parseEntryPath, getTenantJoinPath, getCaretakerJoinPath, getReceiptPath, getBillingAdminPath } from './lib/routing'
@@ -263,24 +264,38 @@ function AppContent() {
 
   const isCaretaker = isCaretakerRole(currentRole)
 
-  const caretakerBuildings = useMemo(
-    () => effectiveBuildings.map((b) => getCaretakerSafeBuilding(b) || b),
-    [effectiveBuildings],
-  )
-  const caretakerUnits = useMemo(
-    () => effectiveUnits.map((u) => getCaretakerSafeUnit(u) || u),
-    [effectiveUnits],
-  )
-  const caretakerTenants = useMemo(
-    () => effectiveTenants.map((t) => getCaretakerSafeTenant(t) || t),
-    [effectiveTenants],
-  )
+  const caretakerBuildings = useMemo(() => {
+    let list = effectiveBuildings.map((b) => getCaretakerSafeBuilding(b) || b)
+    if (authUser?.buildingId) {
+      list = list.filter((b) => b.id === authUser.buildingId)
+    }
+    return list
+  }, [effectiveBuildings, authUser?.buildingId])
+  const caretakerUnits = useMemo(() => {
+    let list = effectiveUnits.map((u) => getCaretakerSafeUnit(u) || u)
+    if (authUser?.buildingId) {
+      list = list.filter((u) => u.buildingId === authUser.buildingId)
+    }
+    return list
+  }, [effectiveUnits, authUser?.buildingId])
+  const caretakerTenants = useMemo(() => {
+    let list = effectiveTenants.map((t) => getCaretakerSafeTenant(t) || t)
+    if (authUser?.buildingId) {
+      list = list.filter((t) => t.buildingId === authUser.buildingId)
+    }
+    return list
+  }, [effectiveTenants, authUser?.buildingId])
 
   const portalBuildings = isCaretaker ? caretakerBuildings : effectiveBuildings
   const portalUnits = isCaretaker ? caretakerUnits : effectiveUnits
   const portalTenants = isCaretaker ? caretakerTenants : effectiveTenants
 
   const roleKey = normalizeRole(currentRole)
+
+  useEffect(() => {
+    if (!isLoggedIn || !activeOwnerId) return
+    ensureDemoPracticeData(activeOwnerId, { demoMode: showDemoData })
+  }, [isLoggedIn, activeOwnerId, showDemoData])
 
   useEffect(() => {
     if (!isLoggedIn || !authUser) return
@@ -462,7 +477,8 @@ function AppContent() {
       const bName = buildings.find((b) => b.id === t?.buildingId)?.name || ''
       setCurrentUser({ name: t ? `${t.firstName} ${t.lastName}` : name, building: bName })
     } else if (role === 'caretaker') {
-      setCurrentUser({ name, building: buildings[0]?.name || '' })
+      const b = buildings.find((bd) => bd.id === user.buildingId) || buildings[0]
+      setCurrentUser({ name, building: b?.name || 'Assigned property' })
       if (entryPath.kind === 'join-caretaker') {
         window.history.replaceState({}, '', getCaretakerJoinPath())
       }
@@ -644,8 +660,10 @@ function AppContent() {
           <AssistantPage
             currentRole={currentRole}
             currentPage={currentPage}
-            demoMode={false}
+            demoMode={showDemoData}
             guidanceContext={guidanceContext}
+            setCurrentPage={setPageSafe}
+            onStartWorkflow={(id) => setActiveWorkflowId(id)}
           />
         )
       }
@@ -732,6 +750,8 @@ function AppContent() {
           currentPage={currentPage}
           demoMode={showDemoData}
           guidanceContext={guidanceContext}
+          setCurrentPage={setPageSafe}
+          onStartWorkflow={(id) => setActiveWorkflowId(id)}
         />
       )
     }
@@ -882,7 +902,7 @@ function AppContent() {
   const isTenant = isTenantRole(currentRole)
 
   return (
-    <div className={`min-h-screen flex ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-[#f8f9fa]'}`}>
+    <div className={`min-h-screen flex ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-surface'}`}>
       {!isTenant && (
         <Sidebar
           currentRole={currentRole}

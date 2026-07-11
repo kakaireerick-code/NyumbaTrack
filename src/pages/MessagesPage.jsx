@@ -95,7 +95,12 @@ export default function MessagesPage({
       <div className="grid md:grid-cols-3 gap-4 min-h-[400px]">
         <div className="card p-2 space-y-1 max-h-[60vh] overflow-y-auto">
           {threads.length === 0 ? (
-            <p className="text-sm text-gray-500 p-3">No tenant messages yet.</p>
+            <div className="text-sm text-gray-500 dark:text-gray-400 p-3 space-y-2">
+              <p>No tenant messages yet.</p>
+              <p className="text-xs">
+                Turn on <strong>Demo Mode</strong> in the header to load practice threads, or wait for a tenant to message you.
+              </p>
+            </div>
           ) : (
             threads.map((t) => (
               <button

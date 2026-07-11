@@ -3,22 +3,22 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-brand: #2d6a4f;
-  --color-brand-light: #40916c;
-  --color-brand-dark: #1a2e1a;
-  --color-brand-muted: #d8f3dc;
-  --color-surface: #f8f9fa;
-  --color-danger: #d62828;
-  --color-warning: #e07b00;
+  --color-brand: #5c7a65;
+  --color-brand-light: #7a9b84;
+  --color-brand-dark: #2f3d32;
+  --color-brand-muted: #e8efe9;
+  --color-surface: #f5f4f0;
+  --color-danger: #c44d4d;
+  --color-warning: #c4843a;
 }
 
 :root {
-  --primary: #2d6a4f;
-  --accent: #40916c;
-  --alert: #e07b00;
-  --danger: #d62828;
-  --sidebar: #1a2e1a;
-  --bg: #f8f9fa;
+  --primary: #5c7a65;
+  --accent: #7a9b84;
+  --alert: #c4843a;
+  --danger: #c44d4d;
+  --sidebar: #2f3d32;
+  --bg: #f5f4f0;
   --text-primary: #111827;
   --text-secondary: #374151;
   --text-muted: #6b7280;
@@ -128,10 +128,11 @@ body.dark .card {
 }
 
 .card {
-  background: white;
+  background: #fffef9;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(47, 61, 50, 0.06);
   color: var(--text-on-card);
+  border: 1px solid rgba(47, 61, 50, 0.06);
 }
 
 /* Large tap targets for mobile / easy use */

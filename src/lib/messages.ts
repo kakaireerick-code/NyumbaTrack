@@ -1,4 +1,5 @@
 import { safeGet, safeSet } from './storage'
+import { addNotification } from './notifications'
 
 export type UnitMessage = {
   id: string
@@ -47,6 +48,30 @@ export const postMessage = (payload: Omit<UnitMessage, 'id' | 'createdAt' | 'rea
     readByTenant: payload.fromRole === 'tenant',
   }
   saveMessages([...getMessages(), msg])
+
+  if (payload.fromRole === 'tenant') {
+    addNotification({
+      ownerId: payload.ownerId,
+      role: 'property_owner',
+      title: 'New tenant message',
+      body: `${payload.authorName}: ${payload.body.slice(0, 100)}`,
+      kind: 'message',
+      actionPage: 'messages',
+      push: false,
+    })
+  } else {
+    addNotification({
+      ownerId: payload.ownerId,
+      role: 'tenant',
+      userId: payload.tenantId,
+      title: 'Message from landlord',
+      body: payload.body.slice(0, 100),
+      kind: 'message',
+      actionPage: 'my-messages',
+      push: false,
+    })
+  }
+
   return msg
 }
 
