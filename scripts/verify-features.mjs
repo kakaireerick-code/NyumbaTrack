@@ -174,9 +174,11 @@ confirm(
   'VAPID setup tooling',
   exists('SETUP-VAPID.ps1') &&
     exists('scripts/setup-vapid.mjs') &&
+    exists('scripts/upload-vapid.mjs') &&
     pkg.scripts['setup:vapid'] &&
+    pkg.scripts['upload:vapid'] &&
     read('OWNER-SYNC.ps1').includes('SETUP-VAPID.ps1'),
-  'SETUP-VAPID.ps1 + npm run setup:vapid + OWNER-SYNC hint',
+  'SETUP-VAPID.ps1 + upload:vapid + OWNER-SYNC hint',
 )
 
 const failed = checks.filter((c) => !c.ok)
