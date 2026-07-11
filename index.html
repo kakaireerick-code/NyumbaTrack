@@ -7,6 +7,118 @@
     <title>NyumbaTrack — Smart Rent Management for Ugandan Landlords</title>
     <meta name="description" content="Track tenants, rent payments, and receipts — built for Ugandan landlords." />
     <link rel="manifest" href="/manifest.json" />
+    <style>
+      #nt-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        background: #f5f4f0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+      }
+      #nt-splash.nt-splash--hide {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .nt-splash-stripes {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+      }
+      .nt-splash-stripe {
+        height: 4px;
+        width: 100%;
+      }
+      .nt-splash-stripe--black { background: #000; }
+      .nt-splash-stripe--yellow { background: #fcdc04; }
+      .nt-splash-stripe--red { background: #d90000; }
+      .nt-splash-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1.5rem;
+        text-align: center;
+      }
+      .nt-splash-emblem {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+        background: linear-gradient(145deg, #5c7a65, #2f3d32);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 2rem;
+        font-weight: 700;
+        box-shadow: 0 8px 24px rgba(47, 61, 50, 0.25);
+        margin-bottom: 1.25rem;
+      }
+      .nt-splash-title {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #2f3d32;
+        letter-spacing: -0.02em;
+      }
+      .nt-splash-subtitle {
+        margin: 0.35rem 0 0.75rem;
+        font-size: 0.9rem;
+        color: #6b7280;
+      }
+      .nt-splash-badge {
+        display: inline-block;
+        padding: 0.2rem 0.55rem;
+        border-radius: 6px;
+        background: #e8efe9;
+        color: #5c7a65;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        margin-bottom: 1.5rem;
+      }
+      .nt-splash-bar {
+        width: min(240px, 70vw);
+        height: 6px;
+        border-radius: 999px;
+        background: #e5e7eb;
+        overflow: hidden;
+        margin-bottom: 0.75rem;
+      }
+      .nt-splash-bar-fill {
+        height: 100%;
+        width: 40%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #5c7a65, #fcdc04, #5c7a65);
+        background-size: 200% 100%;
+        animation: nt-splash-shimmer 1.4s ease-in-out infinite;
+      }
+      @keyframes nt-splash-shimmer {
+        0% { transform: translateX(-100%); background-position: 0% 50%; }
+        100% { transform: translateX(250%); background-position: 100% 50%; }
+      }
+      .nt-splash-status {
+        margin: 0;
+        font-size: 0.8rem;
+        color: #9ca3af;
+      }
+      .nt-splash-footer {
+        padding: 0.75rem 1rem 1.25rem;
+        text-align: center;
+        font-size: 0.65rem;
+        color: #9ca3af;
+        letter-spacing: 0.02em;
+      }
+      html.dark #nt-splash { background: #121212; }
+      html.dark .nt-splash-title { color: #f3f4f6; }
+      html.dark .nt-splash-subtitle,
+      html.dark .nt-splash-status,
+      html.dark .nt-splash-footer { color: #9ca3af; }
+    </style>
     <script>
       (function () {
         try {
@@ -20,6 +132,22 @@
     </script>
   </head>
   <body>
+    <div id="nt-splash" aria-hidden="true">
+      <div class="nt-splash-stripes">
+        <div class="nt-splash-stripe nt-splash-stripe--black"></div>
+        <div class="nt-splash-stripe nt-splash-stripe--yellow"></div>
+        <div class="nt-splash-stripe nt-splash-stripe--red"></div>
+      </div>
+      <div class="nt-splash-body">
+        <div class="nt-splash-emblem" aria-hidden="true">⌂</div>
+        <h1 class="nt-splash-title">NyumbaTrack</h1>
+        <p class="nt-splash-subtitle">Smart rent management for Ugandan landlords</p>
+        <span class="nt-splash-badge">NT</span>
+        <div class="nt-splash-bar"><div class="nt-splash-bar-fill"></div></div>
+        <p class="nt-splash-status">Loading your portfolio…</p>
+      </div>
+      <footer class="nt-splash-footer">Republic of Uganda · MoMo-ready · Tenants use free</footer>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

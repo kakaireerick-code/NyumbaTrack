@@ -224,6 +224,25 @@ confirm(
   'About/Referrals pages + billing promo + assistant + guidance',
 )
 
+// F22 Boot loading screen (ULTT-inspired splash)
+const indexHtml = read('index.html')
+const loadingScreen = exists('src/components/LoadingScreen.jsx') ? read('src/components/LoadingScreen.jsx') : ''
+const mainJsx = exists('src/main.jsx') ? read('src/main.jsx') : ''
+const cssBoot = exists('src/index.css') ? read('src/index.css') : ''
+confirm(
+  'F22',
+  'Boot loading screen',
+  indexHtml.includes('id="nt-splash"') &&
+    indexHtml.includes('nt-splash-stripes') &&
+    loadingScreen.includes('nt-loading-screen') &&
+    loadingScreen.includes('LOADING_STATUS_LINES') &&
+    mainJsx.includes('AppRoot') &&
+    mainJsx.includes('hideHtmlSplash') &&
+    cssBoot.includes('nt-loading-shimmer') &&
+    cssBoot.includes('nt-loading-pulse'),
+  'HTML splash + React loader + AppRoot fade + animations',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -235,6 +254,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F21 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F22 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)
