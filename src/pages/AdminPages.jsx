@@ -13,6 +13,7 @@ import { safeSet } from '../utils/storage'
 import InviteStaffPanel from '../components/InviteStaffPanel'
 import { canManagePortfolio } from '../lib/permissions'
 import { MORE_TOOLS_LINKS } from '../lib/navigation'
+import { isBillingAdminEmail } from '../lib/billingAdmin'
 import { Badge, EmptyState, LoadingButton, StatCard } from '../components/UI'
 
 import { inputCls, btnPrimary, btnSecondary } from '../lib/formStyles'
@@ -626,7 +627,7 @@ Date: ${fmtDate(new Date())}` : ''
   )
 }
 
-export function SettingsPage({ settings, setSettings, showToast, onRestartTour, activeOwnerId, currentRole, setCurrentPage }) {
+export function SettingsPage({ settings, setSettings, showToast, onRestartTour, activeOwnerId, currentRole, setCurrentPage, authUser }) {
   const [connectionStatus, setConnectionStatus] = useState(null)
   const [testing, setTesting] = useState(false)
 
@@ -662,6 +663,10 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour, 
     showToast('Onboarding tour will show on next navigation', 'success')
   }
 
+  const moreTools = MORE_TOOLS_LINKS.filter(
+    (tool) => tool.id !== 'billing-admin' || isBillingAdminEmail(authUser?.email),
+  )
+
   return (
     <div className="p-4 space-y-6 max-w-3xl">
       <h1 className="text-2xl font-bold">Settings</h1>
@@ -673,7 +678,7 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour, 
             Advanced features — billing, import, guided workflows, and more.
           </p>
           <div className="grid sm:grid-cols-2 gap-2">
-            {MORE_TOOLS_LINKS.map((tool) => (
+            {moreTools.map((tool) => (
               <button
                 key={tool.id}
                 type="button"

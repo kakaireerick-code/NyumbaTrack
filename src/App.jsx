@@ -41,6 +41,7 @@ import TenantPortalPage from './pages/TenantPortalPage'
 import DataImportPage from './pages/DataImportPage'
 import AgreementUploadModal from './components/AgreementUploadModal'
 import SubscriptionPage from './pages/SubscriptionPage'
+import BillingAdminPage from './pages/BillingAdminPage'
 import SubscriptionBanner from './components/SubscriptionBanner'
 import TenantBottomNav from './components/TenantBottomNav'
 import { usePersistedState } from './utils/storage'
@@ -63,6 +64,7 @@ import { countUnreadForOwner } from './lib/messages'
 import { getUsers, saveUsers } from './lib/auth'
 import { isoToday } from './lib/dates'
 import { getStoredTheme, persistTheme } from './lib/theme'
+import { isBillingAdminEmail } from './lib/billingAdmin'
 import {
   initialBuildings,
   initialUnits,
@@ -294,6 +296,10 @@ function AppContent() {
 
   const setPageSafe = useCallback((page) => {
     const rk = normalizeRole(currentRole)
+    if (page === 'billing-admin' && !isBillingAdminEmail(authUser?.email)) {
+      showToast('Billing admin is restricted to the platform operator email.', 'error')
+      return
+    }
     if (rk === 'tenant' && TENANT_BLOCKED_PAGES.includes(page)) {
       showToast('This area is not available.', 'error')
       setCurrentPage('my-balance')
@@ -305,7 +311,7 @@ function AppContent() {
       showToast('You do not have access to that page.', 'error')
       setCurrentPage(defaultPageForRole(rk))
     }
-  }, [currentRole, showToast])
+  }, [currentRole, authUser?.email, showToast])
 
   useEffect(() => {
     if (!isLoggedIn || authUser?.role !== 'tenant') return
@@ -718,6 +724,7 @@ function AppContent() {
             {...sharedProps}
             onRestartTour={() => setShowTour(true)}
             setCurrentPage={setPageSafe}
+            authUser={authUser}
           />
         )
       case 'blacklist':
@@ -736,6 +743,8 @@ function AppContent() {
             settings={settings}
           />
         )
+      case 'billing-admin':
+        return <BillingAdminPage showToast={showToast} authUser={authUser} />
       default:
         return <DashboardPage {...sharedProps} />
     }

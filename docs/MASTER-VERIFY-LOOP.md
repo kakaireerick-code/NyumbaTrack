@@ -1,9 +1,9 @@
-# Master verify loop — F1–F14
+# Master verify loop — F1–F15
 
 Run every turn:
 
 ```bash
-npm run verify:features   # F1–F14 local checks
+npm run verify:features   # F1–F15 local checks
 npm test && npm run build
 npm run ops:guardrail     # production (after deploy)
 ```
@@ -26,6 +26,15 @@ npm run ops:guardrail     # production (after deploy)
 | F12 | RBAC isolation | `permissions.ts` blocks tenant/caretaker leaks |
 | F13 | MoMo ref validation | `momoVerification.ts` |
 | F14 | Guardrail script | `scripts/ops-guardrail.mjs` + npm script |
+| F15 | Billing admin panel | `BillingAdminPage.jsx` + PATCH `/api/subscription` |
+
+## F15 — Billing admin (PC operator)
+
+1. Sign in as `VITE_BILLING_ADMIN_EMAIL`
+2. **Settings → More tools → Billing admin**
+3. Paste `BILLING_ADMIN_SECRET` → **Load claims**
+4. Submit test MoMo on **Plans & Billing** → claim appears as `pending_verification`
+5. **Approve MoMo** → claim status `approved` in Redis
 
 ## Loop per feature
 
@@ -36,7 +45,7 @@ Log: CONFIRMED F# at <commit-sha>
 
 ## Done when
 
-- All F1–F14 CONFIRMED locally
+- All F1–F15 CONFIRMED locally
 - `npm run ops:guardrail` → 4/4 PASS on production
 - Bundle ≠ `index-B0iUFD94.js`
 - `/api/health` returns JSON

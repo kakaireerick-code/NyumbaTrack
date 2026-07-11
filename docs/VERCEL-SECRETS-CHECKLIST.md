@@ -73,6 +73,11 @@ npm run ops:guardrail
 - Title says **Ugandan** (not Kenyan)
 - `/api/health` → JSON `"ok":true`
 
+## Step 9 — Billing admin panel (optional)
+
+After deploy, open **Settings → More tools → Billing admin** (admin email only).  
+See `docs/BILLING-ADMIN.md` and run `AUTO-PUSH-BILLING.ps1` if the panel is not on `main` yet.
+
 ## Tell the agent when done
 
 Comment on issue #20:

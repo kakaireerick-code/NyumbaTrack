@@ -20,9 +20,14 @@ describe('permissions', () => {
   it('blocks tenant from owner routes', () => {
     expect(canAccessPage('tenant', 'dashboard')).toBe(false)
     expect(canAccessPage('tenant', 'subscription')).toBe(false)
+    expect(canAccessPage('tenant', 'billing-admin')).toBe(false)
     expect(canAccessPage('tenant', 'payments')).toBe(false)
     expect(canAccessPage('tenant', 'my-balance')).toBe(true)
     expect(canAccessPage('tenant', 'my-receipts')).toBe(true)
+  })
+
+  it('allows owner billing admin page in RBAC map', () => {
+    expect(canAccessPage('property_owner', 'billing-admin')).toBe(true)
   })
 
   it('blocks caretaker from receipts and financial fields', () => {

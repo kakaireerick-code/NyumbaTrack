@@ -318,10 +318,14 @@ export default function SubscriptionPage({
       )}
 
       {subscription.status === 'pending_verification' && (
-        <div className="card p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+        <div className="card p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 space-y-2">
           <p className="font-medium text-orange-800 dark:text-orange-200">
             Your MoMo payment is <strong>pending verification</strong>. An admin will confirm payment to{' '}
             {ADMIN_MOMO_DISPLAY} and activate your plan. You will receive an invoice by email once approved.
+          </p>
+          <p className="text-sm text-orange-700 dark:text-orange-300">
+            Typical review time: same business day. Keep your transaction reference{' '}
+            <strong>{subscription.momoReference || momoReference || 'on your MoMo SMS'}</strong> handy.
           </p>
         </div>
       )}
