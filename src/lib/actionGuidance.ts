@@ -127,7 +127,7 @@ export const getPageGuidance = (
       return {
         variant: 'success',
         headline: 'Partner Rewards',
-        detail: 'Share your personal link. When another owner subscribes, you bank free months toward your next renewal.',
+        detail: 'Share your personal link. When another owner completes their first login, you earn discounted billing months toward renewal.',
         nextSteps: ['Copy your referral link', 'Find Rewards in the header or Discover strip', 'Track banked months on Plans & Billing'],
       }
     }

@@ -172,7 +172,7 @@ export const FAQ_ENTRIES: FaqEntry[] = [
   {
     keywords: ['partner rewards', 'referral', 'refer', 'invite landlord', 'free month'],
     roles: ['property_owner'],
-    answer: 'Partner Rewards lets you refer another landlord. When they subscribe, you bank free months toward your renewal. Tap Rewards in the header or Discover strip, or open Plans & Billing.',
+    answer: 'Partner Rewards lets you refer another landlord. When they complete their first owner login via your link, you earn discounted billing months toward renewal. Tap Rewards in the header or Discover strip, or open Plans & Billing.',
     offerPage: 'Partner Rewards',
     offerPageId: 'referrals',
   },

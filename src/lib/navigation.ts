@@ -46,7 +46,7 @@ export const DISCOVER_STRIP_LINKS: DiscoverStripLink[] = [
     id: 'referrals',
     label: 'Partner Rewards',
     shortLabel: 'Rewards',
-    blurb: 'Refer landlords and earn free subscription months',
+    blurb: 'Refer landlords — discounted billing months on first login',
     icon: 'gift',
     roles: ['property_owner'],
   },
@@ -88,7 +88,7 @@ export const MORE_TOOLS_LINKS: MoreToolLink[] = [
   { id: 'messages', label: 'Tenant Messages', description: 'Owner–tenant inbox' },
   { id: 'help', label: 'Help', description: 'Manuals and support' },
   { id: 'about', label: 'About', description: 'What NyumbaTrack is and who it is for' },
-  { id: 'referrals', label: 'Partner Rewards', description: 'Refer landlords and earn free months' },
+  { id: 'referrals', label: 'Partner Rewards', description: 'Refer landlords — earn discounted billing months on first login' },
 ]
 
 export type MoreToolsGroup = { title: string; ids: PageId[] }

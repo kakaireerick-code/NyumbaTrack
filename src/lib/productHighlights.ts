@@ -74,7 +74,7 @@ export const PRODUCT_HIGHLIGHTS: ProductHighlight[] = [
   {
     id: 'partner-rewards',
     title: 'Partner Rewards',
-    detail: 'Refer another landlord — when they subscribe, you bank free months toward renewal.',
+    detail: 'Refer another landlord — they qualify on first owner login and you earn discounted billing months.',
     pageId: 'referrals',
     ctaLabel: 'Get your link',
     icon: 'referral',
