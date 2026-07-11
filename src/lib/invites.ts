@@ -106,8 +106,17 @@ export const findInvite = (code: string): InviteRecord | undefined => {
 export const findInviteForUnit = (unitId: string): InviteRecord | undefined =>
   getInvites().find((i) => i.role === 'tenant' && i.unitId === unitId && i.status === 'pending')
 
-export const findPendingCaretakerInviteForOwner = (ownerId: string): InviteRecord | undefined =>
-  getInvites().find((i) => i.role === 'caretaker' && i.ownerId === ownerId && i.status === 'pending')
+export const findPendingCaretakerInviteForOwner = (
+  ownerId: string,
+  propertyId?: string,
+): InviteRecord | undefined =>
+  getInvites().find(
+    (i) =>
+      i.role === 'caretaker' &&
+      i.ownerId === ownerId &&
+      i.status === 'pending' &&
+      (!propertyId || i.propertyId === propertyId),
+  )
 
 export const createTenantInviteForUnit = (
   ownerId: string,
@@ -179,14 +188,18 @@ export const regenerateTenantInvite = (
   return createTenantInviteForUnit(ownerId, propertyId, unitId)
 }
 
-export const regenerateCaretakerInvite = (ownerId: string, oldCode?: string): InviteRecord => {
+export const regenerateCaretakerInvite = (
+  ownerId: string,
+  oldCode?: string,
+  propertyId?: string,
+): InviteRecord => {
   const invites = getInvites().map((i) => {
     if (i.ownerId !== ownerId || i.role !== 'caretaker') return i
     if (oldCode && normalizeInviteCode(i.code) !== normalizeInviteCode(oldCode)) return i
     return { ...i, status: 'revoked' as InviteStatus }
   })
   saveInvites(invites)
-  return createCaretakerInvite(ownerId)
+  return createCaretakerInvite(ownerId, propertyId)
 }
 
 export type ValidateInviteResult =

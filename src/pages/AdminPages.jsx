@@ -10,6 +10,7 @@ import {
   daysBetween,
 } from '../utils/helpers'
 import InviteStaffPanel from '../components/InviteStaffPanel'
+import InviteTenantPanel from '../components/InviteTenantPanel'
 import { canManagePortfolio } from '../lib/permissions'
 import { MORE_TOOLS_LINKS, MORE_TOOLS_GROUPS } from '../lib/navigation'
 import { resetTour } from '../lib/rolePrompts'
@@ -627,7 +628,7 @@ Date: ${fmtDate(new Date())}` : ''
   )
 }
 
-export function SettingsPage({ settings, setSettings, showToast, onRestartTour, activeOwnerId, currentRole, setCurrentPage, authUser }) {
+export function SettingsPage({ settings, setSettings, showToast, onRestartTour, activeOwnerId, currentRole, setCurrentPage, authUser, buildings = [], units = [], demoMode }) {
   const [connectionStatus, setConnectionStatus] = useState(null)
   const [testing, setTesting] = useState(false)
 
@@ -710,7 +711,35 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour, 
       )}
 
       {canManagePortfolio(currentRole || '') && activeOwnerId && (
-        <InviteStaffPanel ownerId={activeOwnerId} showToast={showToast} />
+        <>
+          <div className="card p-4 space-y-4">
+            <h2 className="font-semibold">Invite tenants</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Copy a join link for each vacant unit — same easy flow as caretaker invites.
+            </p>
+            {units.filter((u) => u.status === 'vacant' && !u.currentTenantId).length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No vacant units right now. Mark a unit vacant on the Units page to invite someone.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {units
+                  .filter((u) => u.status === 'vacant' && !u.currentTenantId)
+                  .map((unit) => (
+                    <InviteTenantPanel
+                      key={unit.id}
+                      unit={unit}
+                      building={buildings.find((b) => b.id === unit.buildingId)}
+                      ownerId={activeOwnerId}
+                      showToast={showToast}
+                    />
+                  ))}
+              </div>
+            )}
+          </div>
+
+          <InviteStaffPanel ownerId={activeOwnerId} showToast={showToast} buildings={buildings} />
+        </>
       )}
 
       <div className="card p-4 space-y-4">

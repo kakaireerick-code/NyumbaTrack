@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Copy, Link2, RefreshCw, Wrench } from 'lucide-react'
 import {
   getJoinUrl,
@@ -9,19 +9,37 @@ import {
   pushInviteToCloud,
 } from '../lib/invites'
 
-export default function InviteStaffPanel({ ownerId, showToast, propertyId }) {
-  const [code, setCode] = useState(() => {
-    const inv = findPendingCaretakerInviteForOwner(ownerId)
-    return inv?.code || ''
-  })
+export default function InviteStaffPanel({ ownerId, showToast, buildings = [] }) {
+  const [propertyId, setPropertyId] = useState(() => buildings[0]?.id || '')
+  const [code, setCode] = useState('')
+
+  useEffect(() => {
+    if (!propertyId && buildings[0]?.id) setPropertyId(buildings[0].id)
+  }, [buildings, propertyId])
+
+  useEffect(() => {
+    if (!ownerId || !propertyId) return
+    const inv = findPendingCaretakerInviteForOwner(ownerId, propertyId)
+    setCode(inv?.code || '')
+  }, [ownerId, propertyId])
 
   if (!ownerId) return null
 
+  const selectedBuilding = buildings.find((b) => b.id === propertyId)
+
+  const syncCloud = (inv) => {
+    pushInviteToCloud(inv, {
+      buildingName: selectedBuilding
+        ? `${selectedBuilding.name} · ${selectedBuilding.address || ''}`.trim()
+        : undefined,
+    })
+  }
+
   const ensureCode = () => {
-    let inv = findPendingCaretakerInviteForOwner(ownerId)
+    let inv = findPendingCaretakerInviteForOwner(ownerId, propertyId)
     if (!inv) {
       inv = createCaretakerInvite(ownerId, propertyId)
-      pushInviteToCloud(inv)
+      syncCloud(inv)
     }
     setCode(inv.code)
     return inv.code
@@ -41,20 +59,38 @@ export default function InviteStaffPanel({ ownerId, showToast, propertyId }) {
   }
 
   const handleRegenerate = () => {
-    const inv = regenerateCaretakerInvite(ownerId, activeCode)
+    const inv = regenerateCaretakerInvite(ownerId, activeCode, propertyId)
     setCode(inv.code)
-    pushInviteToCloud(inv)
+    syncCloud(inv)
     showToast?.('New code generated — old link no longer works', 'success')
   }
 
   return (
-    <div className="card p-4 border-l-4 border-orange-500 space-y-3">
+    <div className="card p-4 border-l-4 border-brand/40 space-y-3">
       <h3 className="font-semibold text-sm flex items-center gap-2">
         <Wrench size={16} /> Invite caretaker
       </h3>
-      <p className="text-xs text-gray-500">
-        Share this link with your caretaker. They will only see units and maintenance — not rent amounts.
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        Pick the property first, then share the link. Caretakers only see units and maintenance — not rent amounts.
       </p>
+
+      {buildings.length > 0 && (
+        <div>
+          <label className="block text-xs font-medium mb-1">Property</label>
+          <select
+            className="w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600"
+            value={propertyId}
+            onChange={(e) => setPropertyId(e.target.value)}
+          >
+            {buildings.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}{b.address ? ` — ${b.address}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded font-mono text-center text-lg tracking-widest">
         {activeCode}
       </div>
@@ -62,28 +98,28 @@ export default function InviteStaffPanel({ ownerId, showToast, propertyId }) {
         <button
           type="button"
           onClick={() => copy(link, 'Link')}
-          className="flex items-center gap-1 px-3 py-2 text-xs bg-orange-600 text-white rounded"
+          className="tap-target flex items-center gap-1 px-3 py-2 text-xs bg-brand text-white rounded-lg"
         >
           <Link2 size={14} /> Copy caretaker link
         </button>
         <button
           type="button"
           onClick={() => copy(activeCode, 'Code')}
-          className="flex items-center gap-1 px-3 py-2 text-xs border rounded"
+          className="tap-target flex items-center gap-1 px-3 py-2 text-xs border rounded-lg"
         >
           <Copy size={14} /> Copy code only
         </button>
         <button
           type="button"
           onClick={() => copy(template, 'Message')}
-          className="flex items-center gap-1 px-3 py-2 text-xs border rounded"
+          className="tap-target flex items-center gap-1 px-3 py-2 text-xs border rounded-lg"
         >
           <Copy size={14} /> Copy message
         </button>
         <button
           type="button"
           onClick={handleRegenerate}
-          className="flex items-center gap-1 px-3 py-2 text-xs text-orange-700 border border-orange-300 rounded"
+          className="tap-target flex items-center gap-1 px-3 py-2 text-xs text-brand border border-brand/30 rounded-lg"
         >
           <RefreshCw size={14} /> Regenerate code
         </button>

@@ -71,15 +71,15 @@ export default function InviteTenantPanel({
       <div className="text-xs space-y-1 mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
         <p className="font-mono font-bold">{activeCode}</p>
         <div className="flex flex-wrap gap-1">
-          <button type="button" onClick={() => copy(link, 'Link')} className="underline text-[#2d6a4f]">Copy link</button>
-          <button type="button" onClick={() => copy(activeCode, 'Code')} className="underline text-[#2d6a4f]">Copy code</button>
+          <button type="button" onClick={() => copy(link, 'Link')} className="underline text-brand">Copy link</button>
+          <button type="button" onClick={() => copy(activeCode, 'Code')} className="underline text-brand">Copy code</button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="card p-4 border-l-4 border-[#2d6a4f] space-y-3">
+    <div className="card p-4 border-l-4 border-brand/40 space-y-3">
       <h3 className="font-semibold text-sm flex items-center gap-2">
         <MessageCircle size={16} /> Invite tenant
       </h3>
@@ -93,7 +93,7 @@ export default function InviteTenantPanel({
         <button
           type="button"
           onClick={() => copy(link, 'Link')}
-          className="flex items-center gap-1 px-3 py-2 text-xs bg-[#2d6a4f] text-white rounded"
+          className="tap-target flex items-center gap-1 px-3 py-2 text-xs bg-brand text-white rounded-lg"
         >
           <Link2 size={14} /> Copy tenant link
         </button>

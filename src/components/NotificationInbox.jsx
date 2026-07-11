@@ -182,7 +182,10 @@ export default function NotificationInbox({
 
             <div className="max-h-64 overflow-y-auto">
               {items.length === 0 ? (
-                <p className="p-4 text-sm text-gray-500 text-center">No notifications</p>
+                <div className="p-4 text-sm text-gray-500 dark:text-gray-400 text-center space-y-1">
+                  <p>No notifications</p>
+                  <p className="text-xs">Owners: turn on Demo Mode to load practice alerts.</p>
+                </div>
               ) : (
                 items.slice(0, 20).map((n) => (
                   <button

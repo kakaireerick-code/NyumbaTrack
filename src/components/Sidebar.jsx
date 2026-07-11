@@ -59,6 +59,7 @@ export default function Sidebar({ currentRole, currentPage, setCurrentPage, side
             <button
               key={item.id}
               type="button"
+              data-nav-id={item.id}
               onClick={() => {
                 setCurrentPage(item.id)
                 if (window.innerWidth <= 768) setSidebarOpen(false)
