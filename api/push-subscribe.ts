@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { redis, subDataKey, subIndexKey } from './lib/pushRedis'
+import { redis, subDataKey, subIndexKey } from '../src/lib/pushRedis.js'
 
 type SubscribeBody = {
   ownerId?: string

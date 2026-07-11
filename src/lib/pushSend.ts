@@ -1,5 +1,5 @@
 import webpush from 'web-push'
-import { redis, subDataKey, subIndexKey, vapidConfigured } from './pushRedis'
+import { redis, subDataKey, subIndexKey, vapidConfigured } from './pushRedis.js'
 
 export type PushMessage = {
   ownerId: string

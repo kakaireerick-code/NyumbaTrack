@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { vapidConfigured } from './lib/pushRedis'
-import { sendPushMessage } from './lib/pushSend'
+import { vapidConfigured } from '../src/lib/pushRedis.js'
+import { sendPushMessage } from '../src/lib/pushSend.js'
 
 type NotifyBody = {
   ownerId?: string

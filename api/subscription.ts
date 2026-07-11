@@ -7,7 +7,6 @@ import {
   validateClaimPayload,
   type StoredClaim,
 } from '../src/lib/subscriptionApiHelpers.js'
-import { sendPushMessage } from './lib/pushSend'
 
 type ClaimBody = {
   customerEmail?: string
@@ -89,6 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await r.set(key, updated)
 
     if (reviewAction === 'approve' && updated.ownerId) {
+      const { sendPushMessage } = await import('../src/lib/pushSend.js')
       void sendPushMessage({
         ownerId: updated.ownerId,
         role: 'property_owner',
