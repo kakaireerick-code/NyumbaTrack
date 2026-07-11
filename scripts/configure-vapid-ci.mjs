@@ -58,14 +58,14 @@ if (!verified.ok) {
 console.log(`Verified on Vercel Production: ${verified.present.join(', ')}`)
 
 if (process.env.SKIP_DEPLOY === '1') {
-  console.log('SKIP_DEPLOY=1 — redeploy separately')
+  console.log('\nSKIP_DEPLOY=1 — keys on Vercel; redeploy via workflow vercel CLI step')
   process.exit(0)
 }
 
 const deployed = await triggerDeploy(project)
 if (!deployed) {
-  console.log('Could not auto-redeploy — run Deploy to Vercel workflow')
-  process.exit(1)
+  console.log('Note: API redeploy skipped (no git link). Workflow will run vercel deploy next.')
+  process.exit(0)
 }
 
 const waitSec = Math.max(60, Number(process.env.WAIT_SECS || 120))

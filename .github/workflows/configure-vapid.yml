@@ -35,7 +35,7 @@ jobs:
         if: steps.secrets.outputs.configured == 'true'
         run: npm ci
 
-      - name: Upload VAPID keys + redeploy Production
+      - name: Upload VAPID keys to Vercel Production
         if: steps.secrets.outputs.configured == 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -44,9 +44,23 @@ jobs:
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
-          WAIT_SECS: '150'
+          SKIP_DEPLOY: '1'
         run: node scripts/configure-vapid-ci.mjs
+
+      - name: Install Vercel CLI
+        if: steps.secrets.outputs.configured == 'true'
+        run: npm install --global vercel@latest
+
+      - name: Redeploy Production (pick up new env vars)
+        if: steps.secrets.outputs.configured == 'true'
+        run: |
+          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+          vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Production check
         if: steps.secrets.outputs.configured == 'true'
-        run: npm run check:vapid
+        run: WAIT_SECS=120 npm run check:vapid
