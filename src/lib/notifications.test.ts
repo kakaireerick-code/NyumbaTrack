@@ -1,10 +1,14 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   addNotification,
   getRoleSafeNotifications,
   getFilteredNotifications,
   saveNotificationPrefs,
 } from './notifications'
+
+vi.mock('./pushDispatch', () => ({
+  dispatchPushForNotification: vi.fn(),
+}))
 import { filterPaymentsForRole } from './permissions'
 
 describe('notifications', () => {
@@ -23,6 +27,20 @@ describe('notifications', () => {
     const items = getRoleSafeNotifications('caretaker', 'owner-1')
     expect(items[0].title).not.toMatch(/500/)
     expect(items[0].body).not.toMatch(/500000/)
+  })
+
+  it('stores actionPage on notifications', () => {
+    addNotification({
+      ownerId: 'owner-1',
+      role: 'property_owner',
+      title: 'Go',
+      body: 'Tap me',
+      kind: 'system',
+      actionPage: 'units',
+      push: false,
+    })
+    const items = getFilteredNotifications('property_owner', 'owner-1', 'owner-1')
+    expect(items[0].actionPage).toBe('units')
   })
 
   it('respects notification preferences by kind', () => {

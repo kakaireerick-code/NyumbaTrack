@@ -4,6 +4,7 @@
 import { safeGet, safeSet } from './storage'
 import { normalizeRole } from './permissions'
 import type { Role } from './permissions'
+import { dispatchPushForNotification } from './pushDispatch'
 
 export type AppNotification = {
   id: string
@@ -15,6 +16,8 @@ export type AppNotification = {
   createdAt: string
   read: boolean
   kind: 'maintenance' | 'message' | 'payment' | 'system'
+  /** In-app page id when user taps the notification */
+  actionPage?: string
 }
 
 const NOTIF_KEY = 'rt_role_notifications'
@@ -25,7 +28,9 @@ export const getNotifications = (): AppNotification[] =>
 export const saveNotifications = (list: AppNotification[]): void =>
   safeSet(NOTIF_KEY, list)
 
-export const addNotification = (n: Omit<AppNotification, 'id' | 'createdAt' | 'read'>): void => {
+export const addNotification = (
+  n: Omit<AppNotification, 'id' | 'createdAt' | 'read'> & { push?: boolean },
+): void => {
   const record: AppNotification = {
     ...n,
     id: `n-${Date.now()}`,
@@ -35,6 +40,9 @@ export const addNotification = (n: Omit<AppNotification, 'id' | 'createdAt' | 'r
   saveNotifications([...getNotifications(), record])
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('rt-notifications-updated'))
+  }
+  if (n.push !== false) {
+    dispatchPushForNotification(record, record.id)
   }
 }
 

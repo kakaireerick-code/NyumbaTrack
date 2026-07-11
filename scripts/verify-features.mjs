@@ -150,6 +150,23 @@ confirm(
   'api/invite.ts + cross-device join',
 )
 
+// F17 Web push notifications
+const notifLib = exists('src/lib/notifications.ts') ? read('src/lib/notifications.ts') : ''
+const pushClient = exists('src/lib/pushClient.ts') ? read('src/lib/pushClient.ts') : ''
+const inbox = exists('src/components/NotificationInbox.jsx') ? read('src/components/NotificationInbox.jsx') : ''
+confirm(
+  'F17',
+  'Web push notifications',
+  exists('public/sw.js') &&
+    exists('api/push-vapid.ts') &&
+    exists('api/push-subscribe.ts') &&
+    exists('api/push-notify.ts') &&
+    notifLib.includes('actionPage') &&
+    pushClient.includes('subscribeDevicePush') &&
+    inbox.includes('Enable phone notifications'),
+  'service worker + VAPID + bell subscribe flow',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -161,6 +178,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F16 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F17 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)

@@ -3,8 +3,13 @@ import { createRoot } from 'react-dom/client'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import './index.css'
 import App from './App.jsx'
+import { registerServiceWorker } from './lib/pushClient'
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+
+if (typeof window !== 'undefined') {
+  void registerServiceWorker()
+}
 
 class ErrorBoundary extends React.Component {
   constructor(p) {

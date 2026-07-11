@@ -13,6 +13,7 @@ import { Modal, Badge, EmptyState, LoadingButton } from '../components/UI'
 import DataQualityBadge from '../components/DataQualityBadge'
 import { computeDataQuality, displayTenantName, DATA_SOURCE_LABELS } from '../lib/tenantData'
 import { canSeeFinancials, canViewMaintenanceCost, filterMaintenanceForRole } from '../lib/permissions'
+import { addNotification } from '../lib/notifications'
 
 import { inputCls, btnPrimary, btnSecondary } from '../lib/formStyles'
 
@@ -565,6 +566,8 @@ export function MaintenancePage({
   buildings,
   showToast,
   currentRole,
+  ownerId,
+  userId,
 }) {
   const [showForm, setShowForm] = useState(false)
   const [filterBuilding, setFilterBuilding] = useState('')
@@ -618,11 +621,45 @@ export function MaintenancePage({
     setForm({ unitId: '', issue: '', reportedBy: 'Caretaker', priority: 'Medium' })
     setShowForm(false)
     showToast('Maintenance issue logged', 'success')
+    if (ownerId) {
+      const unitNo = unit?.unitNumber || 'unit'
+      addNotification({
+        ownerId,
+        role: 'property_owner',
+        title: 'Maintenance logged',
+        body: `New issue reported for ${unitNo}: ${form.issue.slice(0, 80)}`,
+        kind: 'maintenance',
+        actionPage: 'maintenance',
+      })
+      if (currentRole === 'caretaker' && userId) {
+        addNotification({
+          ownerId,
+          role: 'caretaker',
+          userId,
+          title: 'Issue logged',
+          body: `You logged maintenance for ${unitNo}.`,
+          kind: 'maintenance',
+          actionPage: 'maintenance',
+          push: false,
+        })
+      }
+    }
   }
 
   const saveUpdate = () => {
     if (!updateRow) return
-    setMaintenance((prev) => prev.map((m) => (m.id === updateRow.id ? updateRow : m)))
+    const before = maintenance.find((m) => m.id === updateRow.id)
+    setMaintenance((list) => list.map((m) => (m.id === updateRow.id ? updateRow : m)))
+    if (ownerId && before?.status !== 'resolved' && updateRow.status === 'resolved') {
+      addNotification({
+        ownerId,
+        role: 'property_owner',
+        title: 'Maintenance resolved',
+        body: `Issue marked resolved: ${String(updateRow.issue || '').slice(0, 80)}`,
+        kind: 'maintenance',
+        actionPage: 'maintenance',
+      })
+    }
     setUpdateRow(null)
     showToast('Maintenance updated', 'success')
   }

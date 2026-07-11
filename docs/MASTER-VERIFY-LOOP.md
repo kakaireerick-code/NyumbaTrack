@@ -1,9 +1,9 @@
-# Master verify loop — F1–F15
+# Master verify loop — F1–F17
 
 Run every turn:
 
 ```bash
-npm run verify:features   # F1–F15 local checks
+npm run verify:features   # F1–F17 local checks
 npm test && npm run build
 npm run ops:guardrail     # production (default: nyumbatracker.vercel.app)
 ```
@@ -27,6 +27,16 @@ npm run ops:guardrail     # production (default: nyumbatracker.vercel.app)
 | F13 | MoMo ref validation | `momoVerification.ts` |
 | F14 | Guardrail script | `scripts/ops-guardrail.mjs` + npm script |
 | F15 | Billing admin panel | `BillingAdminPage.jsx` + PATCH `/api/subscription` |
+| F16 | Cloud tenant invites | `api/invite.ts` + cross-device join |
+| F17 | Web push notifications | `sw.js` + push APIs + bell subscribe |
+
+## F17 — Web push (after VAPID on Vercel)
+
+1. `npm run generate:vapid` on PC → add keys to Vercel Production
+2. Redeploy → `npm run check:vapid` → `/api/health` shows `vapid: true`, `push: true`
+3. Bell → **Enable phone notifications** → **When app is closed (PWA)**
+
+See `docs/PUSH-NOTIFICATIONS.md`.
 
 ## F15 — Billing admin (PC operator)
 

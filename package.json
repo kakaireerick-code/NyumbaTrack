@@ -13,6 +13,8 @@
     "test:watch": "vitest",
     "ops:guardrail": "node scripts/ops-guardrail.mjs",
     "verify:features": "node scripts/verify-features.mjs",
+    "generate:vapid": "node scripts/generate-vapid.mjs",
+    "check:vapid": "node scripts/check-vapid.mjs",
     "vercel:setup": "node scripts/vercel-setup-helper.mjs",
     "billing:admin-docs": "node -e \"console.log('See docs/BILLING-ADMIN.md and run AUTO-PUSH-BILLING.ps1 on Windows')\""
   },
@@ -21,7 +23,8 @@
     "@upstash/redis": "^1.34.3",
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.2",
@@ -30,8 +33,8 @@
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.3",
     "@vercel/node": "^5.0.4",
+    "@vitejs/plugin-react": "^6.0.3",
     "jsdom": "^29.1.1",
     "oxlint": "^1.71.0",
     "tailwindcss": "^4.3.2",

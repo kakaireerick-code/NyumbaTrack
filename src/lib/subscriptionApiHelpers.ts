@@ -2,6 +2,7 @@ export type StoredClaim = {
   id: string
   customerEmail: string
   customerName: string
+  ownerId?: string
   planId: string
   billingCycle: string
   amount: number
