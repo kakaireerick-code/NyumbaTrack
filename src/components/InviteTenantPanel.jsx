@@ -4,8 +4,7 @@ import {
   getJoinUrl,
   getShareTemplate,
   regenerateTenantInvite,
-  findInviteForUnit,
-  createTenantInviteForUnit,
+  getOrCreateTenantInvite,
   pushInviteToCloud,
 } from '../lib/invites'
 
@@ -17,10 +16,31 @@ export default function InviteTenantPanel({
   showToast,
   compact = false,
 }) {
-  const [code, setCode] = useState(() => {
-    const inv = findInviteForUnit(unit?.id)
-    return inv?.code || unit?.inviteCode || ''
-  })
+  const [code, setCode] = useState(() => unit?.inviteCode || '')
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    if (!unit?.id || !ownerId) return
+    const inv = getOrCreateTenantInvite(
+      ownerId,
+      String(unit.buildingId),
+      String(unit.id),
+      unit.inviteCode,
+    )
+    setCode(inv.code)
+    setReady(true)
+    if (inv.code !== unit.inviteCode) {
+      onCodeChange?.(inv.code)
+    }
+    pushInviteToCloud(inv, {
+      unitNumber: unit?.unitNumber,
+      buildingName: building?.name,
+      monthlyRent: unit?.monthlyRent,
+      depositAmount: unit?.depositAmount,
+      rentDueDay: unit?.rentDueDay,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stable per unit; avoid parent callback churn
+  }, [unit?.id, ownerId])
 
   if (!unit || !ownerId) return null
 
@@ -34,20 +54,9 @@ export default function InviteTenantPanel({
     })
   }
 
-  const ensureCode = () => {
-    let inv = findInviteForUnit(unit.id)
-    if (!inv || inv.status !== 'pending') {
-      inv = createTenantInviteForUnit(ownerId, String(unit.buildingId), String(unit.id))
-      onCodeChange?.(inv.code)
-      syncToCloud(inv)
-    }
-    setCode(inv.code)
-    return inv.code
-  }
-
-  const activeCode = code || ensureCode()
-  const link = getJoinUrl('tenant', activeCode)
-  const template = getShareTemplate('tenant', activeCode)
+  const activeCode = code
+  const link = activeCode ? getJoinUrl('tenant', activeCode) : ''
+  const template = activeCode ? getShareTemplate('tenant', activeCode) : ''
 
   const copy = async (text, label) => {
     try {
@@ -64,6 +73,14 @@ export default function InviteTenantPanel({
     onCodeChange?.(inv.code)
     syncToCloud(inv)
     showToast?.('New code generated — old link no longer works', 'success')
+  }
+
+  if (!ready && !activeCode) {
+    return (
+      <div className="text-xs text-gray-400 mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
+        Loading invite link…
+      </div>
+    )
   }
 
   if (compact) {
@@ -85,6 +102,9 @@ export default function InviteTenantPanel({
       </h3>
       <p className="text-xs text-gray-500">
         Unit {unit.unitNumber} · {building?.name || 'Property'}
+      </p>
+      <p className="text-[10px] text-gray-400">
+        This link stays valid until you tap Regenerate or a tenant successfully joins.
       </p>
       <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded font-mono text-center text-lg tracking-widest">
         {activeCode}

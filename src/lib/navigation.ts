@@ -23,6 +23,32 @@ export const PRIMARY_CARETAKER_PAGES: PageId[] = [
 
 export type MoreToolLink = { id: PageId; label: string; description: string }
 
+export type DiscoverStripLink = {
+  id: PageId
+  label: string
+  blurb: string
+  icon: 'info' | 'gift' | 'heart'
+  roles: Array<'property_owner' | 'tenant' | 'caretaker'>
+}
+
+/** Prominent header strip — marketing + product info (not buried in Settings) */
+export const DISCOVER_STRIP_LINKS: DiscoverStripLink[] = [
+  {
+    id: 'about',
+    label: 'About NyumbaTrack',
+    blurb: 'What this app is and who it is for',
+    icon: 'info',
+    roles: ['property_owner', 'tenant', 'caretaker'],
+  },
+  {
+    id: 'referrals',
+    label: 'Partner Rewards',
+    blurb: 'Refer landlords and earn free subscription months',
+    icon: 'gift',
+    roles: ['property_owner'],
+  },
+]
+
 /** Advanced tools — reachable from Settings → More tools */
 export const MORE_TOOLS_LINKS: MoreToolLink[] = [
   { id: 'subscription', label: 'Plans & Billing', description: 'MoMo subscription, yearly plans, invoices' },
