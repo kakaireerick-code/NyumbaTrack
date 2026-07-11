@@ -6,7 +6,7 @@ import {
   sortClaimsNewestFirst,
   validateClaimPayload,
   type StoredClaim,
-} from '../src/lib/subscriptionApiHelpers'
+} from '../src/lib/subscriptionApiHelpers.js'
 
 type ClaimBody = {
   customerEmail?: string

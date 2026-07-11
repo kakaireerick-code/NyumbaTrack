@@ -78,6 +78,8 @@ npm run ops:guardrail
 After deploy, open **Settings → More tools → Billing admin** (admin email only).  
 See `docs/BILLING-ADMIN.md` and run `AUTO-PUSH-BILLING.ps1` if the panel is not on `main` yet.
 
+**Deep link:** https://nyumbatracker.vercel.app/billing-admin (sign in as admin email first).
+
 ## Tell the agent when done
 
 Comment on issue #20:

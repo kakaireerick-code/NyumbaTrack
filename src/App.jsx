@@ -56,7 +56,7 @@ import { getTourSteps, isTourComplete } from './lib/rolePrompts'
 import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
 import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
 import { syncInvitesFromUnits } from './lib/invites'
-import { parseEntryPath, getTenantJoinPath, getCaretakerJoinPath, getReceiptPath } from './lib/routing'
+import { parseEntryPath, getTenantJoinPath, getCaretakerJoinPath, getReceiptPath, getBillingAdminPath } from './lib/routing'
 import { getCaretakerSafeBuilding, getCaretakerSafeUnit, getCaretakerSafeTenant } from './lib/propertyViews'
 import NotificationInbox from './components/NotificationInbox'
 import { addNotification } from './lib/notifications'
@@ -205,6 +205,18 @@ function AppContent() {
       setCurrentPage('receipt-view')
     }
   }, [isLoggedIn, entryPath.kind, entryPath.receiptId])
+
+  useEffect(() => {
+    if (!isLoggedIn || entryPath.kind !== 'billing-admin') return
+    if (isBillingAdminEmail(authUser?.email)) {
+      setCurrentPage('billing-admin')
+      window.history.replaceState({}, '', getBillingAdminPath())
+    } else {
+      showToast('Billing admin is restricted to the platform operator email.', 'error')
+      setCurrentPage(defaultPageForRole(normalizeRole(currentRole)))
+      window.history.replaceState({}, '', '/login')
+    }
+  }, [isLoggedIn, entryPath.kind, authUser?.email, currentRole, showToast])
 
   const openReceiptRoute = useCallback((receiptId) => {
     if (!receiptId) return
@@ -409,7 +421,12 @@ function AppContent() {
         return prev
       })
     }
-    setCurrentPage(ROLE_DEFAULT_PAGE[role] || defaultPageForRole(role))
+    if (entryPath.kind === 'billing-admin' && isBillingAdminEmail(user.email)) {
+      setCurrentPage('billing-admin')
+      window.history.replaceState({}, '', getBillingAdminPath())
+    } else {
+      setCurrentPage(ROLE_DEFAULT_PAGE[role] || defaultPageForRole(role))
+    }
     if (!isTourComplete(role)) setShowTour(true)
     showToast(startedTrial ? 'Welcome! Your 14-day free trial has started.' : `Welcome, ${name}!`, 'success')
   }
