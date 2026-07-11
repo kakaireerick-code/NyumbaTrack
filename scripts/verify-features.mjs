@@ -174,7 +174,8 @@ confirm(
   'VAPID setup tooling',
   exists('SETUP-VAPID.ps1') &&
     exists('scripts/setup-vapid.mjs') &&
-    exists('scripts/upload-vapid.mjs') &&
+    exists('.github/workflows/configure-vapid.yml') &&
+    exists('scripts/configure-vapid-ci.mjs') &&
     pkg.scripts['setup:vapid'] &&
     pkg.scripts['upload:vapid'] &&
     read('OWNER-SYNC.ps1').includes('SETUP-VAPID.ps1'),
