@@ -46,7 +46,9 @@ if (Test-Path $patch) {
   git apply --check $patch 2>$null
   if ($LASTEXITCODE -eq 0) {
     git apply $patch
-    Write-Host "   Patch applied." -ForegroundColor Green
+    Write-Host "   Patch applied (~126 KB, base 5b7105e..main)." -ForegroundColor Green
+    git checkout origin/main -- package.json 2>$null
+    if ($LASTEXITCODE -eq 0) { Write-Host "   package.json synced from origin/main (vercel:setup script)." -ForegroundColor Green }
   } else {
     Write-Host "   Patch already applied or not applicable — skipping." -ForegroundColor DarkYellow
   }
