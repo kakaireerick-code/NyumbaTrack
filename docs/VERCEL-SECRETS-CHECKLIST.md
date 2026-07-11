@@ -67,6 +67,8 @@ Deploy should take **1–3 minutes** (not ~6 seconds).
 npm run ops:guardrail
 ```
 
+Or on Windows: `.\OWNER-SYNC.ps1` (pulls main + guardrail).
+
 **Pass when:**
 
 - Bundle ≠ `index-B0iUFD94.js`

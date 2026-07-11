@@ -1,0 +1,582 @@
+diff --git a/AUTO-PUSH-BILLING.ps1 b/AUTO-PUSH-BILLING.ps1
+index 520dbb7..e7f35d8 100644
+--- a/AUTO-PUSH-BILLING.ps1
++++ b/AUTO-PUSH-BILLING.ps1
+@@ -14,6 +14,14 @@ Write-Host "AUTO-PUSH-BILLING" -ForegroundColor Cyan
+ Write-Host "=================" -ForegroundColor Cyan
+ Write-Host ""
+ 
++git fetch origin main 2>$null
++$onMain = git show "origin/main:src/pages/BillingAdminPage.jsx" 2>$null
++if ($LASTEXITCODE -eq 0 -and $onMain) {
++  Write-Host "SKIP — BillingAdminPage.jsx already on main (PR #31 merged)." -ForegroundColor Green
++  Write-Host "Use .\OWNER-SYNC.ps1 for daily sync." -ForegroundColor Cyan
++  exit 0
++}
++
+ $url = git remote get-url origin 2>$null
+ if ($url -match "ultt|land-tax" -and $url -notmatch "Nyumba|nyumba") {
+   Write-Host "Fixing wrong origin: $url" -ForegroundColor Yellow
+diff --git a/OWNER-SYNC.ps1 b/OWNER-SYNC.ps1
+new file mode 100644
+index 0000000..90dd91e
+--- /dev/null
++++ b/OWNER-SYNC.ps1
+@@ -0,0 +1,78 @@
++# NyumbaTrack OWNER-SYNC.ps1 — daily owner PC sync + production checks
++# Copy to: C:\Users\Erik\Documents\NyumbaTrack\OWNER-SYNC.ps1
++
++$ErrorActionPreference = "Stop"
++Set-Location $PSScriptRoot
++
++$RepoHttps = "https://github.com/kakaireerick-code/NyumbaTrack.git"
++$ProdUrl = "https://nyumbatracker.vercel.app"
++$BillingAdminUrl = "$ProdUrl/billing-admin"
++
++function Test-NyumbaOrigin {
++  $url = git remote get-url origin 2>$null
++  if (-not $url) {
++    Write-Host "No origin remote — add: git remote add origin $RepoHttps" -ForegroundColor Red
++    return $false
++  }
++  if ($url -match "ultt|land-tax|Land-Tax" -and $url -notmatch "Nyumba|nyumba") {
++    Write-Host "Wrong origin (ULTT?): $url" -ForegroundColor Yellow
++    git remote set-url origin $RepoHttps
++    Write-Host "Fixed origin -> $RepoHttps" -ForegroundColor Green
++  }
++  return $true
++}
++
++Write-Host ""
++Write-Host "OWNER-SYNC" -ForegroundColor Cyan
++Write-Host "==========" -ForegroundColor Cyan
++Write-Host "Production: $ProdUrl" -ForegroundColor DarkGray
++Write-Host ""
++
++if (-not (Test-NyumbaOrigin)) { exit 1 }
++
++Write-Host "1) Git fetch + pull main" -ForegroundColor Yellow
++git fetch origin main
++$branch = git branch --show-current
++if ($branch -ne "main") {
++  git checkout main 2>$null
++  if ($LASTEXITCODE -ne 0) { git checkout -B main origin/main }
++}
++git pull --ff-only origin main
++Write-Host "   main @ $(git rev-parse --short HEAD)" -ForegroundColor Green
++Write-Host ""
++
++Write-Host "2) GitHub auth (should be YOU)" -ForegroundColor Yellow
++gh auth status 2>&1
++Write-Host ""
++
++Write-Host "3) npm install (if package.json changed)" -ForegroundColor Yellow
++if (Test-Path package.json) {
++  npm install --no-audit --no-fund 2>&1 | Select-Object -Last 3
++}
++Write-Host ""
++
++Write-Host "4) Production guardrail" -ForegroundColor Yellow
++$env:GUARDRAIL_URL = $ProdUrl
++npm run ops:guardrail
++$guardOk = $LASTEXITCODE -eq 0
++Write-Host ""
++
++Write-Host "5) Local verify (optional)" -ForegroundColor Yellow
++if (Test-Path package.json) {
++  npm run verify:features 2>&1 | Select-Object -Last 4
++}
++Write-Host ""
++
++Write-Host "--- Owner quick links ---" -ForegroundColor Cyan
++Write-Host "  Billing admin: $BillingAdminUrl"
++Write-Host "  MoMo line:     0793068911"
++Write-Host "  Setup secret:  .\SETUP-BILLING-ADMIN.ps1"
++Write-Host "  Docs:          docs\POWERSHELL-OWNER.md"
++Write-Host ""
++
++if ($guardOk) {
++  Write-Host "SYNC OK — production guardrail passed." -ForegroundColor Green
++} else {
++  Write-Host "SYNC WARN — guardrail failed. Check deploy or GUARDRAIL_URL." -ForegroundColor Yellow
++  exit 1
++}
+diff --git a/PUSH-DEEPLINK.ps1 b/PUSH-DEEPLINK.ps1
+index 1444ca9..6052e49 100644
+--- a/PUSH-DEEPLINK.ps1
++++ b/PUSH-DEEPLINK.ps1
+@@ -14,6 +14,14 @@ Write-Host "PUSH-DEEPLINK" -ForegroundColor Cyan
+ Write-Host "=============" -ForegroundColor Cyan
+ Write-Host ""
+ 
++git fetch origin main 2>$null
++$routing = git show "origin/main:src/lib/routing.ts" 2>$null
++if ($LASTEXITCODE -eq 0 -and $routing -match "billing-admin") {
++  Write-Host "SKIP — /billing-admin deep link already on main (PR #32 merged)." -ForegroundColor Green
++  Write-Host "Open: https://nyumbatracker.vercel.app/billing-admin" -ForegroundColor Cyan
++  exit 0
++}
++
+ $url = git remote get-url origin 2>$null
+ if ($url -match "ultt|land-tax" -and $url -notmatch "Nyumba|nyumba") {
+   Write-Host "Fixing wrong origin: $url" -ForegroundColor Yellow
+diff --git a/PUSH-NOW.ps1 b/PUSH-NOW.ps1
+index def2c33..d4582fc 100644
+--- a/PUSH-NOW.ps1
++++ b/PUSH-NOW.ps1
+@@ -1,13 +1,29 @@
+-# NyumbaTrack owner PC — apply agent patch, push, deploy, guardrail
+-# Copy with APPLY-ALL.patch to: C:\Users\Erik\Documents\NyumbaTrack\
++# NyumbaTrack owner PC — sync main, then optional patch push / deploy
++# Prefer OWNER-SYNC.ps1 for daily use. This script runs sync first.
+ 
+ $ErrorActionPreference = "Stop"
+ Set-Location $PSScriptRoot
+ 
+-$RepoSsh = "git@github.com:kakaireerick-code/NyumbaTrack.git"
+ $RepoHttps = "https://github.com/kakaireerick-code/NyumbaTrack.git"
+ $GhRepo = "kakaireerick-code/NyumbaTrack"
+ 
++$ownerSync = Join-Path $PSScriptRoot "OWNER-SYNC.ps1"
++if (Test-Path $ownerSync) {
++  Write-Host "Running OWNER-SYNC first..." -ForegroundColor Cyan
++  & $ownerSync
++  if ($LASTEXITCODE -ne 0) {
++    Write-Host "OWNER-SYNC failed — fix before pushing." -ForegroundColor Red
++    exit $LASTEXITCODE
++  }
++  Write-Host ""
++}
++
++$continue = Read-Host "Continue with legacy patch push? [y/N]"
++if ($continue -notmatch "^[Yy]") {
++  Write-Host "Done (sync only)." -ForegroundColor Green
++  exit 0
++}
++
+ function Test-NyumbaOrigin {
+   $url = (git remote get-url origin 2>$null)
+   if (-not $url) { throw "No git remote 'origin'. Run: git remote add origin $RepoHttps" }
+@@ -24,96 +40,39 @@ function Test-NyumbaOrigin {
+ }
+ 
+ Write-Host ""
+-Write-Host "NyumbaTrack PUSH-NOW" -ForegroundColor Cyan
+-Write-Host "====================" -ForegroundColor Cyan
++Write-Host "PUSH-NOW (legacy patch flow)" -ForegroundColor Cyan
++Write-Host "============================" -ForegroundColor Cyan
+ Write-Host ""
+ 
+ Test-NyumbaOrigin
+ 
+-Write-Host "1) Git status" -ForegroundColor Yellow
+-git status -sb
+-Write-Host "   branch: $(git branch --show-current)" -ForegroundColor DarkGray
+-Write-Host "   origin: $(git remote get-url origin)" -ForegroundColor DarkGray
+-Write-Host ""
+-
+-Write-Host "2) Fetch origin/main" -ForegroundColor Yellow
+-git fetch origin main
+-Write-Host ""
+-
+ $patch = Join-Path $PSScriptRoot "APPLY-ALL.patch"
+ if (Test-Path $patch) {
+-  Write-Host "3) Apply APPLY-ALL.patch" -ForegroundColor Yellow
++  Write-Host "Apply APPLY-ALL.patch" -ForegroundColor Yellow
+   git apply --check $patch 2>$null
+   if ($LASTEXITCODE -eq 0) {
+     git apply $patch
+-    Write-Host "   Patch applied." -ForegroundColor Green
++    git checkout origin/main -- package.json 2>$null
++    Write-Host "Patch applied." -ForegroundColor Green
+   } else {
+-    Write-Host "   Patch already applied or not applicable — skipping." -ForegroundColor DarkYellow
++    Write-Host "Patch not applicable — skipping." -ForegroundColor DarkYellow
+   }
+-} else {
+-  Write-Host "3) APPLY-ALL.patch not found — skipping apply." -ForegroundColor DarkYellow
+ }
+-Write-Host ""
+ 
+ $branch = git branch --show-current
+-if ($branch -eq "main") {
+-  $dirty = git status --porcelain
+-  if ($dirty) {
+-    Write-Host "4) On main with local changes — creating branch" -ForegroundColor Yellow
+-    $newBranch = "cursor/billing-admin-pc-5791"
+-    git checkout -b $newBranch 2>$null
+-    if ($LASTEXITCODE -ne 0) { git checkout $newBranch }
+-    $branch = $newBranch
+-  }
++if ($branch -eq "main" -and (git status --porcelain)) {
++  $newBranch = "cursor/owner-pc-$(Get-Date -Format 'yyyyMMdd')-5791"
++  git checkout -b $newBranch
++  $branch = $newBranch
+ }
+ 
+-$porcelain = git status --porcelain
+-if ($porcelain) {
+-  Write-Host "4) Commit local changes" -ForegroundColor Yellow
++if (git status --porcelain) {
+   git add -A
+-  git commit -m "Owner PC: apply agent patch (billing admin setup)"
+-  Write-Host "   Committed." -ForegroundColor Green
++  git commit -m "Owner PC: apply agent patch"
++  git push -u origin $branch
++  Write-Host "Pushed $branch" -ForegroundColor Green
+ } else {
+-  Write-Host "4) Working tree clean — nothing to commit." -ForegroundColor DarkGray
+-}
+-Write-Host ""
+-
+-Write-Host "5) Push branch" -ForegroundColor Yellow
+-git push -u origin $branch
+-Write-Host ""
+-
+-Write-Host "6) GitHub auth (must be YOU, not Cursor)" -ForegroundColor Yellow
+-gh auth status
+-Write-Host ""
+-
+-$setSecrets = Read-Host "Set Vercel GitHub secrets now? [y/N]"
+-if ($setSecrets -match "^[Yy]") {
+-  $token = Read-Host "VERCEL_TOKEN (same token used for vercel:setup)"
+-  $orgId = Read-Host "VERCEL_ORG_ID (from npm run vercel:setup)"
+-  $projId = Read-Host "VERCEL_PROJECT_ID (nyumbatrack project)"
+-  gh secret set VERCEL_TOKEN -R $GhRepo --body $token
+-  gh secret set VERCEL_ORG_ID -R $GhRepo --body $orgId
+-  gh secret set VERCEL_PROJECT_ID -R $GhRepo --body $projId
+-  Write-Host "Secrets set. Names:" -ForegroundColor Green
+-  gh secret list -R $GhRepo
++  Write-Host "Nothing to commit." -ForegroundColor DarkGray
+ }
+-Write-Host ""
+ 
+-Write-Host "7) Trigger Deploy to Vercel workflow" -ForegroundColor Yellow
+-$deploy = Read-Host "Run deploy.yml on main now? [Y/n]"
+-if ($deploy -eq "" -or $deploy -match "^[Yy]") {
+-  gh workflow run deploy.yml -R $GhRepo --ref main
+-  Write-Host "   Workflow started. Watch:" -ForegroundColor Green
+-  gh run list -R $GhRepo --workflow=deploy.yml --limit 3
+-}
+-Write-Host ""
+-
+-Write-Host "8) Production guardrail" -ForegroundColor Yellow
+-$guard = Read-Host "Run npm run ops:guardrail now? [Y/n]"
+-if ($guard -eq "" -or $guard -match "^[Yy]") {
+-  npm run ops:guardrail
+-}
+-
+-Write-Host ""
+-Write-Host "Done. Billing env vars: run .\SETUP-BILLING-ADMIN.ps1 if not yet set on Vercel." -ForegroundColor Cyan
+-Write-Host "Docs: docs\VERCEL-SECRETS-CHECKLIST.md" -ForegroundColor DarkGray
++Write-Host "Done. See docs\POWERSHELL-OWNER.md" -ForegroundColor Cyan
+diff --git a/README.md b/README.md
+index c39e36e..78e2143 100644
+--- a/README.md
++++ b/README.md
+@@ -50,7 +50,9 @@ Hidden in production builds.
+ 
+ ## Production (Vercel)
+ 
+-GitHub `main` has the full RBAC app. If [nyumbatrack.vercel.app](https://nyumbatrack.vercel.app/) still shows an old marketing page or `/login` 404s, Vercel is not linked to this repo — see **[docs/DEPLOY.md](docs/DEPLOY.md)** to reconnect.
++GitHub `main` has the full RBAC app. **Production:** [nyumbatracker.vercel.app](https://nyumbatracker.vercel.app/). Legacy [nyumbatrack.vercel.app](https://nyumbatrack.vercel.app/) may still show an old Kenyan build — see **[docs/DEPLOY.md](docs/DEPLOY.md)**.
++
++**Owner PC:** `OWNER-SYNC.ps1` + **[docs/POWERSHELL-OWNER.md](docs/POWERSHELL-OWNER.md)**
+ 
+ After a correct deploy, `/login` shows owner sign-in and a small **build** stamp (git SHA) in the bottom-right corner so you can confirm the live site matches `main`.
+ 
+diff --git a/SETUP-BILLING-ADMIN.ps1 b/SETUP-BILLING-ADMIN.ps1
+index 697348d..f5334e8 100644
+--- a/SETUP-BILLING-ADMIN.ps1
++++ b/SETUP-BILLING-ADMIN.ps1
+@@ -9,7 +9,6 @@ Write-Host "NyumbaTrack billing admin setup" -ForegroundColor Cyan
+ Write-Host "================================" -ForegroundColor Cyan
+ Write-Host ""
+ 
+-# 32-byte secret for api/subscription.ts admin GET (Bearer auth)
+ $bytes = New-Object byte[] 32
+ [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+ $billingSecret = [BitConverter]::ToString($bytes).Replace("-", "").ToLower()
+@@ -40,7 +39,7 @@ Write-Host "  UPSTASH_REDIS_REST_TOKEN   (same)"
+ Write-Host ""
+ 
+ Write-Host "After adding vars: Redeploy production, then run:" -ForegroundColor Cyan
+-Write-Host "  npm run ops:guardrail"
++Write-Host "  .\OWNER-SYNC.ps1"
+ Write-Host ""
+ 
+ $copy = Read-Host "Copy BILLING_ADMIN_SECRET to clipboard? [Y/n]"
+@@ -54,6 +53,5 @@ if ($copy -eq "" -or $copy -match "^[Yy]") {
+ }
+ 
+ Write-Host ""
+-Write-Host "See docs/VERCEL-SECRETS-CHECKLIST.md (steps 5-8)" -ForegroundColor DarkGray
+-Write-Host "Press Enter to exit."
+-Read-Host | Out-Null
++Write-Host "See docs\VERCEL-SECRETS-CHECKLIST.md (steps 5-9)" -ForegroundColor DarkGray
++Write-Host "Billing admin URL: https://nyumbatracker.vercel.app/billing-admin" -ForegroundColor Cyan
+diff --git a/api/subscription.ts b/api/subscription.ts
+index 2c7f7f4..9562404 100644
+--- a/api/subscription.ts
++++ b/api/subscription.ts
+@@ -73,6 +73,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
+       return res.status(400).json({ ok: false, error: 'action and momoReference required' })
+     }
+ 
++    const reviewAction: 'approve' | 'reject' = action
++
+     const key = claimKey(momoReference)
+     const existing = await r.get<StoredClaim>(key)
+     if (!existing) {
+@@ -82,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
+       return res.status(409).json({ ok: false, error: `Claim already ${existing.status}` })
+     }
+ 
+-    const updated = applyReview(existing, action, note)
++    const updated = applyReview(existing, reviewAction, note)
+     await r.set(key, updated)
+     return res.status(200).json({ ok: true, claim: updated })
+   }
+diff --git a/docs/DEPLOY.md b/docs/DEPLOY.md
+index 6bf14fe..c8bebde 100644
+--- a/docs/DEPLOY.md
++++ b/docs/DEPLOY.md
+@@ -2,7 +2,9 @@
+ 
+ ## Why you might not see updates
+ 
+-If [nyumbatrack.vercel.app](https://nyumbatrack.vercel.app/) still shows a **marketing landing page** (“Welcome back / Get Started”), **Kenyan** copy, or `/login` returns a **404**, Vercel is **not** serving this repository (`kakaireerick-code/NyumbaTrack`). GitHub `main` has the RBAC app; the live domain is linked to a different project or an old deployment.
++If [nyumbatracker.vercel.app](https://nyumbatracker.vercel.app/) (or legacy [nyumbatrack.vercel.app](https://nyumbatrack.vercel.app/)) still shows a **marketing landing page** (“Welcome back / Get Started”), **Kenyan** copy, or `/login` returns a **404**, Vercel is **not** serving this repository (`kakaireerick-code/NyumbaTrack`). GitHub `main` has the RBAC app; the live domain may be linked to a different project or an old deployment.
++
++**Canonical production:** https://nyumbatracker.vercel.app
+ 
+ After a correct deploy:
+ 
+diff --git a/docs/MASTER-VERIFY-LOOP.md b/docs/MASTER-VERIFY-LOOP.md
+index f42f89e..20316a6 100644
+--- a/docs/MASTER-VERIFY-LOOP.md
++++ b/docs/MASTER-VERIFY-LOOP.md
+@@ -5,7 +5,7 @@ Run every turn:
+ ```bash
+ npm run verify:features   # F1–F15 local checks
+ npm test && npm run build
+-npm run ops:guardrail     # production (after deploy)
++npm run ops:guardrail     # production (default: nyumbatracker.vercel.app)
+ ```
+ 
+ ## Feature checklist
+diff --git a/docs/OPERATOR-PROMPT.md b/docs/OPERATOR-PROMPT.md
+index 6dab2af..34ff2c7 100644
+--- a/docs/OPERATOR-PROMPT.md
++++ b/docs/OPERATOR-PROMPT.md
+@@ -7,7 +7,7 @@ You are the **NyumbaTrack** agent on `kakaireerick-code/NyumbaTrack`. Do **not**
+ 1. Read `docs/AGENT-HANDOFF.md`, `docs/MASTER-VERIFY-LOOP.md`, and `docs/UI-PREFERENCE.md`.
+ 2. `git checkout cursor/integrate-patch-features-5791` (or apply coordination bundle if remote is stale).
+ 3. `npm install && npm test && npm run build`
+-4. Before closing: `npm run ops:guardrail` against production.
++4. Before closing: `npm run ops:guardrail` (default: https://nyumbatracker.vercel.app).
+ 
+ ## Production truth checks
+ 
+diff --git a/docs/POWERSHELL-OWNER.md b/docs/POWERSHELL-OWNER.md
+new file mode 100644
+index 0000000..ad457fb
+--- /dev/null
++++ b/docs/POWERSHELL-OWNER.md
+@@ -0,0 +1,86 @@
++# PowerShell owner guide (Erik PC)
++
++**Folder:** `C:\Users\Erik\Documents\NyumbaTrack`  
++**Production:** https://nyumbatracker.vercel.app  
++**Billing admin:** https://nyumbatracker.vercel.app/billing-admin
++
++---
++
++## Daily workflow (use this)
++
++```powershell
++cd C:\Users\Erik\Documents\NyumbaTrack
++git pull origin main
++Set-ExecutionPolicy -Scope Process RemoteSigned
++.\OWNER-SYNC.ps1
++```
++
++`OWNER-SYNC.ps1` pulls `main`, runs `npm run ops:guardrail` against **nyumbatracker.vercel.app**, and prints billing-admin link.
++
++---
++
++## One-time / setup scripts
++
++| Script | When to use |
++|--------|-------------|
++| `SETUP-BILLING-ADMIN.ps1` | Generate `BILLING_ADMIN_SECRET` + admin email for Vercel |
++| `SETUP-VERCEL-NYUMBA.cmd` | Find `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` |
++| `OWNER-SYNC.ps1` | **Daily** — sync + production check |
++
++---
++
++## Shipped — SKIP (already on main)
++
++| Script | Status |
++|--------|--------|
++| `AUTO-PUSH-BILLING.ps1` | PR #31 merged — exits with SKIP |
++| `PUSH-DEEPLINK.ps1` | PR #32 merged — exits with SKIP |
++| `MERGE-NOW.ps1` | Obsolete — do not use |
++| `RUN-BILLING-NOW.ps1` | Obsolete — do not use |
++
++---
++
++## Legacy / agent patches
++
++| Script | Purpose |
++|--------|---------|
++| `PUSH-NOW.ps1` | Runs `OWNER-SYNC` first, then optional `APPLY-ALL.patch` push |
++| `PUSH-PS-CLEANUP.ps1` | One-time ship of guardrail + PS cleanup (if not yet on main) |
++
++---
++
++## MoMo approval (daily)
++
++1. Open https://nyumbatracker.vercel.app/billing-admin
++2. Sign in as `VITE_BILLING_ADMIN_EMAIL`
++3. Paste `BILLING_ADMIN_SECRET` → **Load claims**
++4. Verify MoMo on phone → **Approve MoMo**
++
++---
++
++## Guardrail
++
++Default URL is now **nyumbatracker.vercel.app** (not nyumbatrack.vercel.app — that domain serves the old Kenyan app).
++
++```powershell
++npm run ops:guardrail
++# or explicitly:
++$env:GUARDRAIL_URL = "https://nyumbatracker.vercel.app"
++npm run ops:guardrail
++```
++
++Target: **4/4 PASS**
++
++---
++
++## Wrong git remote?
++
++```powershell
++git remote set-url origin https://github.com/kakaireerick-code/NyumbaTrack.git
++```
++
++---
++
++## Archived guides
++
++See `docs/archive/PUSH-GUIDES-ARCHIVED.md` for old AUTO-PUSH / MERGE-NOW instructions.
+diff --git a/docs/VERCEL-SECRETS-CHECKLIST.md b/docs/VERCEL-SECRETS-CHECKLIST.md
+index c844c66..66cb63c 100644
+--- a/docs/VERCEL-SECRETS-CHECKLIST.md
++++ b/docs/VERCEL-SECRETS-CHECKLIST.md
+@@ -67,6 +67,8 @@ Deploy should take **1–3 minutes** (not ~6 seconds).
+ npm run ops:guardrail
+ ```
+ 
++Or on Windows: `.\OWNER-SYNC.ps1` (pulls main + guardrail).
++
+ **Pass when:**
+ 
+ - Bundle ≠ `index-B0iUFD94.js`
+diff --git a/docs/archive/PUSH-GUIDES-ARCHIVED.md b/docs/archive/PUSH-GUIDES-ARCHIVED.md
+new file mode 100644
+index 0000000..91842b2
+--- /dev/null
++++ b/docs/archive/PUSH-GUIDES-ARCHIVED.md
+@@ -0,0 +1,55 @@
++# Archived push guides (superseded)
++
++These workflows are **obsolete** after PRs #31–#32 merged to `main`.
++
++## Use instead
++
++- **Daily:** `OWNER-SYNC.ps1` (see `docs/POWERSHELL-OWNER.md`)
++- **Billing admin:** https://nyumbatracker.vercel.app/billing-admin
++- **Secrets:** `SETUP-BILLING-ADMIN.ps1` + `docs/VERCEL-SECRETS-CHECKLIST.md`
++
++---
++
++## Former scripts (do not run)
++
++| Script | Was for | Now |
++|--------|---------|-----|
++| `AUTO-PUSH-BILLING.ps1` | Ship billing admin panel | On main — script SKIPs |
++| `PUSH-DEEPLINK.ps1` | Ship `/billing-admin` URL | On main — script SKIPs |
++| `MERGE-NOW.ps1` | Force merge helper | Deleted / obsolete |
++| `RUN-BILLING-NOW.ps1` | Old billing push | Deleted / obsolete |
++| `PUSH-NOW.ps1` + `APPLY-ALL.patch` | Large integrate patch | Already merged |
++
++---
++
++## Historical: BILLING-ADMIN-PUSH.md
++
++Owner PC steps for PR #31 (billing admin panel):
++
++1. Copy `AUTO-PUSH-BILLING.ps1` → run → merge PR
++2. Set Vercel env vars
++3. `npm run ops:guardrail`
++
++**Status:** Complete. Panel live on production.
++
++---
++
++## Historical: deeplink push
++
++Owner PC steps for PR #32 (`/billing-admin`):
++
++1. Copy `PUSH-DEEPLINK.ps1` → run → merge PR
++2. Test https://nyumbatracker.vercel.app/billing-admin
++
++**Status:** Complete. Deep link live.
++
++---
++
++## Production domains
++
++| URL | Status |
++|-----|--------|
++| https://nyumbatracker.vercel.app | **Live** — Uganda app, APIs, billing admin |
++| https://nyumbatrack.vercel.app | **Stale** — old Kenyan marketing build |
++
++Guardrail default targets **nyumbatracker.vercel.app** as of PS cleanup PR.
+diff --git a/scripts/ops-guardrail.mjs b/scripts/ops-guardrail.mjs
+index c000927..c620610 100644
+--- a/scripts/ops-guardrail.mjs
++++ b/scripts/ops-guardrail.mjs
+@@ -1,10 +1,11 @@
+ #!/usr/bin/env node
+ /**
+- * Production guardrail — fails if nyumbatrack.vercel.app serves stale/wrong app.
+- * Run after Vercel redeploy: npm run ops:guardrail
++ * Production guardrail — checks live NyumbaTrack deployment.
++ * Default: https://nyumbatracker.vercel.app (ricorp-ug/nyumba-track)
++ * Override: GUARDRAIL_URL=https://… npm run ops:guardrail
+  */
+ 
+-const PROD_URL = process.env.GUARDRAIL_URL || 'https://nyumbatrack.vercel.app'
++const PROD_URL = process.env.GUARDRAIL_URL || 'https://nyumbatracker.vercel.app'
+ const STALE_BUNDLE = 'index-B0iUFD94.js'
+ const KENYA_MARKERS = ['Kenyan Landlords', 'Kenyan landlords']
+ 
+diff --git a/src/lib/subscriptionApiHelpers.ts b/src/lib/subscriptionApiHelpers.ts
+index 009d676..0b2b613 100644
+--- a/src/lib/subscriptionApiHelpers.ts
++++ b/src/lib/subscriptionApiHelpers.ts
+@@ -12,7 +12,11 @@ export type StoredClaim = {
+   reviewNote?: string
+ }
+ 
+-export const parseReviewBody = (body: Record<string, unknown>) => {
++export const parseReviewBody = (body: Record<string, unknown>): {
++  action: 'approve' | 'reject' | ''
++  momoReference: string
++  note: string
++} => {
+   const action = body.action === 'reject' ? 'reject' : body.action === 'approve' ? 'approve' : ''
+   const momoReference = String(body.momoReference || '').trim()
+   const note = String(body.note || '').trim()

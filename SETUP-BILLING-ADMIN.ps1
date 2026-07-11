@@ -9,7 +9,6 @@ Write-Host "NyumbaTrack billing admin setup" -ForegroundColor Cyan
 Write-Host "================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 32-byte secret for api/subscription.ts admin GET (Bearer auth)
 $bytes = New-Object byte[] 32
 [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
 $billingSecret = [BitConverter]::ToString($bytes).Replace("-", "").ToLower()
@@ -40,7 +39,7 @@ Write-Host "  UPSTASH_REDIS_REST_TOKEN   (same)"
 Write-Host ""
 
 Write-Host "After adding vars: Redeploy production, then run:" -ForegroundColor Cyan
-Write-Host "  npm run ops:guardrail"
+Write-Host "  .\OWNER-SYNC.ps1"
 Write-Host ""
 
 $copy = Read-Host "Copy BILLING_ADMIN_SECRET to clipboard? [Y/n]"
@@ -54,6 +53,5 @@ if ($copy -eq "" -or $copy -match "^[Yy]") {
 }
 
 Write-Host ""
-Write-Host "See docs/VERCEL-SECRETS-CHECKLIST.md (steps 5-8)" -ForegroundColor DarkGray
-Write-Host "Press Enter to exit."
-Read-Host | Out-Null
+Write-Host "See docs\VERCEL-SECRETS-CHECKLIST.md (steps 5-9)" -ForegroundColor DarkGray
+Write-Host "Billing admin URL: https://nyumbatracker.vercel.app/billing-admin" -ForegroundColor Cyan
