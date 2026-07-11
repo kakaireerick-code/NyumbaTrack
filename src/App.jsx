@@ -717,6 +717,7 @@ function AppContent() {
           <SettingsPage
             {...sharedProps}
             onRestartTour={() => setShowTour(true)}
+            setCurrentPage={setPageSafe}
           />
         )
       case 'blacklist':

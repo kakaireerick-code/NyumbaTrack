@@ -12,6 +12,7 @@ import {
 import { safeSet } from '../utils/storage'
 import InviteStaffPanel from '../components/InviteStaffPanel'
 import { canManagePortfolio } from '../lib/permissions'
+import { MORE_TOOLS_LINKS } from '../lib/navigation'
 import { Badge, EmptyState, LoadingButton, StatCard } from '../components/UI'
 
 import { inputCls, btnPrimary, btnSecondary } from '../lib/formStyles'
@@ -625,7 +626,7 @@ Date: ${fmtDate(new Date())}` : ''
   )
 }
 
-export function SettingsPage({ settings, setSettings, showToast, onRestartTour, activeOwnerId, currentRole }) {
+export function SettingsPage({ settings, setSettings, showToast, onRestartTour, activeOwnerId, currentRole, setCurrentPage }) {
   const [connectionStatus, setConnectionStatus] = useState(null)
   const [testing, setTesting] = useState(false)
 
@@ -664,6 +665,28 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour, 
   return (
     <div className="p-4 space-y-6 max-w-3xl">
       <h1 className="text-2xl font-bold">Settings</h1>
+
+      {setCurrentPage && (
+        <div className="card p-4 space-y-3">
+          <h2 className="font-semibold">More tools</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Advanced features — billing, import, guided workflows, and more.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {MORE_TOOLS_LINKS.map((tool) => (
+              <button
+                key={tool.id}
+                type="button"
+                onClick={() => setCurrentPage(tool.id)}
+                className="text-left p-3 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <p className="font-medium text-[#2d6a4f] text-sm">{tool.label}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{tool.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {canManagePortfolio(currentRole || '') && activeOwnerId && (
         <InviteStaffPanel ownerId={activeOwnerId} showToast={showToast} />

@@ -89,7 +89,8 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
           <Home className="text-[#2d6a4f]" size={32} />
           <h1 className="text-2xl font-bold text-[#2d6a4f]">NyumbaTrack</h1>
         </div>
-        <p className="text-center text-gray-500 mb-4 text-sm">Sign in to manage your rental portfolio</p>
+        <h2 className="text-center text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Welcome back</h2>
+        <p className="text-center text-gray-500 mb-4 text-sm">Sign in to manage your properties</p>
 
         <div className="flex rounded-lg border mb-6 overflow-hidden text-sm">
           {['signin', 'register-owner'].map((m) => (
