@@ -20,6 +20,24 @@ const fetchText = async (path) => {
   return { res, text }
 }
 
+const probeApi = async (name, path) => {
+  try {
+    const { res, text } = await fetchText(path)
+    if (res.status !== 200) {
+      fail(name, `HTTP ${res.status} — inflates Vercel error rate`)
+      return
+    }
+    try {
+      JSON.parse(text)
+      pass(name, 'HTTP 200 JSON')
+    } catch {
+      fail(name, 'HTTP 200 but not JSON')
+    }
+  } catch (err) {
+    fail(name, err.message || String(err))
+  }
+}
+
 const main = async () => {
   console.log(`Guardrail target: ${PROD_URL}\n`)
 
@@ -65,6 +83,11 @@ const main = async () => {
     } catch {
       fail('api/health', 'Returns HTML not JSON — API routes not deployed')
     }
+
+    await probeApi('api/push-vapid', '/api/push-vapid')
+    await probeApi('api/push-subscribe', '/api/push-subscribe')
+    await probeApi('api/push-notify', '/api/push-notify')
+    await probeApi('api/invite', '/api/invite')
   } catch (err) {
     fail('network', err.message || String(err))
   }

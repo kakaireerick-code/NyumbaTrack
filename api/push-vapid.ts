@@ -1,15 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { vapidConfigured } from '../src/lib/pushRedis.js'
+import { cleanEnvValue, vapidConfigured } from '../src/lib/pushRedis.js'
 
 export default function handler(_req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Cache-Control', 'no-store')
-  const publicKey = process.env.VAPID_PUBLIC_KEY || ''
-  if (!publicKey) {
-    return res.status(503).json({ ok: false, error: 'VAPID not configured' })
+  try {
+    res.setHeader('Cache-Control', 'no-store')
+    const publicKey = cleanEnvValue(process.env.VAPID_PUBLIC_KEY)
+    if (!publicKey) {
+      return res.status(200).json({ ok: true, configured: false, publicKey: null })
+    }
+    return res.status(200).json({
+      ok: true,
+      publicKey,
+      configured: vapidConfigured(),
+    })
+  } catch {
+    return res.status(200).json({ ok: true, configured: false, publicKey: null })
   }
-  return res.status(200).json({
-    ok: true,
-    publicKey,
-    configured: vapidConfigured(),
-  })
 }
