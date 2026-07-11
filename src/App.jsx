@@ -60,6 +60,7 @@ import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
 import { ensureDemoPracticeData } from './lib/demoPractice'
 import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
 import { syncInvitesFromUnits, releaseUnitInvite, pushInviteToCloud } from './lib/invites'
+import { processReferrerCreditOnFirstLogin, recordReferralSignup } from './lib/partnerRewards'
 import { parseEntryPath, getTenantJoinPath, getCaretakerJoinPath, getReceiptPath, getBillingAdminPath } from './lib/routing'
 import { getCaretakerSafeBuilding, getCaretakerSafeUnit, getCaretakerSafeTenant } from './lib/propertyViews'
 import NotificationInbox from './components/NotificationInbox'
@@ -401,7 +402,7 @@ function AppContent() {
     }
   }, [isLoggedIn, authUser, currentPage, showToast])
 
-  const handleAuthSuccess = (user, registeredUnit = null, inviteMeta = null) => {
+  const handleAuthSuccess = (user, registeredUnit = null, inviteMeta = null, authMeta = null) => {
     setAuthUser(user)
     setIsLoggedIn(true)
     const role = normalizeRole(user.role)
@@ -487,6 +488,21 @@ function AppContent() {
       }
     } else {
       setCurrentUser({ name, building: 'All Properties', email: user.email })
+    }
+
+    const ownerIdForRewards = user.ownerId || user.id
+    if (role === 'property_owner' && ownerIdForRewards) {
+      if (authMeta?.isNew) {
+        recordReferralSignup(ownerIdForRewards, user.email, user.name || name)
+      }
+      const credit = processReferrerCreditOnFirstLogin(
+        ownerIdForRewards,
+        user.name || name,
+        user.email,
+      )
+      if (credit.applied) {
+        showToast(`Partner Rewards: referrer earned ${credit.creditPercent}% billing credit.`, 'success')
+      }
     }
 
     let startedTrial = false

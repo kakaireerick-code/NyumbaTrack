@@ -36,7 +36,7 @@ import {
   checkUnitLimit,
 } from '../utils/subscription'
 import { ADMIN_MOMO_LINE, ADMIN_MOMO_DISPLAY, subscriptionPaymentReference } from '../lib/billing'
-import { getPartnerRewards } from '../lib/partnerRewards'
+import { getPartnerRewards, applyPartnerCreditToAmount } from '../lib/partnerRewards'
 import { verifyMomoReference, collectSubscriptionReferences } from '../lib/momoVerification'
 import { buildSubscriptionInvoice, queueInvoiceEmail, downloadInvoice } from '../lib/subscriptionInvoice'
 import { submitCloudSubscriptionClaim } from '../lib/subscriptionCloud'
@@ -121,7 +121,10 @@ export default function SubscriptionPage({
   }
 
   const subscribe = async (plan) => {
-    const amount = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice
+    const baseAmount = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice
+    const creditPct = partnerRewards?.creditPercent || 0
+    const priced = applyPartnerCreditToAmount(baseAmount, creditPct)
+    const amount = priced.total
     const ref = momoReference.trim()
     const verify = verifyMomoReference(ref, collectSubscriptionReferences(paymentHistory))
     if (!verify.ok) {
@@ -191,6 +194,11 @@ export default function SubscriptionPage({
       : confirmPlan.monthlyPrice
     : 0
 
+  const partnerCredit = partnerRewards?.creditPercent
+    ? applyPartnerCreditToAmount(payAmount, partnerRewards.creditPercent)
+    : null
+  const amountDue = partnerCredit?.total ?? payAmount
+
   const payRefHint = confirmPlan ? subscriptionPaymentReference(confirmPlan.id, customerName) : ''
 
   const cycleBtn = (cycle) =>
@@ -230,14 +238,25 @@ export default function SubscriptionPage({
                 <Gift size={22} />
                 Partner Rewards
               </h2>
-              {partnerRewards.bankedMonths > 0 ? (
+              {partnerRewards.bankedMonths > 0 || partnerRewards.creditPercent > 0 ? (
                 <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                  You have <strong>{partnerRewards.bankedMonths}</strong> free month
-                  {partnerRewards.bankedMonths === 1 ? '' : 's'} banked toward your next renewal.
+                  {partnerRewards.creditPercent > 0 && (
+                    <>
+                      You have <strong>{partnerRewards.creditPercent}%</strong> Partner Rewards billing credit
+                      {partnerRewards.bankedMonths > 0 && (
+                        <>
+                          {' '}
+                          and <strong>{partnerRewards.bankedMonths}</strong> banked month
+                          {partnerRewards.bankedMonths === 1 ? '' : 's'}
+                        </>
+                      )}
+                      .
+                    </>
+                  )}
                 </p>
               ) : (
                 <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                  Refer another landlord — when they complete their first owner login, you earn discounted billing months.
+                  Refer another landlord — when they complete their first owner login, you earn {15}% billing credit (max 45%).
                 </p>
               )}
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -777,7 +796,12 @@ export default function SubscriptionPage({
             <p className="text-xs text-gray-500 dark:text-gray-400">{confirmPlan.tagline}</p>
 
             <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded text-sm space-y-1">
-              <p className="text-2xl font-bold text-[#2d6a4f]">{fmtUGX(payAmount)}</p>
+              <p className="text-2xl font-bold text-[#2d6a4f]">{fmtUGX(amountDue)}</p>
+              {partnerCredit && partnerCredit.discount > 0 && (
+                <p className="text-brand text-xs">
+                  Partner Rewards credit: −{fmtUGX(partnerCredit.discount)} ({partnerCredit.creditPercent}% off {fmtUGX(payAmount)})
+                </p>
+              )}
               {billingCycle === 'yearly' ? (
                 <>
                   <p className="text-green-600 dark:text-green-400">
@@ -808,7 +832,7 @@ export default function SubscriptionPage({
             <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded text-sm space-y-2">
               <p className="font-semibold">Step 1 — Send money now</p>
               <p>
-                Open MTN MoMo and send <strong>{fmtUGX(payAmount)}</strong> to:
+                Open MTN MoMo and send <strong>{fmtUGX(amountDue)}</strong> to:
               </p>
               <p className="text-xl font-bold font-mono">{ADMIN_MOMO_LINE}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">

@@ -265,6 +265,25 @@ confirm(
   'Stable invite reuse + header/discover About, Rewards, Plans, Help + product highlights',
 )
 
+// F24 Partner Rewards automation (15% credits, tracker, sidebar quick links)
+const partnerAuto = exists('src/lib/partnerRewards.ts') ? read('src/lib/partnerRewards.ts') : ''
+const referralsUi = exists('src/pages/ReferralsPage.jsx') ? read('src/pages/ReferralsPage.jsx') : ''
+const sidebarFile = exists('src/components/Sidebar.jsx') ? read('src/components/Sidebar.jsx') : ''
+const navQuick = exists('src/lib/navigation.ts') ? read('src/lib/navigation.ts') : ''
+confirm(
+  'F24',
+  'Partner Rewards automation',
+  partnerAuto.includes('CREDIT_PERCENT_PER_REFERRAL') &&
+    partnerAuto.includes('MAX_CREDIT_PERCENT') &&
+    partnerAuto.includes('processReferrerCreditOnFirstLogin') &&
+    partnerAuto.includes('creditNotes') &&
+    referralsUi.includes('Referral tracker') &&
+    referralsUi.includes('Auto credit notes') &&
+    sidebarFile.includes('SIDEBAR_QUICK_LINKS') &&
+    navQuick.includes('SIDEBAR_QUICK_LINKS'),
+  '15% credits + step tracker + sidebar Plans/Rewards/Messages/Help',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -276,6 +295,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F23 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F24 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)

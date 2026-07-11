@@ -102,6 +102,14 @@ export const MORE_TOOLS_GROUPS: MoreToolsGroup[] = [
   { title: 'Documents & legal', ids: ['documents', 'legal-notices', 'blacklist'] },
 ]
 
+/** Quick links below primary nav — Plans, Rewards, Messages, Help (not replacing 8 core items) */
+export const SIDEBAR_QUICK_LINKS: Array<{ id: PageId; label: string }> = [
+  { id: 'subscription', label: 'Plans' },
+  { id: 'referrals', label: 'Rewards' },
+  { id: 'messages', label: 'Messages' },
+  { id: 'help', label: 'Help' },
+]
+
 export const sidebarPagesForRole = (role: string, allPages: PageId[]): PageId[] => {
   if (role === 'property_owner') {
     return PRIMARY_SIDEBAR_PAGES.filter((id) => allPages.includes(id))

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Home, Eye, EyeOff } from 'lucide-react'
 import { seedDemoUsers, registerOwner, login, loginOrRegisterWithGoogle } from '../lib/auth'
+import { captureReferralFromUrl } from '../lib/partnerRewards'
 import GoogleSignInButton from '../components/GoogleSignInButton'
 import { isOwnerLoginRole } from '../lib/permissions'
 import { validatePortalSignIn, showDemoCredentials, GENERIC_AUTH_ERROR } from '../lib/portalAuth'
@@ -21,6 +22,7 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
 
   useEffect(() => {
     seedDemoUsers()
+    captureReferralFromUrl()
   }, [])
 
   const handleGoogle = (profile) => {
@@ -39,7 +41,7 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
       setError(portalCheck.error)
       return
     }
-    onAuthSuccess(result.user)
+    onAuthSuccess(result.user, null, null, { isNew: !!result.isNew })
   }
 
   const handleSubmit = (e) => {
@@ -74,7 +76,7 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
           setLoading(false)
           return
         }
-        onAuthSuccess(result.user)
+        onAuthSuccess(result.user, null, null, { isNew: true })
       }
       setLoading(false)
     }, 300)

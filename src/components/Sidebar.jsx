@@ -1,6 +1,6 @@
 import React from 'react'
 import { pagesForRole, normalizeRole } from '../lib/permissions'
-import { sidebarPagesForRole } from '../lib/navigation'
+import { sidebarPagesForRole, SIDEBAR_QUICK_LINKS } from '../lib/navigation'
 import { Icon } from './UI'
 
 const PAGE_META = {
@@ -28,6 +28,8 @@ const PAGE_META = {
   assistant: { label: 'Assistant', icon: 'MessageCircle' },
   messages: { label: 'Inbox', icon: 'MessageCircle' },
   'data-import': { label: 'Import', icon: 'FileSpreadsheet' },
+  about: { label: 'About', icon: 'HelpCircle' },
+  referrals: { label: 'Rewards', icon: 'Gift' },
 }
 
 export default function Sidebar({ currentRole, currentPage, setCurrentPage, sidebarOpen, setSidebarOpen }) {
@@ -37,6 +39,11 @@ export default function Sidebar({ currentRole, currentPage, setCurrentPage, side
   const items = pageIds
     .filter((id) => PAGE_META[id])
     .map((id) => ({ id, ...PAGE_META[id] }))
+
+  const quickLinks =
+    role === 'property_owner'
+      ? SIDEBAR_QUICK_LINKS.filter((q) => PAGE_META[q.id] && allPages.includes(q.id))
+      : []
 
   if (role === 'tenant') return null
 
@@ -74,6 +81,30 @@ export default function Sidebar({ currentRole, currentPage, setCurrentPage, side
               {item.label}
             </button>
           ))}
+          {quickLinks.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-white/10">
+              <p className="px-4 text-[10px] uppercase tracking-wide text-white/50 mb-2">Quick links</p>
+              {quickLinks.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  data-nav-id={item.id}
+                  onClick={() => {
+                    setCurrentPage(item.id)
+                    if (window.innerWidth <= 768) setSidebarOpen(false)
+                  }}
+                  className={`tap-target w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-left mb-1 transition-colors ${
+                    currentPage === item.id
+                      ? 'bg-brand/80 text-white font-semibold'
+                      : 'text-white/80 hover:bg-white/10'
+                  }`}
+                >
+                  <Icon name={PAGE_META[item.id].icon} size={18} />
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
       </aside>
     </>

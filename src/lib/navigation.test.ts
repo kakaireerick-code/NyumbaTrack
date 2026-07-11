@@ -4,6 +4,7 @@ import {
   PRIMARY_CARETAKER_PAGES,
   MORE_TOOLS_LINKS,
   DISCOVER_STRIP_LINKS,
+  SIDEBAR_QUICK_LINKS,
   sidebarPagesForRole,
 } from './navigation'
 
@@ -46,5 +47,10 @@ describe('navigation', () => {
     expect(ids).toContain('help')
     const ownerLinks = DISCOVER_STRIP_LINKS.filter((l) => l.roles.includes('property_owner'))
     expect(ownerLinks.length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('owner sidebar quick links promote plans rewards messages help', () => {
+    const ids = SIDEBAR_QUICK_LINKS.map((l) => l.id)
+    expect(ids).toEqual(['subscription', 'referrals', 'messages', 'help'])
   })
 })
