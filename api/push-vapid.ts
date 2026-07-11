@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { vapidConfigured } from './lib/pushRedis'
+import { vapidConfigured } from '../src/lib/pushRedis.js'
 
 export default function handler(_req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store')

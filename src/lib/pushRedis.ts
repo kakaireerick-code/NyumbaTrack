@@ -10,7 +10,8 @@ export const redis = () => {
 export const subIndexKey = (ownerId: string, role: string, userId: string) =>
   `push:index:${ownerId}:${role}:${userId}`
 
-export const subDataKey = (endpoint: string) => `push:sub:${Buffer.from(endpoint).toString('base64url')}`
+export const subDataKey = (endpoint: string) =>
+  `push:sub:${Buffer.from(endpoint).toString('base64url')}`
 
 export const vapidConfigured = () =>
   Boolean(
