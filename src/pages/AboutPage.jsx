@@ -1,6 +1,7 @@
 import React from 'react'
 import { Home, Heart, Shield } from 'lucide-react'
 import GuidancePanel from '../components/GuidancePanel'
+import ProductHighlights from '../components/ProductHighlights'
 import { getPageGuidance } from '../lib/actionGuidance'
 import { ROLE_LABELS } from '../lib/rolePrompts'
 import { normalizeRole } from '../lib/permissions'
@@ -88,6 +89,13 @@ export default function AboutPage({ currentRole, setCurrentPage }) {
           </div>
         </div>
       </div>
+
+      <ProductHighlights
+        currentRole={currentRole}
+        surface="about"
+        setCurrentPage={setCurrentPage}
+        title="More about NyumbaTrack"
+      />
 
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => setCurrentPage('help')} className="px-4 py-2 border rounded-lg text-sm">

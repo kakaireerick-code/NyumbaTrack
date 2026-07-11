@@ -23,6 +23,51 @@ export const PRIMARY_CARETAKER_PAGES: PageId[] = [
 
 export type MoreToolLink = { id: PageId; label: string; description: string }
 
+export type DiscoverStripLink = {
+  id: PageId
+  label: string
+  shortLabel: string
+  blurb: string
+  icon: 'info' | 'gift' | 'heart' | 'card' | 'help'
+  roles: Array<'property_owner' | 'tenant' | 'caretaker'>
+}
+
+/** Prominent header strip — marketing + product info (not buried in Settings) */
+export const DISCOVER_STRIP_LINKS: DiscoverStripLink[] = [
+  {
+    id: 'about',
+    label: 'About NyumbaTrack',
+    shortLabel: 'About',
+    blurb: 'What this app is and who it is for',
+    icon: 'info',
+    roles: ['property_owner', 'tenant', 'caretaker'],
+  },
+  {
+    id: 'referrals',
+    label: 'Partner Rewards',
+    shortLabel: 'Rewards',
+    blurb: 'Refer landlords — discounted billing months on first login',
+    icon: 'gift',
+    roles: ['property_owner'],
+  },
+  {
+    id: 'subscription',
+    label: 'Plans & Billing',
+    shortLabel: 'Plans',
+    blurb: '14-day trial, MoMo billing, yearly savings',
+    icon: 'card',
+    roles: ['property_owner'],
+  },
+  {
+    id: 'help',
+    label: 'Help & guides',
+    shortLabel: 'Help',
+    blurb: 'Manuals, tours, and step-by-step workflows',
+    icon: 'help',
+    roles: ['property_owner', 'tenant', 'caretaker'],
+  },
+]
+
 /** Advanced tools — reachable from Settings → More tools */
 export const MORE_TOOLS_LINKS: MoreToolLink[] = [
   { id: 'subscription', label: 'Plans & Billing', description: 'MoMo subscription, yearly plans, invoices' },
@@ -43,7 +88,7 @@ export const MORE_TOOLS_LINKS: MoreToolLink[] = [
   { id: 'messages', label: 'Tenant Messages', description: 'Owner–tenant inbox' },
   { id: 'help', label: 'Help', description: 'Manuals and support' },
   { id: 'about', label: 'About', description: 'What NyumbaTrack is and who it is for' },
-  { id: 'referrals', label: 'Partner Rewards', description: 'Refer landlords and earn free months' },
+  { id: 'referrals', label: 'Partner Rewards', description: 'Refer landlords — earn discounted billing months on first login' },
 ]
 
 export type MoreToolsGroup = { title: string; ids: PageId[] }

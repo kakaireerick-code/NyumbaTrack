@@ -237,7 +237,7 @@ export default function SubscriptionPage({
                 </p>
               ) : (
                 <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                  Refer another landlord — when they subscribe, you earn free months on your plan.
+                  Refer another landlord — when they complete their first owner login, you earn discounted billing months.
                 </p>
               )}
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">

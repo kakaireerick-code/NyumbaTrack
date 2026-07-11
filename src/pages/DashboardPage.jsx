@@ -2,8 +2,10 @@ import React, { useMemo } from 'react'
 import { LayoutDashboard, AlertTriangle, Calendar, Wrench } from 'lucide-react'
 import { fmtUGX, fmtDate, getTenantBalance, getOccupancyColor, daysUntilDue } from '../utils/helpers'
 import { StatCard, Badge, ProgressBar, EmptyState } from '../components/UI'
+import ProductHighlights from '../components/ProductHighlights'
+import { normalizeRole } from '../lib/permissions'
 
-export default function DashboardPage({ buildings, units, tenants, payments, maintenance, currentUser }) {
+export default function DashboardPage({ buildings, units, tenants, payments, maintenance, currentUser, currentRole, setCurrentPage }) {
   const now = new Date()
   const currentMonth = now.getMonth()
   const currentYear = now.getFullYear()
@@ -104,6 +106,15 @@ export default function DashboardPage({ buildings, units, tenants, payments, mai
           <p className="text-sm text-gray-500 dark:text-gray-400">Property overview at a glance</p>
         </div>
       </div>
+
+      {normalizeRole(currentRole) === 'property_owner' && setCurrentPage && (
+        <ProductHighlights
+          currentRole={currentRole}
+          surface="dashboard"
+          setCurrentPage={setCurrentPage}
+          title="Why landlords choose NyumbaTrack"
+        />
+      )}
 
       {/* Row 1: Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">

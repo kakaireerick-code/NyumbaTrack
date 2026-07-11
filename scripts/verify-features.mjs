@@ -243,6 +243,28 @@ confirm(
   'HTML splash + React loader + AppRoot fade + animations',
 )
 
+// F23 Stable tenant invites + discover strip
+const invitePanel = exists('src/components/InviteTenantPanel.jsx') ? read('src/components/InviteTenantPanel.jsx') : ''
+const invitesLib = exists('src/lib/invites.ts') ? read('src/lib/invites.ts') : ''
+const discoverStrip = exists('src/components/DiscoverStrip.jsx') ? read('src/components/DiscoverStrip.jsx') : ''
+const headerFile = exists('src/components/Header.jsx') ? read('src/components/Header.jsx') : ''
+const navDiscover = exists('src/lib/navigation.ts') ? read('src/lib/navigation.ts') : ''
+confirm(
+  'F23',
+  'Stable invites + discover strip',
+  invitesLib.includes('getOrCreateTenantInvite') &&
+    invitesLib.includes('releaseUnitInvite') &&
+    invitePanel.includes('getOrCreateTenantInvite') &&
+    !invitePanel.includes('activeCode = code || ensureCode()') &&
+    discoverStrip.includes('DISCOVER_STRIP_LINKS') &&
+    discoverStrip.includes('ProductHighlights') &&
+    headerFile.includes('onNavigate') &&
+    navDiscover.includes('DISCOVER_STRIP_LINKS') &&
+    exists('src/lib/productHighlights.ts') &&
+    read('src/lib/productHighlights.ts').includes('PRODUCT_HIGHLIGHTS'),
+  'Stable invite reuse + header/discover About, Rewards, Plans, Help + product highlights',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -254,6 +276,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F22 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F23 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)

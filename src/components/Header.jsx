@@ -2,6 +2,7 @@ import React from 'react'
 import { Icon } from './UI'
 import { ROLE_LABELS, ROLE_BADGE_CLASS } from '../lib/rolePrompts'
 import { normalizeRole } from '../lib/permissions'
+import { DISCOVER_STRIP_LINKS } from '../lib/navigation'
 
 export default function Header({
   currentUser,
@@ -15,6 +16,8 @@ export default function Header({
   onToggleDemoMode,
   appModeLabel: modeLabel,
   onOpenGuide,
+  onNavigate,
+  currentPage,
   isTenant,
   unreadMessages,
   onOpenMessages,
@@ -24,6 +27,7 @@ export default function Header({
   const roleLabel = ROLE_LABELS[roleKey] || 'User'
   const badgeClass = ROLE_BADGE_CLASS[roleKey] || 'bg-gray-600 text-white'
   const isOwner = roleKey === 'property_owner'
+  const discoverLinks = DISCOVER_STRIP_LINKS.filter((l) => l.roles.includes(roleKey))
 
   return (
     <>
@@ -53,6 +57,22 @@ export default function Header({
           </span>
         </div>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {onNavigate &&
+            discoverLinks.map(({ id, shortLabel, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onNavigate(id)}
+                className={`hidden sm:inline tap-target px-2 py-1.5 text-xs rounded-lg border ${
+                  currentPage === id
+                    ? 'bg-brand text-white border-brand'
+                    : 'border-brand/30 text-brand hover:bg-brand/10'
+                }`}
+                title={label}
+              >
+                {shortLabel || (id === 'referrals' ? 'Rewards' : 'About')}
+              </button>
+            ))}
           {notificationInbox}
           {onOpenMessages && unreadMessages > 0 && (
             <button

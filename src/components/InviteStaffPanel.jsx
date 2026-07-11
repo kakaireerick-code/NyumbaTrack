@@ -4,14 +4,14 @@ import {
   getJoinUrl,
   getShareTemplate,
   regenerateCaretakerInvite,
-  findPendingCaretakerInviteForOwner,
-  createCaretakerInvite,
+  getOrCreateCaretakerInvite,
   pushInviteToCloud,
 } from '../lib/invites'
 
 export default function InviteStaffPanel({ ownerId, showToast, buildings = [] }) {
   const [propertyId, setPropertyId] = useState(() => buildings[0]?.id || '')
   const [code, setCode] = useState('')
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     if (!propertyId && buildings[0]?.id) setPropertyId(buildings[0].id)
@@ -19,9 +19,16 @@ export default function InviteStaffPanel({ ownerId, showToast, buildings = [] })
 
   useEffect(() => {
     if (!ownerId || !propertyId) return
-    const inv = findPendingCaretakerInviteForOwner(ownerId, propertyId)
-    setCode(inv?.code || '')
-  }, [ownerId, propertyId])
+    const inv = getOrCreateCaretakerInvite(ownerId, propertyId)
+    setCode(inv.code)
+    setReady(true)
+    const selectedBuilding = buildings.find((b) => b.id === propertyId)
+    pushInviteToCloud(inv, {
+      buildingName: selectedBuilding
+        ? `${selectedBuilding.name} · ${selectedBuilding.address || ''}`.trim()
+        : undefined,
+    })
+  }, [ownerId, propertyId, buildings])
 
   if (!ownerId) return null
 
@@ -35,19 +42,9 @@ export default function InviteStaffPanel({ ownerId, showToast, buildings = [] })
     })
   }
 
-  const ensureCode = () => {
-    let inv = findPendingCaretakerInviteForOwner(ownerId, propertyId)
-    if (!inv) {
-      inv = createCaretakerInvite(ownerId, propertyId)
-      syncCloud(inv)
-    }
-    setCode(inv.code)
-    return inv.code
-  }
-
-  const activeCode = code || ensureCode()
-  const link = getJoinUrl('caretaker', activeCode)
-  const template = getShareTemplate('caretaker', activeCode)
+  const activeCode = code
+  const link = activeCode ? getJoinUrl('caretaker', activeCode) : ''
+  const template = activeCode ? getShareTemplate('caretaker', activeCode) : ''
 
   const copy = async (text, label) => {
     try {
@@ -65,6 +62,12 @@ export default function InviteStaffPanel({ ownerId, showToast, buildings = [] })
     showToast?.('New code generated — old link no longer works', 'success')
   }
 
+  if (!ready && !activeCode) {
+    return (
+      <div className="card p-4 text-xs text-gray-400">Loading caretaker invite…</div>
+    )
+  }
+
   return (
     <div className="card p-4 border-l-4 border-brand/40 space-y-3">
       <h3 className="font-semibold text-sm flex items-center gap-2">
@@ -72,6 +75,9 @@ export default function InviteStaffPanel({ ownerId, showToast, buildings = [] })
       </h3>
       <p className="text-xs text-gray-500 dark:text-gray-400">
         Pick the property first, then share the link. Caretakers only see units and maintenance — not rent amounts.
+      </p>
+      <p className="text-[10px] text-gray-400">
+        Link stays valid until you regenerate it or someone joins with this code.
       </p>
 
       {buildings.length > 0 && (

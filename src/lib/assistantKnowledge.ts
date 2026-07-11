@@ -62,7 +62,7 @@ export const FAQ_ENTRIES: FaqEntry[] = [
   {
     keywords: ['subscribe', 'subscription', 'trial', 'pay'],
     roles: ['property_owner'],
-    answer: 'After your 14-day trial, go to Plans & Billing. Pay via MTN MoMo to 0793068911 and enter your transaction reference.',
+    answer: 'After your 14-day trial, go to Plans & Billing (header, Discover strip, or Settings → More tools). Pay via MTN MoMo to 0793068911 and enter your transaction reference.',
     offerPage: 'Plans & Billing',
     offerPageId: 'subscription',
   },
@@ -158,14 +158,21 @@ export const FAQ_ENTRIES: FaqEntry[] = [
   {
     keywords: ['about', 'what is nyumbatrack', 'who made'],
     roles: ['property_owner', 'tenant', 'caretaker'],
-    answer: 'NyumbaTrack is rent management software built for Uganda. Owners manage properties; tenants and caretakers get simple portals. Open About for your role-specific overview.',
+    answer: 'NyumbaTrack is rent management software built for Uganda. Owners manage properties; tenants and caretakers get simple portals. Tap About in the header or Discover strip for your role-specific overview.',
     offerPage: 'About',
     offerPageId: 'about',
   },
   {
+    keywords: ['good to know', 'why nyumbatrack', 'features', 'tenants free', 'yearly'],
+    roles: ['property_owner'],
+    answer: 'Key facts are on your Dashboard and in the Discover strip below the header: 14-day free trial, tenants join free, yearly saves 2 months, Partner Rewards, and Uganda MoMo workflows.',
+    offerPage: 'Dashboard',
+    offerPageId: 'dashboard',
+  },
+  {
     keywords: ['partner rewards', 'referral', 'refer', 'invite landlord', 'free month'],
     roles: ['property_owner'],
-    answer: 'Partner Rewards lets you refer another landlord. When they subscribe, you bank free months toward your renewal. Copy your personal link from Partner Rewards or Plans & Billing.',
+    answer: 'Partner Rewards lets you refer another landlord. When they complete their first owner login via your link, you earn discounted billing months toward renewal. Tap Rewards in the header or Discover strip, or open Plans & Billing.',
     offerPage: 'Partner Rewards',
     offerPageId: 'referrals',
   },

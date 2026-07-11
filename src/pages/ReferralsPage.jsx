@@ -52,7 +52,7 @@ export default function ReferralsPage({ activeOwnerId, authUser, showToast, setC
           <Users size={18} /> Your invite link
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-300">
-          Share this with another property owner. When they subscribe to a paid plan, you bank free months toward your renewal.
+          Share this with another property owner. When they complete their first owner login via your link, you earn discounted billing months toward renewal.
         </p>
         <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg font-mono text-center text-lg tracking-widest">
           {rewards.referralCode}
@@ -90,8 +90,8 @@ export default function ReferralsPage({ activeOwnerId, authUser, showToast, setC
         <h3 className="font-semibold text-gray-800 dark:text-gray-100">How it works</h3>
         <ol className="list-decimal pl-5 space-y-1">
           <li>Copy your link and send it to a fellow landlord.</li>
-          <li>They create an owner account and start a paid plan.</li>
-          <li>You bank free months — applied on your next renewal.</li>
+          <li>They create an owner account and complete their first login.</li>
+          <li>You earn discounted billing months — applied on your next renewal.</li>
         </ol>
       </div>
 

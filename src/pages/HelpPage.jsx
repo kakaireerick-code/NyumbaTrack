@@ -1,5 +1,6 @@
 import React from 'react'
 import GuidancePanel from '../components/GuidancePanel'
+import ProductHighlights from '../components/ProductHighlights'
 import { getPageGuidance } from '../lib/actionGuidance'
 import { ROLE_HELP_GETTING_STARTED, ROLE_MANUALS } from '../data/roleManuals'
 import { resetTour, ROLE_LABELS } from '../lib/rolePrompts'
@@ -22,6 +23,13 @@ export default function HelpPage({ currentRole, setCurrentPage, onRestartTour, s
     <div className="max-w-2xl mx-auto space-y-6 pb-24">
       <h1 className="text-2xl font-bold">Help — {ROLE_LABELS[role] || 'User'}</h1>
       <GuidancePanel guidance={guidance} />
+
+      <ProductHighlights
+        currentRole={currentRole}
+        surface="help"
+        setCurrentPage={setCurrentPage}
+        title="Quick facts"
+      />
 
       <div className="card p-4">
         <h2 className="font-semibold mb-2">Getting started</h2>

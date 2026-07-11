@@ -106,6 +106,85 @@ export const findInvite = (code: string): InviteRecord | undefined => {
 export const findInviteForUnit = (unitId: string): InviteRecord | undefined =>
   getInvites().find((i) => i.role === 'tenant' && i.unitId === unitId && i.status === 'pending')
 
+const tenantInvitesForUnit = (unitId: string): InviteRecord[] =>
+  getInvites()
+    .filter((i) => i.role === 'tenant' && i.unitId === unitId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+const reactivateInvite = (invite: InviteRecord): InviteRecord => {
+  const restored: InviteRecord = {
+    ...invite,
+    status: 'pending',
+    usedByUserId: null,
+    expiresAt: null,
+  }
+  saveInvites(
+    getInvites().map((i) =>
+      normalizeInviteCode(i.code) === normalizeInviteCode(invite.code) ? restored : i,
+    ),
+  )
+  return restored
+}
+
+/** Reuse or restore a tenant invite — never revokes unless no code exists yet */
+export const getOrCreateTenantInvite = (
+  ownerId: string,
+  propertyId: string,
+  unitId: string,
+  fallbackCode?: string,
+): InviteRecord => {
+  const pending = findInviteForUnit(unitId)
+  if (pending) return pending
+
+  const forUnit = tenantInvitesForUnit(unitId)
+  const restorable = forUnit.find((i) => i.status === 'revoked' || i.status === 'used')
+  if (restorable) return reactivateInvite(restorable)
+
+  if (fallbackCode) {
+    const norm = normalizeInviteCode(fallbackCode)
+    const existing = findInvite(norm)
+    if (existing?.role === 'tenant' && existing.unitId === unitId) {
+      if (existing.status === 'pending') return existing
+      return reactivateInvite(existing)
+    }
+    const record: InviteRecord = {
+      code: norm.includes('-') ? norm : fallbackCode.toUpperCase(),
+      role: 'tenant',
+      ownerId,
+      propertyId,
+      unitId,
+      status: 'pending',
+      expiresAt: null,
+      createdAt: new Date().toISOString(),
+      usedByUserId: null,
+    }
+    saveInvites([...getInvites(), record])
+    return record
+  }
+
+  return createTenantInviteForUnit(ownerId, propertyId, unitId)
+}
+
+/** When a tenant leaves, restore the unit invite so the same link can work again */
+export const releaseUnitInvite = (
+  ownerId: string,
+  propertyId: string,
+  unitId: string,
+  fallbackCode?: string,
+): InviteRecord | null => {
+  const pending = findInviteForUnit(unitId)
+  if (pending) return pending
+
+  const forUnit = tenantInvitesForUnit(unitId)
+  if (forUnit.length) return reactivateInvite(forUnit[0])
+
+  if (fallbackCode && ownerId) {
+    return getOrCreateTenantInvite(ownerId, propertyId, unitId, fallbackCode)
+  }
+
+  return null
+}
+
 export const findPendingCaretakerInviteForOwner = (
   ownerId: string,
   propertyId?: string,
@@ -117,6 +196,27 @@ export const findPendingCaretakerInviteForOwner = (
       i.status === 'pending' &&
       (!propertyId || i.propertyId === propertyId),
   )
+
+/** Reuse pending caretaker invite — only mint on first share or explicit regenerate */
+export const getOrCreateCaretakerInvite = (ownerId: string, propertyId?: string): InviteRecord => {
+  const pending = findPendingCaretakerInviteForOwner(ownerId, propertyId)
+  if (pending) return pending
+
+  const invites = getInvites()
+  const restorable = invites
+    .filter(
+      (i) =>
+        i.role === 'caretaker' &&
+        i.ownerId === ownerId &&
+        (i.status === 'revoked' || i.status === 'used') &&
+        (!propertyId || i.propertyId === propertyId),
+    )
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+
+  if (restorable) return reactivateInvite(restorable)
+
+  return createCaretakerInvite(ownerId, propertyId)
+}
 
 export const createTenantInviteForUnit = (
   ownerId: string,

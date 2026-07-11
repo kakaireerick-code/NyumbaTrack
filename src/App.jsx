@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { ToastProvider, useToast } from './components/Toast'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
+import DiscoverStrip from './components/DiscoverStrip'
 import QuickActions from './components/QuickActions'
 import TourModal from './components/TourModal'
 import PageWithGuidance from './components/PageWithGuidance'
@@ -58,7 +59,7 @@ import { getTourSteps, isTourComplete } from './lib/rolePrompts'
 import { DEMO_BUILDINGS, DEMO_UNITS, DEMO_TENANTS } from './lib/demoData'
 import { ensureDemoPracticeData } from './lib/demoPractice'
 import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
-import { syncInvitesFromUnits } from './lib/invites'
+import { syncInvitesFromUnits, releaseUnitInvite, pushInviteToCloud } from './lib/invites'
 import { parseEntryPath, getTenantJoinPath, getCaretakerJoinPath, getReceiptPath, getBillingAdminPath } from './lib/routing'
 import { getCaretakerSafeBuilding, getCaretakerSafeUnit, getCaretakerSafeTenant } from './lib/propertyViews'
 import NotificationInbox from './components/NotificationInbox'
@@ -947,6 +948,8 @@ function AppContent() {
           onToggleDemoMode={isOwnerRole ? () => setDemoMode((d) => !d) : undefined}
           appModeLabel={isOwnerRole ? appModeLabel(getAppMode()) : undefined}
           onOpenGuide={() => setPageSafe('help')}
+          onNavigate={setPageSafe}
+          currentPage={currentPage}
           isTenant={isTenant}
           unreadMessages={!isTenant && activeOwnerId ? countUnreadForOwner(activeOwnerId) : 0}
           onOpenMessages={!isTenant ? () => setPageSafe('messages') : undefined}
@@ -961,6 +964,11 @@ function AppContent() {
               />
             ) : null
           }
+        />
+        <DiscoverStrip
+          currentRole={currentRole}
+          setCurrentPage={setPageSafe}
+          currentPage={currentPage}
         />
         <div className="flex items-center justify-between px-4 py-1 border-b dark:border-gray-700">
           <span className="text-xs text-gray-500 capitalize">{currentRole} portal</span>
@@ -1016,9 +1024,40 @@ function AppContent() {
           onSendReminder={() => setCurrentPage('reminders')}
           onMarkDeparted={(tenantId) => {
             setTenants((prev) => prev.map((t) => (t.id === tenantId ? { ...t, status: 'Departed' } : t)))
-            setUnits((prev) => prev.map((u) => (u.currentTenantId === tenantId ? { ...u, status: 'vacant', currentTenantId: null } : u)))
+            const departedUnit = detailUnit || units.find((u) => u.currentTenantId === tenantId)
+            setUnits((prev) =>
+              prev.map((u) =>
+                u.currentTenantId === tenantId
+                  ? { ...u, status: 'vacant', currentTenantId: null }
+                  : u,
+              ),
+            )
+            if (departedUnit) {
+              const oid = departedUnit.ownerId || activeOwnerId || authUser?.ownerId
+              const released = releaseUnitInvite(
+                oid,
+                String(departedUnit.buildingId),
+                String(departedUnit.id),
+                departedUnit.inviteCode,
+              )
+              if (released) {
+                setUnits((prev) =>
+                  prev.map((u) =>
+                    u.id === departedUnit.id ? { ...u, inviteCode: released.code } : u,
+                  ),
+                )
+                const bName = buildings.find((b) => b.id === departedUnit.buildingId)?.name
+                pushInviteToCloud(released, {
+                  unitNumber: departedUnit.unitNumber,
+                  buildingName: bName,
+                  monthlyRent: departedUnit.monthlyRent,
+                  depositAmount: departedUnit.depositAmount,
+                  rentDueDay: departedUnit.rentDueDay,
+                })
+              }
+            }
             setSelectedTenant(null)
-            showToast('Tenant marked as departed', 'success')
+            showToast('Tenant marked as departed — invite link restored for this unit', 'success')
           }}
           onUpdateTenant={(updated) => setTenants((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))}
           onAttachAgreement={() => setAgreementTenantId(detailTenant.id)}

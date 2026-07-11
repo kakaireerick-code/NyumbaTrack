@@ -120,15 +120,15 @@ export const getPageGuidance = (
         variant: 'info',
         headline: 'Built for Uganda landlords',
         detail: 'NyumbaTrack keeps rent, tenants, and MoMo payments in one place. Tenants and caretakers get their own simple portals.',
-        nextSteps: ['Read how roles stay private', 'Open Partner Rewards to refer a fellow landlord'],
+        nextSteps: ['Read how roles stay private', 'Partner Rewards is in the header and Discover strip'],
       }
     }
     if (pageId === 'referrals') {
       return {
         variant: 'success',
         headline: 'Partner Rewards',
-        detail: 'Share your personal link. When another owner subscribes, you bank free months toward your next renewal.',
-        nextSteps: ['Copy your referral link', 'Send the WhatsApp template', 'Track banked months on Plans & Billing'],
+        detail: 'Share your personal link. When another owner completes their first login, you earn discounted billing months toward renewal.',
+        nextSteps: ['Copy your referral link', 'Find Rewards in the header or Discover strip', 'Track banked months on Plans & Billing'],
       }
     }
     if (pageId === 'subscription') {
