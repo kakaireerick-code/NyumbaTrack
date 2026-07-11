@@ -341,6 +341,35 @@ confirm(
   'Tenants see score, on-time %, streak, and tips on Home dashboard',
 )
 
+// F28 Smart spreadsheet import (xlsx native)
+const dataImportPage = exists('src/pages/DataImportPage.jsx') ? read('src/pages/DataImportPage.jsx') : ''
+const fileImportTs = exists('src/lib/fileImport.ts') ? read('src/lib/fileImport.ts') : ''
+confirm(
+  'F28',
+  'Smart spreadsheet import with native xlsx',
+  dataImportPage.includes('Spreadsheet') &&
+    fileImportTs.includes('readXlsxAsCsvText') &&
+    fileImportTs.includes("kind === 'xlsx'"),
+  'Excel .xlsx reads via SheetJS + column auto-map',
+)
+
+// F29 Bulk agreement PDF/Word scan import
+const agreementScan = exists('src/lib/agreementScan.ts') ? read('src/lib/agreementScan.ts') : ''
+const agreementImport = exists('src/lib/agreementImport.ts') ? read('src/lib/agreementImport.ts') : ''
+const agreementModal = exists('src/components/AgreementUploadModal.jsx') ? read('src/components/AgreementUploadModal.jsx') : ''
+confirm(
+  'F29',
+  'Bulk agreement PDF/Word scan import',
+  dataImportPage.includes('Agreements (PDF / Word)') &&
+    dataImportPage.includes('multiple') &&
+    agreementScan.includes('mammoth') &&
+    agreementScan.includes('scanAgreementText') &&
+    agreementImport.includes('commitAgreementImport') &&
+    agreementImport.includes('agreementPdf') &&
+    agreementModal.includes('extractAgreementHints'),
+  'Bulk PDF/docx scan + attach + single-tenant parser',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -352,6 +381,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F27 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F29 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)

@@ -38,9 +38,9 @@ export const getPageGuidance = (
       }
       return {
         variant: 'info',
-        headline: 'Already keep tenants in Excel?',
-        detail: 'Upload your sheet — we match columns for you. Save as CSV from Excel or Google Sheets.',
-        nextSteps: ['Download the sample template', 'Upload your CSV', 'Review the preview before confirming'],
+        headline: 'Import spreadsheets or agreements',
+        detail: 'Spreadsheet tab: Excel .xlsx, CSV, TSV. Agreements tab: bulk PDF/Word — one tenant per file, auto-scan fields, attach document.',
+        nextSteps: ['Download the sample template for spreadsheets', 'Or upload PDF/.docx agreements in bulk', 'Review preview before confirming'],
       }
     }
     if (pageId === 'tenants') {

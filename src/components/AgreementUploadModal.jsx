@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import { FileText, Upload } from 'lucide-react'
 import { Modal, LoadingButton } from './UI'
 import GuidancePanel from './GuidancePanel'
-import { storePdfFile, tryExtractPdfHints } from '../lib/documentStorage'
+import { storePdfFile, storeAgreementFile } from '../lib/documentStorage'
+import { extractAgreementHints, extractTextFromPdfDataUrl, extractTextFromDocx } from '../lib/agreementScan'
 import { splitName } from '../lib/tenantData'
 
 const PDF_GUIDANCE = {
@@ -41,16 +42,25 @@ export default function AgreementUploadModal({
     setError('')
     setLoading(true)
     try {
-      const stored = await storePdfFile(file)
+      const isDocx = file.name.toLowerCase().endsWith('.docx')
+      const stored = isDocx ? await storeAgreementFile(file) : await storePdfFile(file)
       setDoc(stored)
-      const hints = tryExtractPdfHints(stored.dataUrl)
+      let text = ''
+      if (isDocx) {
+        text = await extractTextFromDocx(await file.arrayBuffer())
+      } else {
+        text = extractTextFromPdfDataUrl(stored.dataUrl)
+      }
+      const hints = extractAgreementHints(text)
       setFields((f) => ({
         ...f,
-        rentAmount: hints.rent ? String(hints.rent) : f.rentAmount,
+        tenantName: hints.tenantName || f.tenantName,
+        rentAmount: hints.monthlyRent ? String(hints.monthlyRent) : f.rentAmount,
         leaseStart: hints.leaseStart || f.leaseStart,
         leaseEnd: hints.leaseEnd || f.leaseEnd,
+        deposit: hints.deposit ? String(hints.deposit) : f.deposit,
       }))
-      showToast?.('Agreement attached', 'success')
+      showToast?.('Agreement attached — review extracted fields', 'success')
     } catch (err) {
       setError(err.message || 'Upload failed')
     }
@@ -82,9 +92,9 @@ export default function AgreementUploadModal({
 
       <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 mb-4">
         <Upload className="text-[#2d6a4f] mb-2" size={28} />
-        <span className="text-sm font-medium">Upload PDF agreement</span>
-        <span className="text-xs text-gray-400 mt-1">Max ~800KB — smaller scans work best</span>
-        <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleFile} />
+        <span className="text-sm font-medium">Upload PDF or Word (.docx) agreement</span>
+        <span className="text-xs text-gray-400 mt-1">Max ~800KB — text-based PDFs extract best</span>
+        <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleFile} />
       </label>
 
       {doc && (

@@ -1,5 +1,7 @@
 /** PDF / document storage in localStorage with size guard */
 
+import { extractTextFromPdfDataUrl, extractAgreementHints } from './agreementScan'
+
 export const MAX_PDF_BYTES = 800_000 // ~800KB base64-safe for localStorage
 
 export type StoredDocument = {
@@ -34,6 +36,46 @@ export const validatePdfUpload = (file: File): { ok: boolean; error?: string } =
   return { ok: true }
 }
 
+export const validateAgreementFile = (file: File): { ok: boolean; error?: string } => {
+  if (!file) return { ok: false, error: 'No file selected' }
+  const name = file.name.toLowerCase()
+  const isPdf = file.type === 'application/pdf' || name.endsWith('.pdf')
+  const isDocx =
+    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    name.endsWith('.docx')
+  if (!isPdf && !isDocx) {
+    return { ok: false, error: 'Upload PDF or Word .docx (save .doc as .docx first)' }
+  }
+  if (file.size > MAX_PDF_BYTES) {
+    return {
+      ok: false,
+      error: `File is too large (${Math.round(file.size / 1024)}KB). Max ~800KB per agreement.`,
+    }
+  }
+  return { ok: true }
+}
+
+export const storeAgreementFile = async (file: File): Promise<StoredDocument> => {
+  const check = validateAgreementFile(file)
+  if (!check.ok) throw new Error(check.error)
+  const dataUrl = await readFileAsDataUrl(file)
+  if (estimateBase64Size(dataUrl) > MAX_PDF_BYTES) {
+    throw new Error('File too large after encoding — use a smaller PDF or compress the document.')
+  }
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  return {
+    fileName: file.name,
+    mimeType:
+      file.type ||
+      (ext === 'docx'
+        ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        : 'application/pdf'),
+    dataUrl,
+    uploadedAt: new Date().toISOString(),
+    sizeBytes: file.size,
+  }
+}
+
 export const storePdfFile = async (file: File): Promise<StoredDocument> => {
   const check = validatePdfUpload(file)
   if (!check.ok) throw new Error(check.error)
@@ -52,24 +94,26 @@ export const storePdfFile = async (file: File): Promise<StoredDocument> => {
   }
 }
 
-/** Best-effort text sniff from PDF data URL — v1 does not fail if empty */
+/** Best-effort text sniff from PDF data URL — uses agreementScan parser */
 export const tryExtractPdfHints = (dataUrl: string): Partial<{
   tenantName: string
   rent: number
   leaseStart: string
   leaseEnd: string
   deposit: number
+  phone: string
 }> => {
   try {
-    const base64 = dataUrl.split(',')[1] || ''
-    const raw = atob(base64.slice(0, 8000))
-    const hints: Record<string, string | number> = {}
-    const rentMatch = raw.match(/UGX?\s*([\d,]+)/i) || raw.match(/rent[:\s]+([\d,]+)/i)
-    if (rentMatch) hints.rent = parseInt(rentMatch[1].replace(/,/g, ''), 10)
-    const dateMatch = raw.match(/(\d{4}-\d{2}-\d{2})/g)
-    if (dateMatch?.[0]) hints.leaseStart = dateMatch[0]
-    if (dateMatch?.[1]) hints.leaseEnd = dateMatch[1]
-    return hints
+    const text = extractTextFromPdfDataUrl(dataUrl)
+    const hints = extractAgreementHints(text)
+    return {
+      tenantName: hints.tenantName,
+      rent: hints.monthlyRent,
+      leaseStart: hints.leaseStart,
+      leaseEnd: hints.leaseEnd,
+      deposit: hints.deposit,
+      phone: hints.phone,
+    }
   } catch {
     return {}
   }
