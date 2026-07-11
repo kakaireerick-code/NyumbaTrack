@@ -31,7 +31,7 @@ Vercel Production env:
 - `BILLING_ADMIN_SECRET`
 - `VITE_BILLING_ADMIN_EMAIL`
 
-See `docs/DEPLOY.md`.
+See `docs/DEPLOY.md` and **`docs/VERCEL-SECRETS-CHECKLIST.md`** (issue #24).
 
 ## Feature fix playbook
 
