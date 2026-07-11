@@ -11,6 +11,7 @@ import {
 type ClaimBody = {
   customerEmail?: string
   customerName?: string
+  ownerId?: string
   planId?: string
   billingCycle?: string
   amount?: number
