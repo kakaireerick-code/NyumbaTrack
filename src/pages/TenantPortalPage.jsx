@@ -6,6 +6,7 @@ import { Badge, EmptyState, LoadingButton } from '../components/UI'
 import { buildReceiptData } from '../utils/receipts'
 import ReceiptViewerModal from '../components/ReceiptViewerModal'
 import GuidancePanel from '../components/GuidancePanel'
+import ProductHighlights from '../components/ProductHighlights'
 import { getPageGuidance } from '../lib/actionGuidance'
 import { Smartphone, Copy, MessageCircle, Send } from 'lucide-react'
 import {
@@ -199,6 +200,12 @@ export default function TenantPortalPage({
       <>
       <div className="space-y-5 pb-24">
         <GuidancePanel guidance={guidance} />
+        <ProductHighlights
+          currentRole="tenant"
+          surface="tenant-home"
+          setCurrentPage={setPageSafe}
+          variant="compact"
+        />
         <h1 className="text-lg font-bold">
           Hello, {String(safeTenant.firstName || 'Tenant')}
         </h1>

@@ -257,9 +257,12 @@ confirm(
     invitePanel.includes('getOrCreateTenantInvite') &&
     !invitePanel.includes('activeCode = code || ensureCode()') &&
     discoverStrip.includes('DISCOVER_STRIP_LINKS') &&
+    discoverStrip.includes('ProductHighlights') &&
     headerFile.includes('onNavigate') &&
-    navDiscover.includes('DISCOVER_STRIP_LINKS'),
-  'Stable invite reuse + header/discover About & Rewards',
+    navDiscover.includes('DISCOVER_STRIP_LINKS') &&
+    exists('src/lib/productHighlights.ts') &&
+    read('src/lib/productHighlights.ts').includes('PRODUCT_HIGHLIGHTS'),
+  'Stable invite reuse + header/discover About, Rewards, Plans, Help + product highlights',
 )
 
 const failed = checks.filter((c) => !c.ok)

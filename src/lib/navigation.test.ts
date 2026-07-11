@@ -38,11 +38,13 @@ describe('navigation', () => {
     expect(ids).toContain('referrals')
   })
 
-  it('discover strip surfaces about and rewards outside settings', () => {
+  it('discover strip surfaces about, rewards, plans, and help outside settings', () => {
     const ids = DISCOVER_STRIP_LINKS.map((l) => l.id)
     expect(ids).toContain('about')
     expect(ids).toContain('referrals')
+    expect(ids).toContain('subscription')
+    expect(ids).toContain('help')
     const ownerLinks = DISCOVER_STRIP_LINKS.filter((l) => l.roles.includes('property_owner'))
-    expect(ownerLinks.length).toBeGreaterThanOrEqual(2)
+    expect(ownerLinks.length).toBeGreaterThanOrEqual(4)
   })
 })

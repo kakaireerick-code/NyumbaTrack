@@ -7,6 +7,7 @@ import { validatePortalSignIn, showDemoCredentials, GENERIC_AUTH_ERROR } from '.
 import { isDeployedApp } from '../lib/environment'
 import { getBuildInfo } from '../lib/buildInfo'
 import { inputCls, btnPrimary } from '../lib/formStyles'
+import ProductHighlights from '../components/ProductHighlights'
 
 export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
   const [mode, setMode] = useState(initialMode === 'signup' ? 'register-owner' : 'signin')
@@ -173,6 +174,8 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
         <p className="text-xs text-gray-400 mt-4 text-center">
           {showDemoCredentials() ? 'Demo owner: owner@demo.com / owner123' : 'Property owner access only'}
         </p>
+
+        <ProductHighlights currentRole="property_owner" surface="login" variant="login" maxItems={4} />
       </div>
     </div>
   )

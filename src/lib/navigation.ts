@@ -26,8 +26,9 @@ export type MoreToolLink = { id: PageId; label: string; description: string }
 export type DiscoverStripLink = {
   id: PageId
   label: string
+  shortLabel: string
   blurb: string
-  icon: 'info' | 'gift' | 'heart'
+  icon: 'info' | 'gift' | 'heart' | 'card' | 'help'
   roles: Array<'property_owner' | 'tenant' | 'caretaker'>
 }
 
@@ -36,6 +37,7 @@ export const DISCOVER_STRIP_LINKS: DiscoverStripLink[] = [
   {
     id: 'about',
     label: 'About NyumbaTrack',
+    shortLabel: 'About',
     blurb: 'What this app is and who it is for',
     icon: 'info',
     roles: ['property_owner', 'tenant', 'caretaker'],
@@ -43,9 +45,26 @@ export const DISCOVER_STRIP_LINKS: DiscoverStripLink[] = [
   {
     id: 'referrals',
     label: 'Partner Rewards',
+    shortLabel: 'Rewards',
     blurb: 'Refer landlords and earn free subscription months',
     icon: 'gift',
     roles: ['property_owner'],
+  },
+  {
+    id: 'subscription',
+    label: 'Plans & Billing',
+    shortLabel: 'Plans',
+    blurb: '14-day trial, MoMo billing, yearly savings',
+    icon: 'card',
+    roles: ['property_owner'],
+  },
+  {
+    id: 'help',
+    label: 'Help & guides',
+    shortLabel: 'Help',
+    blurb: 'Manuals, tours, and step-by-step workflows',
+    icon: 'help',
+    roles: ['property_owner', 'tenant', 'caretaker'],
   },
 ]
 

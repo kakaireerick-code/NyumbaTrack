@@ -58,7 +58,7 @@ export default function Header({
         </div>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {onNavigate &&
-            discoverLinks.map(({ id, label }) => (
+            discoverLinks.map(({ id, shortLabel, label }) => (
               <button
                 key={id}
                 type="button"
@@ -70,7 +70,7 @@ export default function Header({
                 }`}
                 title={label}
               >
-                {id === 'referrals' ? 'Rewards' : 'About'}
+                {shortLabel || (id === 'referrals' ? 'Rewards' : 'About')}
               </button>
             ))}
           {notificationInbox}
