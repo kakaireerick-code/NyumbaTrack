@@ -44,10 +44,11 @@ const main = async () => {
     if (login.text.includes('404') && login.text.includes('Page not found')) {
       fail('login', '/login returns SPA 404 — wrong deployment')
     } else if (
-      login.text.includes('Sign in to manage your rental portfolio') ||
+      login.text.includes('Welcome back') ||
+      login.text.includes('Sign in to manage your properties') ||
       login.text.includes('NyumbaTrack')
     ) {
-      pass('login', '/login serves owner portal')
+      pass('login', '/login serves Welcome back owner portal')
     } else {
       fail('login', '/login missing owner sign-in copy')
     }

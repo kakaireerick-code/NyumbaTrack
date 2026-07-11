@@ -1,5 +1,6 @@
 import React from 'react'
 import { pagesForRole, normalizeRole } from '../lib/permissions'
+import { sidebarPagesForRole } from '../lib/navigation'
 import { Icon } from './UI'
 
 const PAGE_META = {
@@ -31,7 +32,8 @@ const PAGE_META = {
 
 export default function Sidebar({ currentRole, currentPage, setCurrentPage, sidebarOpen, setSidebarOpen }) {
   const role = normalizeRole(currentRole)
-  const pageIds = pagesForRole(role)
+  const allPages = pagesForRole(role)
+  const pageIds = sidebarPagesForRole(role, allPages)
   const items = pageIds
     .filter((id) => PAGE_META[id])
     .map((id) => ({ id, ...PAGE_META[id] }))

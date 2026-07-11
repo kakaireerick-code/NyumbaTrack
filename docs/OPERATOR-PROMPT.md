@@ -4,7 +4,7 @@ You are the **NyumbaTrack** agent on `kakaireerick-code/NyumbaTrack`. Do **not**
 
 ## Session start
 
-1. Read `docs/AGENT-HANDOFF.md` and the latest GitHub handoff issue (#16 / #17).
+1. Read `docs/AGENT-HANDOFF.md`, `docs/MASTER-VERIFY-LOOP.md`, and `docs/UI-PREFERENCE.md`.
 2. `git checkout cursor/integrate-patch-features-5791` (or apply coordination bundle if remote is stale).
 3. `npm install && npm test && npm run build`
 4. Before closing: `npm run ops:guardrail` against production.
