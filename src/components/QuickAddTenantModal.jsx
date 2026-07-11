@@ -1,15 +1,21 @@
 import React, { useState } from 'react'
+import { Copy, Link2 } from 'lucide-react'
 import { Modal, LoadingButton } from './UI'
 import GuidancePanel from './GuidancePanel'
 import { buildQuickTenant, assignTenantToUnit } from '../lib/tenantData'
-import { generateInviteCode } from '../lib/invites'
+import {
+  getOrCreateTenantInvite,
+  getJoinUrl,
+  getShareTemplate,
+  pushInviteToCloud,
+} from '../lib/invites'
 import { isoToday } from '../lib/dates'
 
 const QUICK_GUIDANCE = {
   variant: 'info',
   headline: 'No written agreement yet?',
   detail: "Don't have a tenancy agreement? You can still add the tenant and upload documents later.",
-  nextSteps: ['Enter name and phone if you have them', 'Save and share the invite code with your tenant'],
+  nextSteps: ['Enter name and phone if you have them', 'Save and copy — the tenant join link copies automatically'],
 }
 
 export default function QuickAddTenantModal({
@@ -17,6 +23,8 @@ export default function QuickAddTenantModal({
   onClose,
   unit,
   buildingName,
+  building,
+  ownerId,
   onSave,
   showToast,
 }) {
@@ -28,13 +36,28 @@ export default function QuickAddTenantModal({
   })
   const [loading, setLoading] = useState(false)
   const [inviteCode, setInviteCode] = useState(null)
+  const [inviteLink, setInviteLink] = useState('')
+  const [inviteTemplate, setInviteTemplate] = useState('')
 
   if (!open || !unit) return null
 
+  const copyText = async (text, label) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      showToast?.(`${label} copied`, 'success')
+    } catch {
+      showToast?.('Copy failed — select and copy manually', 'error')
+    }
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (!ownerId) {
+      showToast?.('Sign in as property owner first', 'error')
+      return
+    }
     setLoading(true)
-    setTimeout(() => {
+    setTimeout(async () => {
       const rent = parseInt(form.monthlyRent, 10) || Number(unit.monthlyRent) || 0
       const tenant = buildQuickTenant(unit, {
         name: form.name,
@@ -42,18 +65,50 @@ export default function QuickAddTenantModal({
         monthlyRent: rent,
         moveInDate: form.moveInDate || undefined,
       })
-      const code = generateInviteCode()
+      const inv = getOrCreateTenantInvite(
+        ownerId,
+        String(unit.buildingId),
+        String(unit.id),
+        unit.inviteCode,
+      )
+      const code = inv.code
+      const link = getJoinUrl('tenant', code)
+      const template = getShareTemplate('tenant', code)
       const updatedUnit = assignTenantToUnit({ ...unit, inviteCode: code }, String(tenant.id), code)
+
+      pushInviteToCloud(inv, {
+        unitNumber: unit?.unitNumber,
+        buildingName: building?.name || buildingName,
+        monthlyRent: rent,
+        depositAmount: unit?.depositAmount,
+        rentDueDay: unit?.rentDueDay,
+      })
+
       onSave?.({ tenant, unit: updatedUnit, inviteCode: code })
       setInviteCode(code)
-      showToast?.('Tenant saved. Share the invite code when ready.', 'success')
+      setInviteLink(link)
+      setInviteTemplate(template)
+
+      try {
+        await navigator.clipboard.writeText(link)
+        showToast?.('Tenant saved — join link copied to clipboard', 'success')
+      } catch {
+        showToast?.('Tenant saved. Copy the link below to share.', 'success')
+      }
       setLoading(false)
     }, 200)
   }
 
   const finish = () => {
     setInviteCode(null)
-    setForm({ name: '', phone: '', monthlyRent: unit?.monthlyRent ? String(unit.monthlyRent) : '', moveInDate: isoToday() })
+    setInviteLink('')
+    setInviteTemplate('')
+    setForm({
+      name: '',
+      phone: '',
+      monthlyRent: unit?.monthlyRent ? String(unit.monthlyRent) : '',
+      moveInDate: isoToday(),
+    })
     onClose()
   }
 
@@ -69,7 +124,31 @@ export default function QuickAddTenantModal({
             <p className="text-xs text-gray-500 mb-1">Invite code for your tenant</p>
             <p className="text-2xl font-mono font-bold tracking-widest">{inviteCode}</p>
           </div>
-          <p className="text-sm text-gray-500">Share by SMS or WhatsApp. They register free under Tenant → Register.</p>
+          <p className="text-sm text-gray-500">Share by SMS or WhatsApp. They register free via your link.</p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <button
+              type="button"
+              onClick={() => copyText(inviteLink, 'Link')}
+              className="tap-target flex items-center gap-1 px-3 py-2 text-xs bg-brand text-white rounded-lg"
+            >
+              <Link2 size={14} /> Copy link
+            </button>
+            <button
+              type="button"
+              onClick={() => copyText(inviteCode, 'Code')}
+              className="tap-target flex items-center gap-1 px-3 py-2 text-xs border rounded-lg"
+            >
+              <Copy size={14} /> Copy code
+            </button>
+            <button
+              type="button"
+              onClick={() => copyText(inviteTemplate, 'Message')}
+              className="tap-target flex items-center gap-1 px-3 py-2 text-xs border rounded-lg"
+            >
+              <Copy size={14} /> Copy message
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-400 break-all px-2">{inviteLink}</p>
           <button type="button" onClick={finish} className="px-4 py-2 bg-[#2d6a4f] text-white rounded">
             Done
           </button>
@@ -120,8 +199,12 @@ export default function QuickAddTenantModal({
             <button type="button" onClick={finish} className="px-4 py-2 border rounded text-sm">
               Cancel
             </button>
-            <LoadingButton loading={loading} className="px-4 py-2 bg-[#2d6a4f] text-white rounded text-sm">
-              Save and invite
+            <LoadingButton
+              type="submit"
+              loading={loading}
+              className="px-4 py-2 bg-[#2d6a4f] text-white rounded text-sm"
+            >
+              Save and copy
             </LoadingButton>
           </div>
         </form>

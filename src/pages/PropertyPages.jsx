@@ -619,6 +619,8 @@ export function UnitsPage({
         open={!!quickAddUnit}
         unit={quickAddUnit}
         buildingName={quickAddUnit ? getBuildingName(quickAddUnit.buildingId) : ''}
+        building={quickAddUnit ? buildings.find((b) => b.id === quickAddUnit.buildingId) : null}
+        ownerId={activeOwnerId}
         onClose={() => setQuickAddUnit(null)}
         onSave={handleQuickSave}
         showToast={showToast}

@@ -38,6 +38,7 @@ export type GoogleProfile = {
 }
 
 const USERS_KEY = 'rent_app_users'
+const LOGIN_RESET_KEY = 'nt_login_reset_20260711_v8'
 const LOCK_THRESHOLD = 5
 const LOCK_MINUTES = 15
 
@@ -47,7 +48,17 @@ const simpleHash = (s: string): string => {
   return `h${Math.abs(h)}`
 }
 
-export const getUsers = (): AppUser[] => safeGet<AppUser[]>(USERS_KEY, [])
+/** One-time v8 — wipe browser-stored accounts so everyone re-registers after deploy */
+const runLoginResetV8 = (): void => {
+  if (safeGet<boolean>(LOGIN_RESET_KEY, false)) return
+  safeSet(USERS_KEY, [])
+  safeSet(LOGIN_RESET_KEY, true)
+}
+
+export const getUsers = (): AppUser[] => {
+  runLoginResetV8()
+  return safeGet<AppUser[]>(USERS_KEY, [])
+}
 
 export const saveUsers = (users: AppUser[]): void => safeSet(USERS_KEY, users)
 

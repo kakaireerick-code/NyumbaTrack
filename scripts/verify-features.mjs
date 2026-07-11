@@ -284,6 +284,21 @@ confirm(
   '15% credits + step tracker + sidebar Plans/Rewards/Messages/Help',
 )
 
+// F25 Quick add submit + login reset v8
+const quickAddModal = exists('src/components/QuickAddTenantModal.jsx') ? read('src/components/QuickAddTenantModal.jsx') : ''
+const authFile = exists('src/lib/auth.ts') ? read('src/lib/auth.ts') : ''
+const uiBtn = exists('src/components/UI.jsx') ? read('src/components/UI.jsx') : ''
+confirm(
+  'F25',
+  'Quick add Save and copy + login reset v8',
+  quickAddModal.includes('Save and copy') &&
+    quickAddModal.includes('type="submit"') &&
+    quickAddModal.includes('getOrCreateTenantInvite') &&
+    authFile.includes('nt_login_reset_20260711_v8') &&
+    uiBtn.includes('type={type}'),
+  'Submit works + stable invite copy + one-time login wipe',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -295,6 +310,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F24 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F25 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)

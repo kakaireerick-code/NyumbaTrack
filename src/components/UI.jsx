@@ -56,9 +56,9 @@ export function EmptyState({ message }) {
   )
 }
 
-export function LoadingButton({ loading, children, className = '', ...props }) {
+export function LoadingButton({ loading, children, className = '', type = 'button', ...props }) {
   return (
-    <button type="button" disabled={loading} className={`${className} disabled:opacity-50`} {...props}>
+    <button type={type} disabled={loading} className={`${className} disabled:opacity-50`} {...props}>
       {loading ? 'Loading...' : children}
     </button>
   )
