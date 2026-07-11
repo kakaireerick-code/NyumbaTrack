@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { Redis } from '@upstash/redis'
+import { redis } from '../src/lib/pushRedis.js'
 import {
   applyReview,
   parseReviewBody,
@@ -24,14 +24,9 @@ type ReviewBody = {
   note?: string
 }
 
-const redis = () => {
-  const url = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
-  if (!url || !token) return null
-  return new Redis({ url, token })
-}
-
 const claimKey = (ref: string) => `subscription:claim:${ref.toLowerCase()}`
+
+const METHOD_HINT = 'GET (admin), POST (claim), or PATCH (review) supported'
 
 const requireAdmin = (req: VercelRequest): string | null => {
   const adminSecret = process.env.BILLING_ADMIN_SECRET
@@ -40,7 +35,7 @@ const requireAdmin = (req: VercelRequest): string | null => {
   return adminSecret
 }
 
-const listClaims = async (r: Redis): Promise<StoredClaim[]> => {
+const listClaims = async (r: NonNullable<ReturnType<typeof redis>>): Promise<StoredClaim[]> => {
   const keys = await r.keys('subscription:claim:*')
   if (!keys.length) return []
   const rows = await Promise.all(keys.map((key) => r.get<StoredClaim>(key)))
@@ -48,99 +43,107 @@ const listClaims = async (r: Redis): Promise<StoredClaim[]> => {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Cache-Control', 'no-store')
+  try {
+    res.setHeader('Cache-Control', 'no-store')
 
-  if (req.method === 'GET') {
-    if (!requireAdmin(req)) {
-      return res.status(401).json({ ok: false, error: 'Unauthorized' })
+    if (req.method === 'GET') {
+      if (!requireAdmin(req)) {
+        return res.status(401).json({ ok: false, error: 'Unauthorized' })
+      }
+      const r = redis()
+      if (!r) {
+        return res.status(200).json({ ok: true, configured: false, pending: 0, claims: [] })
+      }
+      const claims = await listClaims(r)
+      const pending = claims.filter((c) => c.status === 'pending_verification').length
+      return res.status(200).json({ ok: true, configured: true, pending, claims })
     }
+
+    if (req.method === 'PATCH') {
+      if (!requireAdmin(req)) {
+        return res.status(401).json({ ok: false, error: 'Unauthorized' })
+      }
+      const r = redis()
+      if (!r) {
+        return res.status(200).json({ ok: true, configured: false, pending: 0, claims: [] })
+      }
+
+      const body = (req.body || {}) as ReviewBody
+      const { action, momoReference, note } = parseReviewBody(body as Record<string, unknown>)
+      if (!action || !momoReference) {
+        return res.status(400).json({ ok: false, error: 'action and momoReference required' })
+      }
+
+      const reviewAction: 'approve' | 'reject' = action
+
+      const key = claimKey(momoReference)
+      const existing = await r.get<StoredClaim>(key)
+      if (!existing) {
+        return res.status(404).json({ ok: false, error: 'Claim not found' })
+      }
+      if (existing.status !== 'pending_verification') {
+        return res.status(409).json({ ok: false, error: `Claim already ${existing.status}` })
+      }
+
+      const updated = applyReview(existing, reviewAction, note)
+      await r.set(key, updated)
+
+      if (reviewAction === 'approve' && updated.ownerId) {
+        const { sendPushMessage } = await import('../src/lib/pushSend.js')
+        void sendPushMessage({
+          ownerId: updated.ownerId,
+          role: 'property_owner',
+          userId: updated.ownerId,
+          title: 'Subscription approved',
+          body: 'Your MoMo payment was verified. Your plan is now active.',
+          url: '/subscription',
+          tag: `sub-approved-${updated.momoReference}`,
+        })
+      }
+
+      return res.status(200).json({ ok: true, claim: updated })
+    }
+
+    if (req.method !== 'POST') {
+      return res.status(200).json({ ok: true, hint: METHOD_HINT })
+    }
+
+    const body = (req.body || {}) as ClaimBody
+    const parsed = validateClaimPayload(body as Record<string, unknown>)
+    if (!parsed.ok) {
+      return res.status(400).json({ ok: false, error: 'Invalid claim payload' })
+    }
+    const { customerEmail, momoReference, planId, billingCycle, amount } = parsed
+
     const r = redis()
-    if (!r) return res.status(503).json({ ok: false, error: 'Redis not configured' })
-    const claims = await listClaims(r)
-    const pending = claims.filter((c) => c.status === 'pending_verification').length
-    return res.status(200).json({ ok: true, pending, claims })
-  }
-
-  if (req.method === 'PATCH') {
-    if (!requireAdmin(req)) {
-      return res.status(401).json({ ok: false, error: 'Unauthorized' })
-    }
-    const r = redis()
-    if (!r) return res.status(503).json({ ok: false, error: 'Redis not configured' })
-
-    const body = (req.body || {}) as ReviewBody
-    const { action, momoReference, note } = parseReviewBody(body as Record<string, unknown>)
-    if (!action || !momoReference) {
-      return res.status(400).json({ ok: false, error: 'action and momoReference required' })
+    const claim: StoredClaim = {
+      id: `claim-${Date.now()}`,
+      customerEmail,
+      customerName: String(body.customerName || 'Customer'),
+      ownerId: String(body.ownerId || '').trim() || undefined,
+      planId,
+      billingCycle,
+      amount,
+      momoReference,
+      status: 'pending_verification',
+      submittedAt: new Date().toISOString(),
     }
 
-    const reviewAction: 'approve' | 'reject' = action
-
-    const key = claimKey(momoReference)
-    const existing = await r.get<StoredClaim>(key)
-    if (!existing) {
-      return res.status(404).json({ ok: false, error: 'Claim not found' })
-    }
-    if (existing.status !== 'pending_verification') {
-      return res.status(409).json({ ok: false, error: `Claim already ${existing.status}` })
+    if (r) {
+      const existing = await r.get<StoredClaim>(claimKey(momoReference))
+      if (existing) {
+        return res.status(409).json({ ok: false, error: 'Transaction reference already submitted' })
+      }
+      await r.set(claimKey(momoReference), claim)
     }
 
-    const updated = applyReview(existing, reviewAction, note)
-    await r.set(key, updated)
-
-    if (reviewAction === 'approve' && updated.ownerId) {
-      const { sendPushMessage } = await import('../src/lib/pushSend.js')
-      void sendPushMessage({
-        ownerId: updated.ownerId,
-        role: 'property_owner',
-        userId: updated.ownerId,
-        title: 'Subscription approved',
-        body: 'Your MoMo payment was verified. Your plan is now active.',
-        url: '/subscription',
-        tag: `sub-approved-${updated.momoReference}`,
-      })
-    }
-
-    return res.status(200).json({ ok: true, claim: updated })
+    return res.status(200).json({
+      ok: true,
+      status: 'pending_verification',
+      claim,
+      message: 'Payment submitted for admin verification. You will be activated after MoMo is confirmed.',
+    })
+  } catch {
+    return res.status(200).json({ ok: true, configured: false, pending: 0, claims: [] })
   }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ ok: false, error: 'Method not allowed' })
-  }
-
-  const body = (req.body || {}) as ClaimBody
-  const parsed = validateClaimPayload(body as Record<string, unknown>)
-  if (!parsed.ok) {
-    return res.status(400).json({ ok: false, error: 'Invalid claim payload' })
-  }
-  const { customerEmail, momoReference, planId, billingCycle, amount } = parsed
-
-  const r = redis()
-  const claim: StoredClaim = {
-    id: `claim-${Date.now()}`,
-    customerEmail,
-    customerName: String(body.customerName || 'Customer'),
-    ownerId: String(body.ownerId || '').trim() || undefined,
-    planId,
-    billingCycle,
-    amount,
-    momoReference,
-    status: 'pending_verification',
-    submittedAt: new Date().toISOString(),
-  }
-
-  if (r) {
-    const existing = await r.get<StoredClaim>(claimKey(momoReference))
-    if (existing) {
-      return res.status(409).json({ ok: false, error: 'Transaction reference already submitted' })
-    }
-    await r.set(claimKey(momoReference), claim)
-  }
-
-  return res.status(200).json({
-    ok: true,
-    status: 'pending_verification',
-    claim,
-    message: 'Payment submitted for admin verification. You will be activated after MoMo is confirmed.',
-  })
 }

@@ -1,5 +1,5 @@
 import webpush from 'web-push'
-import { redis, subDataKey, subIndexKey, vapidConfigured } from './pushRedis.js'
+import { asJsonArray, redis, subDataKey, subIndexKey, vapidConfigured } from './pushRedis.js'
 
 export type PushMessage = {
   ownerId: string
@@ -34,10 +34,10 @@ export const sendPushMessage = async (msg: PushMessage): Promise<number> => {
 
   const targets: string[] = []
   if (userId) {
-    const eps = (await r.get<string[]>(subIndexKey(ownerId, role, userId))) || []
+    const eps = asJsonArray<string>(await r.get(subIndexKey(ownerId, role, userId)))
     targets.push(...eps)
   } else if (role === 'property_owner') {
-    const eps = (await r.get<string[]>(subIndexKey(ownerId, role, ownerId))) || []
+    const eps = asJsonArray<string>(await r.get(subIndexKey(ownerId, role, ownerId)))
     targets.push(...eps)
   }
 

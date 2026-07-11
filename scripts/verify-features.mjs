@@ -182,6 +182,25 @@ confirm(
   'SETUP-VAPID.ps1 + upload:vapid + OWNER-SYNC hint',
 )
 
+// F20 API uptime probe safety — no 503/405 on GET probes
+const pushVapidApi = exists('api/push-vapid.ts') ? read('api/push-vapid.ts') : ''
+const pushSubApi = exists('api/push-subscribe.ts') ? read('api/push-subscribe.ts') : ''
+const pushNotifyApi = exists('api/push-notify.ts') ? read('api/push-notify.ts') : ''
+const inviteApiProbe = exists('api/invite.ts') ? read('api/invite.ts') : ''
+const guardrail = exists('scripts/ops-guardrail.mjs') ? read('scripts/ops-guardrail.mjs') : ''
+confirm(
+  'F20',
+  'API uptime probe safety',
+  pushVapidApi.includes('configured: false') &&
+    pushSubApi.includes("req.method === 'GET'") &&
+    !pushSubApi.includes('status(405)') &&
+    pushNotifyApi.includes('hint') &&
+    inviteApiProbe.includes('configured: false') &&
+    guardrail.includes('api/push-vapid') &&
+    pkg.scripts['test:api-smoke'],
+  '200 + configured:false on probes, api-smoke + guardrail probes',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -193,6 +212,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F18 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F20 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)
