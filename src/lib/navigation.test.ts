@@ -12,6 +12,7 @@ describe('navigation', () => {
   it('more tools includes billing and import', () => {
     const ids = MORE_TOOLS_LINKS.map((t) => t.id)
     expect(ids).toContain('subscription')
+    expect(ids).toContain('billing-admin')
     expect(ids).toContain('data-import')
     expect(ids).toContain('guided')
   })

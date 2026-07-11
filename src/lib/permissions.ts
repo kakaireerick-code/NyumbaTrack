@@ -23,6 +23,7 @@ export type PageId =
   | 'legal-notices'
   | 'settings'
   | 'subscription'
+  | 'billing-admin'
   | 'blacklist'
   | 'defaulter-list'
   | 'help'
@@ -86,7 +87,7 @@ const OWNER_PAGES: PageId[] = [
   'dashboard', 'buildings', 'units', 'vacancy', 'tenants', 'lease-manager',
   'payments', 'balance-tracker', 'deposits', 'utilities', 'reminders',
   'maintenance', 'reports', 'documents', 'legal-notices', 'settings',
-  'subscription', 'blacklist', 'defaulter-list', 'help', 'guided', 'assistant',
+  'subscription', 'billing-admin', 'blacklist', 'defaulter-list', 'help', 'guided', 'assistant',
   'data-import', 'messages', 'receipt-view',
 ]
 
@@ -106,7 +107,7 @@ const ROLE_PAGE_MAP: Record<Role, PageId[]> = {
 }
 
 export const TENANT_BLOCKED_PAGES: string[] = [
-  'subscription', 'data-import', 'buildings', 'units', 'tenants', 'reports',
+  'subscription', 'billing-admin', 'data-import', 'buildings', 'units', 'tenants', 'reports',
   'dashboard', 'payments', 'balance-tracker', 'deposits', 'vacancy', 'lease-manager',
   'utilities', 'reminders', 'maintenance', 'documents', 'legal-notices', 'settings',
   'blacklist', 'defaulter-list', 'messages',

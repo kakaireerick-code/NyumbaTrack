@@ -123,6 +123,18 @@ confirm(
   'ops:guardrail npm script',
 )
 
+// F15 Billing admin panel
+const billingAdminPage = exists('src/pages/BillingAdminPage.jsx') ? read('src/pages/BillingAdminPage.jsx') : ''
+const subApi = exists('api/subscription.ts') ? read('api/subscription.ts') : ''
+confirm(
+  'F15',
+  'Billing admin panel',
+  billingAdminPage.includes('Billing admin') &&
+    subApi.includes("req.method === 'PATCH'") &&
+    exists('src/lib/billingAdmin.ts'),
+  'BillingAdminPage + MoMo approval API',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -134,6 +146,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F14 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F15 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)

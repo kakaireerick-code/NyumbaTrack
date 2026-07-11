@@ -17,6 +17,7 @@ export type MoreToolLink = { id: PageId; label: string; description: string }
 /** Advanced tools — reachable from Settings → More tools */
 export const MORE_TOOLS_LINKS: MoreToolLink[] = [
   { id: 'subscription', label: 'Plans & Billing', description: 'MoMo subscription, yearly plans, invoices' },
+  { id: 'billing-admin', label: 'Billing admin', description: 'Approve MoMo payments (admin email only)' },
   { id: 'data-import', label: 'Data Import', description: 'Excel/CSV/Word tenant import' },
   { id: 'guided', label: 'Guided Steps', description: 'Step-by-step workflows' },
   { id: 'assistant', label: 'Ask Assistant', description: 'In-app help assistant' },
