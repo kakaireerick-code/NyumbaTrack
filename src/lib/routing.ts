@@ -2,7 +2,7 @@
 
 import type { Role } from './permissions'
 
-export type EntryKind = 'owner-login' | 'owner-signup' | 'join-tenant' | 'join-caretaker' | 'receipt'
+export type EntryKind = 'owner-login' | 'owner-signup' | 'join-tenant' | 'join-caretaker' | 'receipt' | 'billing-admin'
 
 export type AppEntry = {
   kind: EntryKind
@@ -45,6 +45,10 @@ export const parseEntryPath = (pathname = window.location.pathname): AppEntry =>
     return { kind: 'owner-signup', inviteCode: '', receiptId: '' }
   }
 
+  if (path === '/billing-admin') {
+    return { kind: 'billing-admin', inviteCode: '', receiptId: '' }
+  }
+
   if (path === '/login' || path === '/owner' || path === '/') {
     return { kind: 'owner-login', inviteCode: '', receiptId: '' }
   }
@@ -77,6 +81,8 @@ export const getCaretakerJoinPath = (code?: string): string =>
 export const getOwnerLoginPath = (): string => '/login'
 
 export const getOwnerSignupPath = (): string => '/owner/signup'
+
+export const getBillingAdminPath = (): string => '/billing-admin'
 
 export const getReceiptPath = (receiptId: string): string =>
   `/receipt/${encodeURIComponent(receiptId)}`

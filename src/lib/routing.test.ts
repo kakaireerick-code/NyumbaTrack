@@ -14,6 +14,11 @@ describe('routing', () => {
     expect(entry.inviteCode).toBe('CTR-7F2G')
   })
 
+  it('parses billing admin deep link', () => {
+    expect(parseEntryPath('/billing-admin').kind).toBe('billing-admin')
+    expect(parseEntryPath('/billing-admin/').kind).toBe('billing-admin')
+  })
+
   it('parses owner login routes', () => {
     expect(parseEntryPath('/login').kind).toBe('owner-login')
     expect(parseEntryPath('/owner').kind).toBe('owner-login')

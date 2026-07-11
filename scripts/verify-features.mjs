@@ -126,13 +126,15 @@ confirm(
 // F15 Billing admin panel
 const billingAdminPage = exists('src/pages/BillingAdminPage.jsx') ? read('src/pages/BillingAdminPage.jsx') : ''
 const subApi = exists('api/subscription.ts') ? read('api/subscription.ts') : ''
+const routing = exists('src/lib/routing.ts') ? read('src/lib/routing.ts') : ''
 confirm(
   'F15',
   'Billing admin panel',
   billingAdminPage.includes('Billing admin') &&
     subApi.includes("req.method === 'PATCH'") &&
-    exists('src/lib/billingAdmin.ts'),
-  'BillingAdminPage + MoMo approval API',
+    exists('src/lib/billingAdmin.ts') &&
+    routing.includes("'billing-admin'"),
+  'BillingAdminPage + MoMo approval API + /billing-admin route',
 )
 
 const failed = checks.filter((c) => !c.ok)
