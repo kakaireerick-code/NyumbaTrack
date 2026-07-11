@@ -18,4 +18,14 @@ describe('assistant navigation offers', () => {
     const r = getAssistantResponse('something random xyz', { role: 'tenant' })
     expect(r.offerPageId).toBe('help')
   })
+
+  it('offers referrals for partner rewards questions', () => {
+    const r = getAssistantResponse('how does partner rewards work', { role: 'property_owner' })
+    expect(r.offerPageId).toBe('referrals')
+  })
+
+  it('offers about page for product questions', () => {
+    const r = getAssistantResponse('what is nyumbatrack', { role: 'tenant' })
+    expect(r.offerPageId).toBe('about')
+  })
 })

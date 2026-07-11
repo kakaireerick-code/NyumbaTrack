@@ -115,6 +115,30 @@ export const getPageGuidance = (
         nextSteps: ['Unread messages show in the header badge', 'Click a thread to reply'],
       }
     }
+    if (pageId === 'about') {
+      return {
+        variant: 'info',
+        headline: 'Built for Uganda landlords',
+        detail: 'NyumbaTrack keeps rent, tenants, and MoMo payments in one place. Tenants and caretakers get their own simple portals.',
+        nextSteps: ['Read how roles stay private', 'Open Partner Rewards to refer a fellow landlord'],
+      }
+    }
+    if (pageId === 'referrals') {
+      return {
+        variant: 'success',
+        headline: 'Partner Rewards',
+        detail: 'Share your personal link. When another owner subscribes, you bank free months toward your next renewal.',
+        nextSteps: ['Copy your referral link', 'Send the WhatsApp template', 'Track banked months on Plans & Billing'],
+      }
+    }
+    if (pageId === 'subscription') {
+      return {
+        variant: 'neutral',
+        headline: 'Plans for property owners only',
+        detail: 'Tenants join free. Pick monthly or yearly billing — Partner Rewards discounts stack when you refer others.',
+        nextSteps: ['Compare plans below', 'Pay via MoMo then enter your reference', 'Open Partner Rewards for your invite link'],
+      }
+    }
     if (demoMode) {
       return {
         variant: 'warning',
@@ -156,6 +180,25 @@ export const getPageGuidance = (
         headline: 'We are here to help',
         detail: 'Everything in this app is about your unit only. You never need to call the developer.',
         nextSteps: ['Read the FAQ', 'Ask the assistant a question', 'Restart the tour from Help'],
+      }
+    }
+    if (pageId === 'about') {
+      return {
+        variant: 'info',
+        headline: 'Your tenant portal',
+        detail: 'Your landlord invited you to see your rent, lease, and messages — not other tenants or owner finances.',
+        nextSteps: ['Check Home for what you owe', 'Use Messages for rent questions', 'Open Help if something looks wrong'],
+      }
+    }
+  }
+
+  if (r === 'caretaker') {
+    if (pageId === 'about') {
+      return {
+        variant: 'info',
+        headline: 'Caretaker view only',
+        detail: 'You help with units, vacancy, and repairs. Rent amounts and owner balances are hidden from your role.',
+        nextSteps: ['Log maintenance when tenants call', 'Check vacancy before showings', 'Use Help if access looks wrong'],
       }
     }
   }
