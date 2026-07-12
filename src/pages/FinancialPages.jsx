@@ -9,7 +9,7 @@ import {
   downloadText,
   parseMoMoCSV,
 } from '../utils/helpers'
-import { generateReceiptNo } from '../utils/receipts'
+import { generateReceiptNo, generateUniqueReceiptId } from '../utils/receipts'
 import { CHECKLIST_ITEMS } from '../data/mockData'
 import { Modal, Badge, EmptyState, LoadingButton, StatCard } from '../components/UI'
 
@@ -63,6 +63,7 @@ function MomoReconciliation({ payments, tenants, units, setPayments, showToast }
       return
     }
     const tenant = lookupTenant(tenants, tenantId)
+    const receiptNo = generateReceiptNo(payments)
     const payment = {
       id: `p-momo-${Date.now()}`,
       tenantId,
@@ -76,7 +77,8 @@ function MomoReconciliation({ payments, tenants, units, setPayments, showToast }
       type: 'rent',
       notes: 'MoMo reconciliation',
       receiptSent: true,
-      receiptNo: generateReceiptNo(payments),
+      receiptNo,
+      receiptId: generateUniqueReceiptId(receiptNo),
     }
     setPayments((prev) => [...prev, payment])
     setCsvRows((prev) => prev.filter((r) => r.id !== row.id))
@@ -242,6 +244,7 @@ export function PaymentsPage({
     }
     setSaving(true)
     const tenant = lookupTenant(tenants, form.tenantId)
+    const receiptNo = generateReceiptNo(payments)
     const payment = {
       id: `p-${Date.now()}`,
       tenantId: form.tenantId,
@@ -255,7 +258,8 @@ export function PaymentsPage({
       type: 'rent',
       notes: form.notes,
       receiptSent: true,
-      receiptNo: generateReceiptNo(payments),
+      receiptNo,
+      receiptId: generateUniqueReceiptId(receiptNo),
     }
     setPayments((prev) => [...prev, payment])
     setForm({

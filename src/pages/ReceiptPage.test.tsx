@@ -39,5 +39,6 @@ describe('ReceiptPage', () => {
     expect(container.querySelector('textarea')).toBeNull()
     expect(container.querySelector('[contenteditable="true"]')).toBeNull()
     expect(container.textContent).toMatch(/read only/i)
+    expect(container.textContent).toMatch(/Word/i)
   })
 })

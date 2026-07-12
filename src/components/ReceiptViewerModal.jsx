@@ -2,7 +2,7 @@ import React from 'react'
 import { Modal } from './UI'
 import { LoadingButton } from './UI'
 import PaymentReceipt from './PaymentReceipt'
-import { openReceiptDocument, downloadReceiptDocument, buildReceiptHtmlDocument } from '../utils/receipts'
+import { buildReceiptHtmlDocument, downloadReceiptDocument, openReceiptDocument } from '../utils/receipts'
 
 export default function ReceiptViewerModal({
   open,
@@ -38,7 +38,7 @@ export default function ReceiptViewerModal({
       </div>
 
       <p className="text-xs text-center text-gray-400 mt-3 mb-4">
-        This receipt opens as a read-only document — not an editable file.
+        This receipt opens in Word as a read-only document — not editable.
       </p>
 
       <div className="flex flex-wrap gap-2 justify-center">
@@ -47,7 +47,7 @@ export default function ReceiptViewerModal({
           className="px-4 py-2.5 bg-[#2d6a4f] text-white rounded-lg text-sm font-medium"
           onClick={handleOpenDocument}
         >
-          Open receipt
+          Open in Word
         </LoadingButton>
         <button
           type="button"

@@ -19,6 +19,8 @@ import { isBillingAdminEmail } from '../lib/billingAdmin'
 import { Badge, EmptyState, LoadingButton, StatCard } from '../components/UI'
 
 import { inputCls, btnPrimary, btnSecondary } from '../lib/formStyles'
+import { issueNotice, openNoticeInWord, downloadNoticeDocument } from '../utils/notices'
+import { getNoticeById } from '../lib/noticeStore'
 
 const LTA_SUMMARY = `Key tenant rights under Uganda's Landlord and Tenant Act 2019:
 - 2 months notice required for rent increases
@@ -401,6 +403,8 @@ export function LegalNoticesPage({
   settings,
   showToast,
   currentUser,
+  ownerId,
+  onOpenNotice,
 }) {
   const [noticeTab, setNoticeTab] = useState('warning')
   const [selectedTenant, setSelectedTenant] = useState('')
@@ -478,27 +482,67 @@ This notice is given in accordance with the 2-month advance notice requirement.
 Signed: ${settings.managerName || '_______________________'}
 Date: ${fmtDate(new Date())}` : ''
 
-  const logNotice = (type, tenantId) => {
+  const issueAndLogNotice = (type, tenantId, body) => {
     const t = lookupTenant(tenants, tenantId)
+    const u = lookupUnit(units, t?.unitId)
+    const b = lookupBuilding(buildings, t?.buildingId)
+    const followUp = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
+    const snapshot = issueNotice({
+      type,
+      body,
+      tenant: t,
+      unit: u,
+      building: b,
+      settings,
+      servedBy: currentUser?.name || 'Admin',
+      followUpDate: followUp,
+      ownerId,
+    })
     setNotices((prev) => [
       ...prev,
       {
         id: `n-${Date.now()}`,
+        noticeId: snapshot.noticeId,
+        noticeNo: snapshot.noticeNo,
         tenantId,
         unitId: t?.unitId,
         buildingId: t?.buildingId,
         type,
-        date: new Date().toISOString().split('T')[0],
-        servedBy: currentUser?.name || 'Admin',
-        followUpDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+        date: snapshot.servedAt,
+        servedBy: snapshot.servedBy,
+        followUpDate: followUp,
       },
     ])
-    showToast('Notice logged', 'success')
+    openNoticeInWord(snapshot)
+    showToast(`Notice ${snapshot.noticeNo} issued — read-only for recipient`, 'success')
+    return snapshot
+  }
+
+  const previewNoticeInWord = (type, body) => {
+    if (!tenant) return
+    const draft = {
+      noticeNo: 'DRAFT',
+      type,
+      body,
+      servedAt: new Date().toISOString().split('T')[0],
+      tenantName: `${tenant.firstName} ${tenant.lastName}`,
+      unitNumber: unit?.unitNumber || '—',
+      propertyName: building?.name || settings?.companyName || 'Property',
+      servedBy: currentUser?.name || 'Admin',
+      issuedBy: settings?.managerName || 'Property Manager',
+    }
+    openNoticeInWord(draft)
+  }
+
+  const logNotice = (type, tenantId, body) => {
+    issueAndLogNotice(type, tenantId, body)
   }
 
   const addManualNotice = () => {
     if (!manualNotice.tenantId) return
-    logNotice(manualNotice.type, manualNotice.tenantId)
+    const t = lookupTenant(tenants, manualNotice.tenantId)
+    const body = `${manualNotice.type}\n\nTo: ${t?.firstName} ${t?.lastName}\nDate: ${fmtDate(new Date())}\n\nThis notice has been recorded in Nyumba-track.`
+    issueAndLogNotice(manualNotice.type, manualNotice.tenantId, body)
     setManualNotice({ tenantId: '', type: 'Warning Letter', servedBy: 'Admin' })
   }
 
@@ -530,8 +574,8 @@ Date: ${fmtDate(new Date())}` : ''
         <div className="card p-4 space-y-4">
           <pre className="whitespace-pre-wrap text-sm bg-gray-50 dark:bg-gray-900 p-4 rounded max-h-96 overflow-y-auto">{warningLetter}</pre>
           <div className="flex gap-2 flex-wrap">
-            <button type="button" className={btnSecondary} onClick={() => downloadText(`warning-${tenant.id}.txt`, warningLetter)}>Download</button>
-            <button type="button" className={btnPrimary} onClick={() => logNotice('Warning Letter', tenant.id)}>Log Notice</button>
+            <button type="button" className={btnSecondary} onClick={() => previewNoticeInWord('Warning Letter', warningLetter)}>Preview in Word</button>
+            <button type="button" className={btnPrimary} onClick={() => logNotice('Warning Letter', tenant.id, warningLetter)}>Issue notice</button>
           </div>
         </div>
       )}
@@ -540,8 +584,8 @@ Date: ${fmtDate(new Date())}` : ''
         <div className="card p-4 space-y-4">
           <pre className="whitespace-pre-wrap text-sm bg-gray-50 dark:bg-gray-900 p-4 rounded max-h-96 overflow-y-auto">{lc1Notice}</pre>
           <div className="flex gap-2 flex-wrap">
-            <button type="button" className={btnSecondary} onClick={() => downloadText(`lc1-${tenant.id}.txt`, lc1Notice)}>Download</button>
-            <button type="button" className={btnPrimary} onClick={() => logNotice('LC1 Notice', tenant.id)}>Log Notice</button>
+            <button type="button" className={btnSecondary} onClick={() => previewNoticeInWord('LC1 Notice', lc1Notice)}>Preview in Word</button>
+            <button type="button" className={btnPrimary} onClick={() => logNotice('LC1 Notice', tenant.id, lc1Notice)}>Issue notice</button>
           </div>
         </div>
       )}
@@ -567,8 +611,8 @@ Date: ${fmtDate(new Date())}` : ''
             <>
               <pre className="whitespace-pre-wrap text-sm bg-gray-50 dark:bg-gray-900 p-4 rounded">{rentIncreaseLetter}</pre>
               <div className="flex gap-2 flex-wrap">
-                <button type="button" className={btnSecondary} onClick={() => downloadText(`rent-increase-${tenant.id}.txt`, rentIncreaseLetter)}>Download</button>
-                <button type="button" className={btnPrimary} onClick={() => logNotice('Rent Increase Notice', tenant.id)}>Log Notice</button>
+                <button type="button" className={btnSecondary} onClick={() => previewNoticeInWord('Rent Increase Notice', rentIncreaseLetter)}>Preview in Word</button>
+                <button type="button" className={btnPrimary} onClick={() => logNotice('Rent Increase Notice', tenant.id, rentIncreaseLetter)}>Issue notice</button>
               </div>
             </>
           )}
@@ -603,20 +647,36 @@ Date: ${fmtDate(new Date())}` : ''
                   <th className="p-2">Notice Type</th>
                   <th className="p-2">Served By</th>
                   <th className="p-2">Follow-up</th>
+                  <th className="p-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {notices.map((n) => {
                   const t = lookupTenant(tenants, n.tenantId)
                   const u = lookupUnit(units, n.unitId)
+                  const snapshot = n.noticeId ? getNoticeById(n.noticeId) : null
                   return (
                     <tr key={`notice-track-${n.id}`} className="border-b dark:border-gray-700">
                       <td className="p-2">{fmtDate(n.date)}</td>
                       <td className="p-2">{t ? `${t.firstName} ${t.lastName}` : '—'}</td>
                       <td className="p-2">{u?.unitNumber}</td>
-                      <td className="p-2">{n.type}</td>
+                      <td className="p-2">{n.type}{n.noticeNo ? ` (${n.noticeNo})` : ''}</td>
                       <td className="p-2">{n.servedBy}</td>
                       <td className="p-2">{fmtDate(n.followUpDate)}</td>
+                      <td className="p-2">
+                        {snapshot && (
+                          <div className="flex gap-1 flex-wrap">
+                            {onOpenNotice && (
+                              <button type="button" className="text-xs text-[#2d6a4f] underline" onClick={() => onOpenNotice(snapshot.noticeId)}>
+                                View
+                              </button>
+                            )}
+                            <button type="button" className="text-xs text-[#2d6a4f] underline" onClick={() => openNoticeInWord(snapshot)}>
+                              Word
+                            </button>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   )
                 })}

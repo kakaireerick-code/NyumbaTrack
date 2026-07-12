@@ -29,4 +29,9 @@ describe('routing', () => {
     expect(parseEntryPath('/receipt/RCT-2026-001').receiptId).toBe('RCT-2026-001')
     expect(parseEntryPath('/tenant/receipts/RCT-2026-001').receiptId).toBe('RCT-2026-001')
   })
+
+  it('parses notice routes', () => {
+    expect(parseEntryPath('/notice/NTC-2026-001-abc').noticeId).toBe('NTC-2026-001-abc')
+    expect(parseEntryPath('/tenant/notices/NTC-2026-001-abc').noticeId).toBe('NTC-2026-001-abc')
+  })
 })
