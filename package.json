@@ -21,7 +21,8 @@
     "test:api-smoke": "vitest run api/apiSmoke.test.ts",
     "ship:production": "node scripts/ship-to-production.mjs",
     "vercel:setup": "node scripts/vercel-setup-helper.mjs",
-    "billing:admin-docs": "node -e \"console.log('See docs/BILLING-ADMIN.md and run AUTO-PUSH-BILLING.ps1 on Windows')\""
+    "billing:admin-docs": "node -e \"console.log('See docs/BILLING-ADMIN.md and run AUTO-PUSH-BILLING.ps1 on Windows')\"",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
@@ -44,6 +45,7 @@
     "@vitejs/plugin-react": "^6.0.3",
     "jsdom": "^29.1.1",
     "oxlint": "^1.71.0",
+    "patch-package": "^8.0.1",
     "tailwindcss": "^4.3.2",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
