@@ -10,6 +10,7 @@ import { getBuildInfo } from '../lib/buildInfo'
 import { getStoredTheme } from '../lib/theme'
 import { inputCls, btnPrimary } from '../lib/formStyles'
 import { APP_NAME } from '../lib/brand'
+import ProductHighlights from '../components/ProductHighlights'
 
 export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
   const [mode, setMode] = useState(initialMode === 'signup' ? 'register-owner' : 'signin')
