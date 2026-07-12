@@ -56,6 +56,19 @@ describe('autoNotifications', () => {
     expect(due).toHaveLength(1)
   })
 
+  it('skips unread owner alerts while demo mode is on', () => {
+    runAutoNotifications({
+      ...baseCtx,
+      buildings: [{ id: 'b1' }],
+      units: [{ id: 'u1', status: 'occupied' }],
+      tenants: [{ id: 't1', status: 'Active', rentAmount: 500000 }],
+      settings: { mtnMomo: '+256700000000' },
+      demoMode: true,
+      unreadMessages: 2,
+    })
+    expect(getNotifications().some((n) => n.title === 'Unread messages')).toBe(false)
+  })
+
   it('warns owner about low collection after day 10', () => {
     const day = new Date().getDate()
     if (day < 10) return

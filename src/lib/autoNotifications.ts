@@ -105,7 +105,7 @@ export const runAutoNotifications = (ctx: AutoNotifContext): void => {
       })
     }
 
-    if (ctx.unreadMessages > 0 && !wasSent(`unread-owner-${today}`)) {
+    if (ctx.unreadMessages > 0 && !ctx.demoMode && !wasSent(`unread-owner-${today}`)) {
       notify(ctx, `unread-owner-${today}`, {
         ownerId,
         role: 'property_owner',

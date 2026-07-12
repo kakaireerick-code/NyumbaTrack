@@ -3,8 +3,66 @@ import { DEMO_TENANTS, DEMO_UNITS, DEMO_BUILDINGS } from './demoData'
 import { saveMessages, getMessages, type UnitMessage } from './messages'
 import { addNotification, getNotifications, saveNotifications } from './notifications'
 import { isDemoMessage, isPracticeNotification } from './demoLiveSeparation'
+import { getTenantBalance } from '../utils/helpers'
+import { isoToday, daysBetween } from './dates'
 
 const MARKER_PREFIX = 'rt_demo_practice_seeded_v1'
+
+export type LiveNotificationContext = {
+  ownerId: string
+  buildings: Array<{ id?: string }>
+  units: Array<{ id?: string; status?: string }>
+  tenants: Array<Record<string, unknown>>
+  payments: Array<Record<string, unknown>>
+  maintenance: Array<Record<string, unknown>>
+  unreadMessages: number
+}
+
+/** Remove bell alerts that only existed because of demo training data. */
+export const reconcileLiveNotifications = (ctx: LiveNotificationContext): void => {
+  const ownerKey = String(ctx.ownerId)
+  if (!ownerKey) return
+
+  const today = isoToday()
+  const vacant = ctx.units.filter((u) => u.status !== 'occupied').length
+  const openMaint = ctx.maintenance.filter(
+    (m) => m.status === 'open' || m.status === 'in_progress',
+  )
+  const staleMaint = openMaint.filter((m) => {
+    const reported = String(m.reportedDate || '')
+    return reported && daysBetween(reported, today) >= 7
+  })
+  const critical = staleMaint.filter((m) => daysBetween(String(m.reportedDate), today) >= 14)
+  const overdueCount = ctx.tenants.filter((t) => {
+    if (t.status === 'Departed') return false
+    return getTenantBalance(String(t.id), ctx.tenants, ctx.payments).daysLate > 0
+  }).length
+
+  const isPhantomLiveAlert = (n: { title?: string }): boolean => {
+    const title = String(n.title || '')
+    if (isPracticeNotification(n)) return true
+    if (title === 'Demo mode is on') return true
+    if (title === 'Unread messages' && ctx.unreadMessages === 0) return true
+    if (title.includes('vacant unit') && vacant === 0) return true
+    if (title === 'Overdue rent' && overdueCount === 0) return true
+    if (title === 'Open maintenance' && openMaint.length === 0) return true
+    if (title === 'Repairs open 7+ days' && staleMaint.length === 0) return true
+    if (title === 'Repairs open 14+ days' && critical.length === 0) return true
+    return false
+  }
+
+  const next = getNotifications().filter(
+    (n) =>
+      !(
+        String(n.ownerId) === ownerKey &&
+        n.role === 'property_owner' &&
+        isPhantomLiveAlert(n)
+      ),
+  )
+  if (next.length !== getNotifications().length) {
+    saveNotifications(next)
+  }
+}
 
 export const isDemoPracticeSeeded = (ownerId: string): boolean =>
   safeGet(`${MARKER_PREFIX}_${ownerId}`, false) === true
@@ -130,7 +188,10 @@ export const ensureDemoPracticeData = (
 }
 
 /** Remove practice inbox messages and bell alerts when Demo is turned off. */
-export const purgeDemoPracticeData = (ownerId: string): void => {
+export const purgeDemoPracticeData = (
+  ownerId: string,
+  reconcileCtx?: Omit<LiveNotificationContext, 'ownerId'>,
+): void => {
   if (!ownerId) return
   const ownerKey = String(ownerId)
   saveMessages(
@@ -142,4 +203,7 @@ export const purgeDemoPracticeData = (ownerId: string): void => {
     ),
   )
   safeSet(`${MARKER_PREFIX}_${ownerId}`, false)
+  if (reconcileCtx) {
+    reconcileLiveNotifications({ ownerId, ...reconcileCtx })
+  }
 }
