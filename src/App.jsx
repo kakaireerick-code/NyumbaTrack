@@ -381,7 +381,11 @@ function AppContent() {
 
   useEffect(() => {
     if (!isLoggedIn || !activeOwnerId) return
-    ensureDemoPracticeData(activeOwnerId, { demoMode: showDemoData })
+    if (showDemoData) {
+      ensureDemoPracticeData(activeOwnerId, { demoMode: true })
+    } else {
+      purgeDemoPracticeData(activeOwnerId)
+    }
   }, [isLoggedIn, activeOwnerId, showDemoData])
 
   useEffect(() => {

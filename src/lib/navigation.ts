@@ -33,6 +33,9 @@ export type DiscoverStripLink = {
   roles: Array<'property_owner' | 'tenant' | 'caretaker'>
 }
 
+export const PARTNER_REWARDS_BLURB =
+  'Refer landlords — earn 15% billing credit (max 45%) on first login'
+
 /** Prominent header strip — marketing + product info (not buried in Settings) */
 export const DISCOVER_STRIP_LINKS: DiscoverStripLink[] = [
   {
@@ -47,7 +50,7 @@ export const DISCOVER_STRIP_LINKS: DiscoverStripLink[] = [
     id: 'referrals',
     label: 'Partner Rewards',
     shortLabel: 'Rewards',
-    blurb: 'Refer landlords — discounted billing months on first login',
+    blurb: PARTNER_REWARDS_BLURB,
     icon: 'gift',
     roles: ['property_owner'],
   },
@@ -89,7 +92,7 @@ export const MORE_TOOLS_LINKS: MoreToolLink[] = [
   { id: 'messages', label: 'Tenant Messages', description: 'Owner–tenant inbox' },
   { id: 'help', label: 'Help', description: 'Manuals and support' },
   { id: 'about', label: 'About', description: `What ${APP_NAME} is and who it is for` },
-  { id: 'referrals', label: 'Partner Rewards', description: 'Refer landlords — earn discounted billing months on first login' },
+  { id: 'referrals', label: 'Partner Rewards', description: PARTNER_REWARDS_BLURB },
 ]
 
 export type MoreToolsGroup = { title: string; ids: PageId[] }

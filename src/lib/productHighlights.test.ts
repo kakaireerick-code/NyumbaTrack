@@ -22,6 +22,19 @@ describe('productHighlights', () => {
     expect(tenant.some((h) => h.id === 'tenant-portal-free')).toBe(true)
   })
 
+  it('normalizes admin and accountant aliases for owner highlights', () => {
+    expect(highlightsFor('admin', 'discover').length).toBeGreaterThan(0)
+    expect(highlightsFor('accountant', 'dashboard').map((h) => h.id)).toEqual(
+      highlightsFor('property_owner', 'dashboard').map((h) => h.id),
+    )
+  })
+
+  it('aligns partner rewards copy with 15% billing credit', () => {
+    const reward = PRODUCT_HIGHLIGHTS.find((h) => h.id === 'partner-rewards')
+    expect(reward?.detail).toContain('15% billing credit')
+    expect(reward?.detail).not.toContain('discounted billing months')
+  })
+
   it('every highlight has title and detail', () => {
     for (const h of PRODUCT_HIGHLIGHTS) {
       expect(h.title.length).toBeGreaterThan(2)

@@ -1,4 +1,6 @@
 import type { PageId } from './permissions'
+import { normalizeRole } from './permissions'
+import { APP_NAME } from './brand'
 
 export type HighlightIcon =
   | 'trial'
@@ -46,7 +48,7 @@ export const PRODUCT_HIGHLIGHTS: ProductHighlight[] = [
   {
     id: 'tenant-portal-free',
     title: 'Your portal is free',
-    detail: 'Nyumba-track never charges tenants. You only see your unit, rent, and messages.',
+    detail: `${APP_NAME} never charges tenants. You only see your unit, rent, and messages.`,
     pageId: 'about',
     ctaLabel: 'About this app',
     icon: 'free',
@@ -104,7 +106,7 @@ export const PRODUCT_HIGHLIGHTS: ProductHighlight[] = [
   {
     id: 'momo-billing',
     title: 'Pay via MTN MoMo',
-    detail: 'Subscribe to Nyumba-track at 0793068911. Tenants pay rent to your building MoMo in Settings.',
+    detail: `Subscribe to ${APP_NAME} at 0793068911. Tenants pay rent to your building MoMo in Settings.`,
     pageId: 'subscription',
     ctaLabel: 'Plans & Billing',
     icon: 'momo',
@@ -136,7 +138,11 @@ export const PRODUCT_HIGHLIGHTS: ProductHighlight[] = [
 export const highlightsFor = (
   role: string,
   surface: ProductHighlight['surfaces'][number],
-): ProductHighlight[] =>
-  PRODUCT_HIGHLIGHTS.filter(
-    (h) => h.surfaces.includes(surface) && h.roles.includes(role as ProductHighlight['roles'][number]),
+): ProductHighlight[] => {
+  const normalized = normalizeRole(role)
+  return PRODUCT_HIGHLIGHTS.filter(
+    (h) =>
+      h.surfaces.includes(surface) &&
+      h.roles.includes(normalized as ProductHighlight['roles'][number]),
   )
+}

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { highlightsFor } from '../lib/productHighlights'
 import { normalizeRole } from '../lib/permissions'
+import { APP_NAME } from '../lib/brand'
 
 const ICONS = {
   trial: Clock,
@@ -40,7 +41,7 @@ export default function ProductHighlights({
     return (
       <div className="mt-6 pt-5 border-t dark:border-gray-600 space-y-2">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-          Why Nyumba-track
+          Why {APP_NAME}
         </p>
         <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1.5">
           {visible.map((h) => (

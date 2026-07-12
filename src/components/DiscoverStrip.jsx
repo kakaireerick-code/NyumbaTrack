@@ -1,6 +1,7 @@
 import React from 'react'
 import { Heart, Gift, Info, CreditCard, HelpCircle } from 'lucide-react'
 import { DISCOVER_STRIP_LINKS } from '../lib/navigation'
+import { normalizeRole } from '../lib/permissions'
 import ProductHighlights from './ProductHighlights'
 
 const LINK_ICONS = {
@@ -12,7 +13,8 @@ const LINK_ICONS = {
 }
 
 export default function DiscoverStrip({ currentRole, setCurrentPage, currentPage }) {
-  const links = DISCOVER_STRIP_LINKS.filter((l) => l.roles.includes(currentRole))
+  const role = normalizeRole(currentRole)
+  const links = DISCOVER_STRIP_LINKS.filter((l) => l.roles.includes(role))
   if (!links.length) return null
 
   return (
@@ -41,7 +43,7 @@ export default function DiscoverStrip({ currentRole, setCurrentPage, currentPage
         })}
       </div>
       <ProductHighlights
-        currentRole={currentRole}
+        currentRole={role}
         surface="discover"
         setCurrentPage={setCurrentPage}
         variant="pills"

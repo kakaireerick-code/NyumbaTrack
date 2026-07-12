@@ -49,6 +49,12 @@ describe('navigation', () => {
     expect(ownerLinks.length).toBeGreaterThanOrEqual(4)
   })
 
+  it('discover strip partner rewards uses 15% billing credit copy', () => {
+    const rewards = DISCOVER_STRIP_LINKS.find((l) => l.id === 'referrals')
+    expect(rewards?.blurb).toContain('15% billing credit')
+    expect(rewards?.blurb).not.toContain('discounted billing months')
+  })
+
   it('owner sidebar quick links promote plans rewards messages help', () => {
     const ids = SIDEBAR_QUICK_LINKS.map((l) => l.id)
     expect(ids).toEqual(['subscription', 'referrals', 'messages', 'help'])
