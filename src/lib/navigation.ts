@@ -1,4 +1,5 @@
 import type { PageId } from './permissions'
+import { APP_NAME } from './brand'
 
 /** Owner sidebar — 8 items only (see docs/UI-PREFERENCE.md) */
 export const PRIMARY_SIDEBAR_PAGES: PageId[] = [
@@ -36,7 +37,7 @@ export type DiscoverStripLink = {
 export const DISCOVER_STRIP_LINKS: DiscoverStripLink[] = [
   {
     id: 'about',
-    label: 'About NyumbaTrack',
+    label: `About ${APP_NAME}`,
     shortLabel: 'About',
     blurb: 'What this app is and who it is for',
     icon: 'info',
@@ -87,7 +88,7 @@ export const MORE_TOOLS_LINKS: MoreToolLink[] = [
   { id: 'defaulter-list', label: 'Defaulters', description: 'Outstanding rent list' },
   { id: 'messages', label: 'Tenant Messages', description: 'Owner–tenant inbox' },
   { id: 'help', label: 'Help', description: 'Manuals and support' },
-  { id: 'about', label: 'About', description: 'What NyumbaTrack is and who it is for' },
+  { id: 'about', label: 'About', description: `What ${APP_NAME} is and who it is for` },
   { id: 'referrals', label: 'Partner Rewards', description: 'Refer landlords — earn discounted billing months on first login' },
 ]
 

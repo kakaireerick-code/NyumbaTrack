@@ -7,9 +7,9 @@ import { ROLE_LABELS } from '../lib/rolePrompts'
 import { normalizeRole } from '../lib/permissions'
 
 const OWNER_COPY = {
-  title: 'About NyumbaTrack',
+  title: 'About Nyumba-track',
   intro:
-    'NyumbaTrack helps property owners in Uganda manage rent, tenants, MoMo payments, and reminders in one simple place — without spreadsheets.',
+    'Nyumba-track helps property owners in Uganda manage rent, tenants, MoMo payments, and reminders in one simple place — without spreadsheets.',
   bullets: [
     'Add properties and units with different rent amounts',
     'Invite tenants and caretakers with secure codes',
@@ -21,7 +21,7 @@ const OWNER_COPY = {
 const TENANT_COPY = {
   title: 'About your tenant portal',
   intro:
-    'Your landlord invited you here to see your unit, rent balance, lease, and messages — nothing else. Tenants never pay for NyumbaTrack.',
+    'Your landlord invited you here to see your unit, rent balance, lease, and messages — nothing else. Tenants never pay for Nyumba-track.',
   bullets: [
     'Home shows what you owe for your unit only',
     'Pay tab explains how to send MoMo to your landlord',
@@ -94,7 +94,7 @@ export default function AboutPage({ currentRole, setCurrentPage }) {
         currentRole={currentRole}
         surface="about"
         setCurrentPage={setCurrentPage}
-        title="More about NyumbaTrack"
+        title="More about Nyumba-track"
       />
 
       <div className="flex flex-wrap gap-2">

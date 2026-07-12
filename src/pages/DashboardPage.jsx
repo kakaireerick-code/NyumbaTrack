@@ -112,7 +112,7 @@ export default function DashboardPage({ buildings, units, tenants, payments, mai
           currentRole={currentRole}
           surface="dashboard"
           setCurrentPage={setCurrentPage}
-          title="Why landlords choose NyumbaTrack"
+          title="Why landlords choose Nyumba-track"
         />
       )}
 

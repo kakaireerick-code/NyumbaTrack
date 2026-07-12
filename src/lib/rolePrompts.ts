@@ -16,7 +16,7 @@ export const resetTour = (role: string): void =>
   safeSet(TOUR_STORAGE_KEY(role), false)
 
 const OWNER_STEPS: TourStep[] = [
-  { title: 'Welcome, property owner', description: 'NyumbaTrack helps you manage rent, tenants, and payments in one place. This short tour shows you the basics.', icon: 'Home' },
+  { title: 'Welcome, property owner', description: 'Nyumba-track helps you manage rent, tenants, and payments in one place. This short tour shows you the basics.', icon: 'Home' },
   { title: 'Add your property', description: 'Go to Properties and add each building or compound you rent out.', icon: 'Building2' },
   { title: 'Create units', description: 'Add every rentable space separately — a ground shop and Flat 2B can have different rent.', icon: 'DoorOpen' },
   { title: 'Set rent per unit', description: 'Enter monthly rent and due day for each unit. You can change these anytime.', icon: 'CreditCard' },

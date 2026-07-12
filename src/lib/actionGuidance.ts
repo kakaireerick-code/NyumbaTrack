@@ -107,7 +107,7 @@ export const getPageGuidance = (
     if (pageId === 'assistant') {
       return {
         variant: 'info',
-        headline: 'Ask anything about NyumbaTrack',
+        headline: 'Ask anything about Nyumba-track',
         detail: 'Type a question like "How do I add a unit?" or "What can tenants see?"',
         nextSteps: ['Try the suggested questions below', 'Open Help for the full manual'],
       }
@@ -124,7 +124,7 @@ export const getPageGuidance = (
       return {
         variant: 'info',
         headline: 'Built for Uganda landlords',
-        detail: 'NyumbaTrack keeps rent, tenants, and MoMo payments in one place. Tenants and caretakers get their own simple portals.',
+        detail: 'Nyumba-track keeps rent, tenants, and MoMo payments in one place. Tenants and caretakers get their own simple portals.',
         nextSteps: ['Read how roles stay private', 'Partner Rewards is in the header and Discover strip'],
       }
     }

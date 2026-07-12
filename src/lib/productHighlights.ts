@@ -46,7 +46,7 @@ export const PRODUCT_HIGHLIGHTS: ProductHighlight[] = [
   {
     id: 'tenant-portal-free',
     title: 'Your portal is free',
-    detail: 'NyumbaTrack never charges tenants. You only see your unit, rent, and messages.',
+    detail: 'Nyumba-track never charges tenants. You only see your unit, rent, and messages.',
     pageId: 'about',
     ctaLabel: 'About this app',
     icon: 'free',
@@ -104,7 +104,7 @@ export const PRODUCT_HIGHLIGHTS: ProductHighlight[] = [
   {
     id: 'momo-billing',
     title: 'Pay via MTN MoMo',
-    detail: 'Subscribe to NyumbaTrack at 0793068911. Tenants pay rent to your building MoMo in Settings.',
+    detail: 'Subscribe to Nyumba-track at 0793068911. Tenants pay rent to your building MoMo in Settings.',
     pageId: 'subscription',
     ctaLabel: 'Plans & Billing',
     icon: 'momo',

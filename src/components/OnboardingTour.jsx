@@ -30,7 +30,7 @@ export default function OnboardingTour({ open, onClose }) {
   }
 
   return (
-    <Modal open={open} onClose={finish} title={`Welcome to NyumbaTrack — Step ${step + 1} of 4`}>
+    <Modal open={open} onClose={finish} title={`Welcome to Nyumba-track — Step ${step + 1} of 4`}>
       <h3 className="font-semibold text-lg mb-2">{STEPS[step].title}</h3>
       <p className="text-gray-600 dark:text-gray-300 mb-6">{STEPS[step].text}</p>
       <div className="flex gap-2 flex-wrap">

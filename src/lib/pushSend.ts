@@ -25,7 +25,7 @@ export const sendPushMessage = async (msg: PushMessage): Promise<number> => {
   const ownerId = String(msg.ownerId || '').trim()
   const role = String(msg.role || '').trim()
   const userId = String(msg.userId || '').trim()
-  const title = String(msg.title || 'NyumbaTrack').trim()
+  const title = String(msg.title || 'Nyumba-track').trim()
   const body = String(msg.body || '').trim()
   const url = String(msg.url || '/').trim()
   const tag = String(msg.tag || `nyumba-${Date.now()}`).trim()

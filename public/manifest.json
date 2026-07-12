@@ -1,6 +1,6 @@
 {
-  "name": "NyumbaTrack",
-  "short_name": "NyumbaTrack",
+  "name": "Nyumba-track",
+  "short_name": "Nyumba-track",
   "description": "Smart rent management for Ugandan landlords — tenants, payments, and receipts.",
   "start_url": "/",
   "display": "standalone",

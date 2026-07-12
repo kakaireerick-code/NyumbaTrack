@@ -212,7 +212,7 @@ const navAbout = exists('src/lib/navigation.ts') ? read('src/lib/navigation.ts')
 confirm(
   'F21',
   'About + Partner Rewards',
-  aboutPage.includes('About NyumbaTrack') &&
+  aboutPage.includes('About Nyumba-track') &&
     referralsPage.includes('Partner Rewards') &&
     partnerRewards.includes('getPartnerRewards') &&
     subscriptionPageFile.includes('Partner Rewards') &&

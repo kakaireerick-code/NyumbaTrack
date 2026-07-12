@@ -1,4 +1,5 @@
 import React from 'react'
+import { APP_NAME } from '../lib/brand'
 import { pagesForRole, normalizeRole } from '../lib/permissions'
 import { sidebarPagesForRole, SIDEBAR_QUICK_LINKS } from '../lib/navigation'
 import { Icon } from './UI'
@@ -59,7 +60,7 @@ export default function Sidebar({ currentRole, currentPage, setCurrentPage, side
       >
         <div className="p-4 flex items-center gap-2 text-white border-b border-white/10">
           <Icon name="Home" size={26} className="text-brand-light" />
-          <span className="font-bold text-base leading-tight">NyumbaTrack</span>
+          <span className="font-bold text-base leading-tight">{APP_NAME}</span>
         </div>
         <nav className="p-3 overflow-y-auto max-h-[calc(100vh-80px)]" aria-label="Main menu">
           {items.map((item) => (

@@ -49,7 +49,7 @@ export const BILLING_FAQ = [
   },
   {
     q: 'Do tenants need to pay?',
-    a: 'No. Tenants join free via invite link. Only property owners pay for NyumbaTrack.',
+    a: 'No. Tenants join free via invite link. Only property owners pay for Nyumba-track.',
   },
   {
     q: 'Can I try before paying?',

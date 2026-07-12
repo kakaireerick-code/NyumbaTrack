@@ -200,7 +200,7 @@ export default function DataImportPage({
         <p className="font-semibold text-blue-900 dark:text-blue-100">Can&apos;t import your file?</p>
         <p className="text-sm text-blue-800 dark:text-blue-200">
           If a spreadsheet, PDF, or Word document won&apos;t upload or map correctly, improvise and carry on — you
-          don&apos;t need import to use NyumbaTrack.
+          don&apos;t need import to use Nyumba-track.
         </p>
         <ul className="text-sm text-blue-800 dark:text-blue-200 list-disc pl-5 space-y-1">
           <li>

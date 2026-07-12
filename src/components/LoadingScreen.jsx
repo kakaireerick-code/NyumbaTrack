@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Home } from 'lucide-react'
+import { APP_NAME } from '../lib/brand'
 
 export const LOADING_STATUS_LINES = [
   'Loading your portfolio…',
@@ -24,7 +25,7 @@ export default function LoadingScreen({ fading = false }) {
       className={`nt-loading-screen${fading ? ' nt-loading-screen--out' : ''}`}
       role="status"
       aria-live="polite"
-      aria-label="Loading NyumbaTrack"
+      aria-label={`Loading ${APP_NAME}`}
     >
       <div className="nt-loading-stripes" aria-hidden="true">
         <span className="nt-loading-stripe nt-loading-stripe--black" />
@@ -41,7 +42,7 @@ export default function LoadingScreen({ fading = false }) {
           </div>
         </div>
 
-        <h1 className="nt-loading-title">NyumbaTrack</h1>
+        <h1 className="nt-loading-title">{APP_NAME}</h1>
         <p className="nt-loading-subtitle">Smart rent management for Ugandan landlords</p>
         <span className="nt-loading-badge">NT</span>
 

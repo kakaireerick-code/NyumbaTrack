@@ -170,7 +170,7 @@ export default function TenantPortalPage({
     return (
       <>
         <div className="card p-6 text-center max-w-md mx-auto mt-8">
-        <h2 className="text-xl font-bold text-brand mb-2">Welcome to NyumbaTrack</h2>
+        <h2 className="text-xl font-bold text-brand mb-2">Welcome to Nyumba-track</h2>
         <p className="text-gray-600 dark:text-gray-300 mb-4">
           You rent <strong>{safeUnit?.unitNumber}</strong> at <strong>{safeBuilding?.name}</strong>
         </p>

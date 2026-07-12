@@ -9,7 +9,7 @@ import { isDeployedApp } from '../lib/environment'
 import { getBuildInfo } from '../lib/buildInfo'
 import { getStoredTheme } from '../lib/theme'
 import { inputCls, btnPrimary } from '../lib/formStyles'
-import ProductHighlights from '../components/ProductHighlights'
+import { APP_NAME } from '../lib/brand'
 
 export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
   const [mode, setMode] = useState(initialMode === 'signup' ? 'register-owner' : 'signin')
@@ -94,7 +94,7 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
       <div className="card w-full max-w-md p-8">
         <div className="flex items-center justify-center gap-2 mb-2">
           <Home className="text-brand" size={32} />
-          <h1 className="text-2xl font-bold text-brand">NyumbaTrack</h1>
+          <h1 className="text-2xl font-bold text-brand">{APP_NAME}</h1>
         </div>
         <h2 className="text-center text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">
           {isRegister ? 'Create your account' : 'Welcome back'}

@@ -19,7 +19,7 @@ const FAQ = [
   },
   {
     q: 'Is this app free for tenants?',
-    a: 'Yes. Tenants use NyumbaTrack at no cost. Your landlord manages the property; you only see your own unit.',
+    a: 'Yes. Tenants use Nyumba-track at no cost. Your landlord manages the property; you only see your own unit.',
   },
 ]
 

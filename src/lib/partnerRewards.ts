@@ -342,7 +342,7 @@ export const getReferralLink = (code: string): string => {
 
 export const getReferralShareMessage = (code: string, name = 'A landlord'): string => {
   const link = getReferralLink(code)
-  return `${name} uses NyumbaTrack to manage rent in Uganda. Join with my Partner Rewards link: ${link} (code ${code}). Complete your first owner login — I earn 15% billing credit (up to 45%).`
+  return `${name} uses Nyumba-track to manage rent in Uganda. Join with my Partner Rewards link: ${link} (code ${code}). Complete your first owner login — I earn 15% billing credit (up to 45%).`
 }
 
 /** Demo / training — bank one month for UI practice */

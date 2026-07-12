@@ -99,7 +99,7 @@ export default function PaymentReceipt({ data, className = '' }) {
             Issued by <span className="font-medium text-gray-700 dark:text-gray-300">{String(data.issuedBy)}</span>
           </p>
           <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
-            Official payment record · View only · NyumbaTrack
+            Official payment record · View only · Nyumba-track
           </p>
         </div>
       </div>

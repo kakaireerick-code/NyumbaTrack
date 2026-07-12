@@ -220,7 +220,7 @@ export default function SubscriptionPage({
       <div className="text-center">
         <h1 className="text-2xl font-bold">Plans & Billing</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Monthly or yearly plans for property owners — tenants use NyumbaTrack free
+          Monthly or yearly plans for property owners — tenants use Nyumba-track free
         </p>
         {authUser?.authProvider === 'google' && (
           <p className="text-sm text-[#2d6a4f] mt-2">
@@ -417,7 +417,7 @@ export default function SubscriptionPage({
           </p>
         )}
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-          Subscription fees go to the NyumbaTrack admin MoMo line above — not your building rent numbers.
+          Subscription fees go to the Nyumba-track admin MoMo line above — not your building rent numbers.
           Invoice emailed to Google after you confirm your transaction reference.
         </p>
       </div>

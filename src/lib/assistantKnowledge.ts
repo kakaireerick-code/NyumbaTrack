@@ -158,7 +158,7 @@ export const FAQ_ENTRIES: FaqEntry[] = [
   {
     keywords: ['about', 'what is nyumbatrack', 'who made'],
     roles: ['property_owner', 'tenant', 'caretaker'],
-    answer: 'NyumbaTrack is rent management software built for Uganda. Owners manage properties; tenants and caretakers get simple portals. Tap About in the header or Discover strip for your role-specific overview.',
+    answer: 'Nyumba-track is rent management software built for Uganda. Owners manage properties; tenants and caretakers get simple portals. Tap About in the header or Discover strip for your role-specific overview.',
     offerPage: 'About',
     offerPageId: 'about',
   },

@@ -50,7 +50,7 @@ export default function AssistantPage({
   return (
     <div className="max-w-2xl mx-auto space-y-4 pb-24">
       <h1 className="text-2xl font-bold">Ask Assistant</h1>
-      <p className="text-sm text-gray-500 dark:text-gray-400">Plain answers about rent, payments, and how to use NyumbaTrack.</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400">Plain answers about rent, payments, and how to use Nyumba-track.</p>
       <GuidancePanel guidance={guidance} />
 
       <div className="flex flex-wrap gap-2">

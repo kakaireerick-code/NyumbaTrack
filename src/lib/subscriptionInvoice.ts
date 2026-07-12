@@ -85,7 +85,7 @@ Paid to: ${inv.paidTo}
 Transaction Ref: ${inv.momoReference}
 
 -------------------------------------
-Thank you for subscribing to NyumbaTrack!
+Thank you for subscribing to Nyumba-track!
 Your subscription is now active.
 
 Questions? Reply to this email or contact support.
@@ -113,7 +113,7 @@ export const queueInvoiceEmail = (
     {
       id: inv.id,
       to: inv.customerEmail,
-      subject: `NyumbaTrack Invoice ${inv.invoiceNo} — ${inv.planName} Plan`,
+      subject: `Nyumba-track Invoice ${inv.invoiceNo} — ${inv.planName} Plan`,
       body: formatInvoiceText(inv),
       sentAt: new Date().toISOString(),
     },

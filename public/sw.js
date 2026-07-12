@@ -1,6 +1,6 @@
-/* NyumbaTrack service worker — Web Push when PWA is closed */
+/* Nyumba-track service worker — Web Push when PWA is closed */
 self.addEventListener('push', (event) => {
-  let data = { title: 'NyumbaTrack', body: '', url: '/', tag: 'nyumba' }
+  let data = { title: 'Nyumba-track', body: '', url: '/', tag: 'nyumba' }
   try {
     data = { ...data, ...event.data.json() }
   } catch {

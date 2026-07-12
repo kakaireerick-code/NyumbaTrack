@@ -53,8 +53,8 @@ const main = async () => {
     const kenyaHit = KENYA_MARKERS.find((m) => home.text.includes(m))
     if (kenyaHit) {
       fail('branding', `Kenya copy found: "${kenyaHit}"`)
-    } else if (home.text.includes('Uganda') || home.text.includes('NyumbaTrack')) {
-      pass('branding', 'Uganda/NyumbaTrack branding present')
+    } else if (home.text.includes('Uganda') || home.text.includes('Nyumba-track')) {
+      pass('branding', 'Uganda/Nyumba-track branding present')
     } else {
       fail('branding', 'Expected Uganda landlords copy in page')
     }
@@ -65,7 +65,7 @@ const main = async () => {
     } else if (
       login.text.includes('Welcome back') ||
       login.text.includes('Sign in to manage your properties') ||
-      login.text.includes('NyumbaTrack')
+      login.text.includes('Nyumba-track')
     ) {
       pass('login', '/login serves Welcome back owner portal')
     } else {
