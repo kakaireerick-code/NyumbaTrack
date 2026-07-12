@@ -1,50 +1,59 @@
-# Agent handoff — PR #49 demo/live + payments
+# Agent handoff — NyumbaTrack on main (post PR #49)
 
 **Repo:** `kakaireerick-code/NyumbaTrack`  
-**Branch:** `cursor/demo-live-separation-5791`  
-**PR #49** — **MERGED** to `main` at `6e96542` (2026-07-12). Branch `cursor/demo-live-separation-5791` shipped.  
+**Branch:** `main` (default for all new work)  
+**HEAD:** `f0e49ae`+ — PR #49 merged at `6e96542`; import fallback banner shipped  
 **Do not touch:** Land-Tax-Tracker / ULTT
 
 ## Start here
 
-1. Read **`docs/MASTER-PROMPT-PR49.md`** (master prompt for this stack)
+1. Read **`docs/MASTER-PROMPT-PR49.md`** (master prompt + push protocol)
 2. Read **`docs/MASTER-VERIFY-LOOP.md`** (F1–F31)
-3. `git checkout cursor/demo-live-separation-5791`
+3. `git fetch origin && git checkout main && git pull origin main`
 4. `npm test && npm run verify:features && npm run build`
 
-## This branch includes
+## On main today
 
 | Area | Key files |
 |------|-----------|
-| Demo/live separation | `demoLiveSeparation.ts`, `demoPractice.ts`, guarded setters in `App.jsx` |
+| Demo/live separation | `demoLiveSeparation.ts`, guarded setters in `App.jsx` |
 | Per-landlord MoMo | `ownerSettings.ts`, `rt_payment_settings_by_owner` |
-| Unified rent flow | `TenantPortalPage.jsx` (`my-payments`), `TenantBottomNav.jsx` |
+| Unified rent flow | `TenantPortalPage.jsx` (`my-payments`) |
 | Dark login fix | `GoogleSignInButton.jsx`, `LoginPage.jsx` |
-| Smart import | `spreadsheetImport.ts`, `agreementScan.ts` (from main ancestry) |
-| Ship script | `PUSH-DEMO-LIVE-SEPARATION.ps1` |
+| Smart import + fallback | `DataImportPage.jsx` — banner if import fails → manual entry |
+| Operator docs | `docs/MASTER-PROMPT-PR49.md` |
 
-## Cloud agent limits
+## Import fallback (landlord UX)
 
-- `git push` may return **403** — owner runs `PUSH-DEMO-LIVE-SEPARATION.ps1` on PC
-- `gh pr ready` / merge need owner credentials
+If spreadsheet/PDF/Word import fails, landlords **improvise and carry on**:
 
-## Owner PC ship (final step)
+- Buildings & units → Buildings / Units menus
+- Tenants → Quick add on a unit, or invite code
+- Agreements → tenant profile or Documents later
+
+Banner on **Data Import**; guidance in `actionGuidance.ts`.
+
+## Push after every work session
+
+```bash
+npm test && npm run verify:features && npm run build
+git add -A && git commit -m "<message>"   # if changes
+git push origin main
+```
+
+Feature branches: `git push -u origin cursor/<name>-ae35 --force-with-lease` then PR → merge.
+
+## Owner PC sync
 
 ```powershell
 git fetch origin
-git checkout cursor/demo-live-separation-5791
-.\PUSH-DEMO-LIVE-SEPARATION.ps1
-gh pr ready 49
-.\SHIP-TO-PRODUCTION.ps1 -Branch cursor/demo-live-separation-5791
+git checkout main
+git reset --hard origin/main
 ```
 
-**Do not pull** if local HEAD is already at consolidated stack (`d5d6e4c` or ahead).
-
-## Acknowledgment
-
-Comment on PR #49 with:
+## Acknowledgment (when shipping a PR)
 
 - HEAD sha
 - Test count (159/159)
 - `verify:features` PASS (F1–F31)
-- Guardrail output after merge
+- `npm run ops:guardrail` output

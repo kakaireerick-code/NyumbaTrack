@@ -4,7 +4,7 @@ Copy this into **every cloud agent session** working on demo/live separation, pa
 
 ## Mission
 
-Ship **PR #49** (`cursor/demo-live-separation-5791`) to `main` with:
+Maintain and extend **NyumbaTrack** on `main` (PR #49 stack shipped):
 
 - Demo/live **read-only training** (F30 guards + F31 separation)
 - **Per-landlord payment numbers** (`rt_payment_settings_by_owner`)
@@ -15,8 +15,9 @@ Ship **PR #49** (`cursor/demo-live-separation-5791`) to `main` with:
 ## Session start
 
 ```bash
-git fetch origin main cursor/demo-live-separation-5791
-git checkout cursor/demo-live-separation-5791
+git fetch origin main
+git checkout main
+git pull origin main
 npm install
 npm test && npm run test:api-smoke && npm run verify:features && npm run build
 ```
@@ -57,29 +58,29 @@ Log: `CONFIRMED F# at <sha>` when fixing.
 
 ## Push after every work session (mandatory)
 
-After **any** code change on this branch, the agent must:
+After **any** code change, the agent must:
 
 ```bash
 npm test && npm run test:api-smoke && npm run verify:features && npm run build
 git add -A && git commit -m "<clear message>"   # if changes exist
-git push -u origin cursor/demo-live-separation-5791 --force-with-lease
-# if lease fails: git push -u origin cursor/demo-live-separation-5791 --force
+git push origin main
+# feature branch: git push -u origin cursor/<name>-ae35 --force-with-lease
 ```
-
-On owner PC, the same flow is wrapped in `.\PUSH-DEMO-LIVE-SEPARATION.ps1`.
 
 **Never end a session with unpushed commits.** Hand off HEAD sha + push result to the next agent.
 
-## Ship
+## Ship (feature PR on `main`)
 
-```powershell
-git fetch origin
-git checkout cursor/demo-live-separation-5791
-git reset --hard origin/cursor/demo-live-separation-5791   # sync to cloud if behind
-.\PUSH-DEMO-LIVE-SEPARATION.ps1                            # if you made local edits
-gh pr ready 49                                             # once only (already done at 86f5513)
-.\SHIP-TO-PRODUCTION.ps1 -Branch cursor/demo-live-separation-5791
+```bash
+git checkout -b cursor/<feature>-ae35
+# ... changes, tests ...
+git push -u origin cursor/<feature>-ae35 --force-with-lease
+gh pr create --base main
+gh pr merge
+npm run ops:guardrail
 ```
+
+Owner PC: `.\SHIP-TO-PRODUCTION.ps1 -Branch cursor/<feature>-ae35`
 
 ## Handoff to next agent
 

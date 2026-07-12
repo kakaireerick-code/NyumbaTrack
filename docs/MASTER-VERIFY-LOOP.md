@@ -23,12 +23,13 @@ npm run ops:guardrail     # production (default: nyumbatracker.vercel.app)
 | F30 | Demo write guards (read-only training) |
 | F31 | Demo/live separation (import, limits, messages, purge, dark login) |
 
-Full automated checks: `scripts/verify-features.mjs`
+Full automated checks: `scripts/verify-features.mjs`  
+Landlord import fallback: **Data Import** banner (`Can't import your file?`) — manual entry paths.
 
-## PR #49 stack
+## Post-PR #49 (on `main`)
 
-Branch: `cursor/demo-live-separation-5791`  
-Master prompt: **`docs/MASTER-PROMPT-PR49.md`**
+Master prompt: **`docs/MASTER-PROMPT-PR49.md`**  
+PR #49 merged — work on `main`, push after every session.
 
 ## Loop per feature
 
@@ -44,11 +45,13 @@ Log: CONFIRMED F# at <commit-sha>
 - `npm run ops:guardrail` → PASS on production
 - Bundle ≠ stale `index-B0iUFD94.js`
 - `/api/health` returns JSON
+- Changes **pushed** to `origin/main` (or feature branch PR merged)
 
-## Ship
+## Ship (feature PR)
 
-```powershell
-.\PUSH-DEMO-LIVE-SEPARATION.ps1
-gh pr ready 49
-.\SHIP-TO-PRODUCTION.ps1 -Branch cursor/demo-live-separation-5791
+```bash
+git push -u origin cursor/<feature>-ae35 --force-with-lease
+gh pr create / gh pr merge
+# or owner PC:
+.\SHIP-TO-PRODUCTION.ps1 -Branch cursor/<feature>-ae35
 ```

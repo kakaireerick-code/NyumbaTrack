@@ -5,9 +5,9 @@ You are the **NyumbaTrack** agent on `kakaireerick-code/NyumbaTrack`. Do **not**
 ## Session start
 
 1. Read `docs/AGENT-HANDOFF.md`, `docs/MASTER-PROMPT-PR49.md`, `docs/MASTER-VERIFY-LOOP.md`, and `docs/UI-PREFERENCE.md`.
-2. `git checkout cursor/demo-live-separation-5791` (PR #49 stack) or `main` for hotfixes only.
+2. `git fetch origin && git checkout main && git pull origin main` (default). Use `cursor/*` branches only for explicit feature PRs.
 3. `npm install && npm test && npm run verify:features && npm run build`
-4. Before closing: `npm run ops:guardrail` (default: https://nyumbatracker.vercel.app).
+4. Before closing: commit, **push**, then `npm run ops:guardrail` (default: https://nyumbatracker.vercel.app).
 
 ## Production truth checks
 
@@ -40,18 +40,22 @@ See `docs/DEPLOY.md` and **`docs/VERCEL-SECRETS-CHECKLIST.md`** (issue #24).
 | Subscription bypass | Instant `status: active` on MoMo ref | `submitCloudSubscriptionClaim` → `pending_verification` |
 | Billing UI | Stripped plan details | Full `SubscriptionPage` + `subscriptionPlans.js` |
 | Demo / import / guided | Missing on stale deploy | `appMode.ts`, `fileImport.ts`, `GuidedWorkflowOverlay` |
+| Import file won't work | Landlord blocked on upload | Data Import fallback banner → Buildings/Units/Quick add (see `MASTER-PROMPT-PR49.md`) |
 | Uganda branding | Kenya copy on Vercel | `index.html`, `public/manifest.json` |
 | `/api/health` | SPA rewrite only | `api/health.ts` + vercel.json API exclusion |
 
 ## Branch workflow
 
 ```bash
-git checkout cursor/integrate-patch-features-5791
-git merge origin/main   # keep billing + integrate features
-npm test && npm run build
-git push -u origin cursor/integrate-patch-features-5791
-# PR → merge main → redeploy Vercel
+git checkout main
+git pull origin main
+# make changes
+npm test && npm run verify:features && npm run build
+git add -A && git commit -m "..."
+git push origin main
 npm run ops:guardrail
 ```
+
+For larger features: `git checkout -b cursor/<feature>-ae35`, push, open PR, merge to `main`.
 
 Reply on the handoff issue with PR link, bundle hash, and guardrail output.
