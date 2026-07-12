@@ -107,4 +107,4 @@ Reply with:
 - [x] F1–F31 CONFIRMED
 - [x] Build OK
 - [x] PR #49 merged to `main` (`6e96542`)
-- [ ] `npm run ops:guardrail` green on production
+- [x] `npm run ops:guardrail` green on production (8/8 PASS)
