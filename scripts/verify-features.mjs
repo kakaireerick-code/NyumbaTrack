@@ -410,6 +410,31 @@ confirm(
   'Live-only import, owner unit limits, practice purge, scoped maintenance',
 )
 
+// F32 Read-only Word notices and unique immutable receipts
+const noticeStore = exists('src/lib/noticeStore.ts') ? read('src/lib/noticeStore.ts') : ''
+const noticesUtil = exists('src/utils/notices.js') ? read('src/utils/notices.js') : ''
+const readOnlyDocs = exists('src/utils/readOnlyDocuments.js') ? read('src/utils/readOnlyDocuments.js') : ''
+const receiptsUtil = exists('src/utils/receipts.js') ? read('src/utils/receipts.js') : ''
+const noticePage = exists('src/pages/NoticePage.jsx') ? read('src/pages/NoticePage.jsx') : ''
+confirm(
+  'F32',
+  'Read-only Word notices and unique immutable receipts',
+  noticeStore.includes('saveNoticeSnapshot') &&
+    noticesUtil.includes('issueNotice') &&
+    noticesUtil.includes('openNoticeInWord') &&
+    readOnlyDocs.includes('buildReadOnlyWordDocument') &&
+    readOnlyDocs.includes('application/msword') &&
+    readOnlyDocs.includes('WordDocument') &&
+    receiptsUtil.includes('generateUniqueReceiptId') &&
+    receiptsUtil.includes('buildReceiptWordDocument') &&
+    noticePage.includes('contentEditable={false}') &&
+    routing.includes("kind: 'notice'") &&
+    routing.includes('getNoticePath') &&
+    adminPages.includes('Issue notice') &&
+    adminPages.includes('Preview in Word'),
+  'Immutable notice/receipt snapshots + Word .doc export + tenant read-only views',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -421,6 +446,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F31 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F32 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)
