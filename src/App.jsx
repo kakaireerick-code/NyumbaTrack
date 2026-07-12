@@ -64,6 +64,12 @@ import {
   filterOwnerUtilities,
   paymentTouchesDemo,
 } from './lib/demoLiveSeparation'
+import {
+  mergeOwnerSettings,
+  splitSettingsUpdate,
+  migrateGlobalPaymentSettings,
+  savePaymentSettingsByOwner,
+} from './lib/ownerSettings'
 import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
 import { syncInvitesFromUnits, releaseUnitInvite, pushInviteToCloud } from './lib/invites'
 import { processReferrerCreditOnFirstLogin, recordReferralSignup } from './lib/partnerRewards'
@@ -134,6 +140,10 @@ function AppContent() {
   const [broadcastHistory, setBroadcastHistory] = usePersistedState('rt_broadcast_history', initialBroadcastHistory)
   const [guarantorLogs, setGuarantorLogs] = usePersistedState('rt_guarantor_logs', initialGuarantorLogs)
   const [settings, setSettings] = usePersistedState('rt_settings', initialSettings)
+  const [paymentSettingsByOwner, setPaymentSettingsByOwner] = usePersistedState(
+    'rt_payment_settings_by_owner',
+    {},
+  )
   const [subscriptionByOwner, setSubscriptionByOwner] = usePersistedState('rt_subscriptions_by_owner', {
     [DEMO_OWNER_ID]: initialSubscription,
   })
@@ -162,6 +172,10 @@ function AppContent() {
     migrate(units, setUnits)
     migrate(tenants, setTenants)
     migrate(payments, setPayments)
+    const migratedPayments = migrateGlobalPaymentSettings(settings, DEMO_OWNER_ID)
+    if (Object.keys(migratedPayments).length) {
+      setPaymentSettingsByOwner((prev) => ({ ...prev, ...migratedPayments }))
+    }
   }, [])
 
   const activeOwnerId = getOwnerIdForUser(authUser)
@@ -306,6 +320,35 @@ function AppContent() {
     [showDemoData, showToast, setPayments],
   )
 
+  const ownerSettings = useMemo(
+    () =>
+      mergeOwnerSettings(settings, activeOwnerId, {
+        demoMode: showDemoData,
+        paymentByOwner: paymentSettingsByOwner,
+      }),
+    [settings, activeOwnerId, showDemoData, paymentSettingsByOwner],
+  )
+
+  const setOwnerSettings = useCallback(
+    (updater) => {
+      const next =
+        typeof updater === 'function' ? updater(ownerSettings) : updater
+      const { paymentPatch, globalPatch } = splitSettingsUpdate(ownerSettings, next)
+
+      if (activeOwnerId && !showDemoData && Object.keys(paymentPatch).length) {
+        setPaymentSettingsByOwner((prev) => ({
+          ...prev,
+          [activeOwnerId]: { ...(prev[activeOwnerId] || {}), ...paymentPatch },
+        }))
+      }
+
+      if (Object.keys(globalPatch).length) {
+        setSettings((prev) => ({ ...prev, ...globalPatch }))
+      }
+    },
+    [ownerSettings, activeOwnerId, showDemoData, setSettings, setPaymentSettingsByOwner],
+  )
+
   const isCaretaker = isCaretakerRole(currentRole)
 
   const caretakerBuildings = useMemo(() => {
@@ -364,7 +407,7 @@ function AppContent() {
         payments: ownerPayments,
         maintenance,
         subscription,
-        settings,
+        settings: ownerSettings,
         demoMode: showDemoData,
         unreadMessages,
       })
@@ -384,7 +427,7 @@ function AppContent() {
     ownerPayments,
     maintenance,
     subscription,
-    settings,
+    ownerSettings,
     showDemoData,
     tenants,
     unreadRefresh,
@@ -583,8 +626,8 @@ function AppContent() {
       return
     }
     const bal = getTenantBalance(tenant?.id, tenants, payments)
-    const receiptData = issueReceipt(payment, tenant, unit, building, settings, bal.balance, activeOwnerId)
-    const text = buildReceiptText(payment, tenant, unit, building, settings, bal.balance)
+    const receiptData = issueReceipt(payment, tenant, unit, building, ownerSettings, bal.balance, activeOwnerId)
+    const text = buildReceiptText(payment, tenant, unit, building, ownerSettings, bal.balance)
     const wa = tenant?.whatsapp
       ? `https://wa.me/${tenant.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(text.slice(0, 500))}`
       : ''
@@ -610,7 +653,7 @@ function AppContent() {
         })
       }
     }
-  }, [tenants, payments, settings, activeOwnerId, showToast])
+  }, [tenants, payments, ownerSettings, activeOwnerId, showToast])
 
   const handleToggleDemoMode = useCallback(() => {
     setDemoMode((wasOn) => {
@@ -634,7 +677,7 @@ function AppContent() {
     tenantNotes,
     broadcastHistory,
     guarantorLogs,
-    settings,
+    settings: ownerSettings,
     currentUser,
     currentRole,
     selectedBuilding,
@@ -653,7 +696,7 @@ function AppContent() {
     setTenantNotes,
     setBroadcastHistory,
     setGuarantorLogs,
-    setSettings,
+    setSettings: setOwnerSettings,
     setSelectedBuilding,
     setSelectedUnit,
     setSelectedTenant,
@@ -742,12 +785,17 @@ function AppContent() {
         )
       }
 
+      const tenantLandlordId = t?.ownerId || u?.ownerId || b?.ownerId || authUser?.ownerId
+      const tenantSettings = mergeOwnerSettings(settings, tenantLandlordId, {
+        paymentByOwner: paymentSettingsByOwner,
+      })
+
       const portalProps = {
         tenant: t,
         unit: u,
         building: b,
         payments: tenantPayments,
-        settings,
+        settings: tenantSettings,
         showToast,
         authUser,
         setPageSafe,
@@ -942,7 +990,7 @@ function AppContent() {
             units={ownerUnits}
             currentUser={currentUser}
             authUser={authUser}
-            settings={settings}
+            settings={ownerSettings}
             setCurrentPage={setPageSafe}
             activeOwnerId={activeOwnerId}
           />
@@ -1106,7 +1154,7 @@ function AppContent() {
           unit={detailUnit}
           building={detailBuilding}
           payments={payments.filter((p) => p.tenantId === detailTenant.id)}
-          settings={settings}
+          settings={ownerSettings}
           currentUser={currentUser}
           tenantNotes={tenantNotes[detailTenant.id] || []}
           utilities={utilities.filter((u) => u.unitId === detailTenant.unitId)}
@@ -1168,7 +1216,7 @@ function AppContent() {
           unit={getCaretakerSafeUnit(detailUnit) || detailUnit}
           building={getCaretakerSafeBuilding(detailBuilding) || detailBuilding}
           payments={[]}
-          settings={settings}
+          settings={ownerSettings}
           currentUser={currentUser}
           tenantNotes={[]}
           utilities={[]}

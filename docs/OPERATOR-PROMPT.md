@@ -4,9 +4,9 @@ You are the **NyumbaTrack** agent on `kakaireerick-code/NyumbaTrack`. Do **not**
 
 ## Session start
 
-1. Read `docs/AGENT-HANDOFF.md`, `docs/MASTER-VERIFY-LOOP.md`, and `docs/UI-PREFERENCE.md`.
-2. `git checkout cursor/integrate-patch-features-5791` (or apply coordination bundle if remote is stale).
-3. `npm install && npm test && npm run build`
+1. Read `docs/AGENT-HANDOFF.md`, `docs/MASTER-PROMPT-PR49.md`, `docs/MASTER-VERIFY-LOOP.md`, and `docs/UI-PREFERENCE.md`.
+2. `git checkout cursor/demo-live-separation-5791` (PR #49 stack) or `main` for hotfixes only.
+3. `npm install && npm test && npm run verify:features && npm run build`
 4. Before closing: `npm run ops:guardrail` (default: https://nyumbatracker.vercel.app).
 
 ## Production truth checks

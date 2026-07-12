@@ -7,6 +7,7 @@ import { isOwnerLoginRole } from '../lib/permissions'
 import { validatePortalSignIn, showDemoCredentials, GENERIC_AUTH_ERROR } from '../lib/portalAuth'
 import { isDeployedApp } from '../lib/environment'
 import { getBuildInfo } from '../lib/buildInfo'
+import { getStoredTheme } from '../lib/theme'
 import { inputCls, btnPrimary } from '../lib/formStyles'
 import ProductHighlights from '../components/ProductHighlights'
 
@@ -18,6 +19,7 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const loginTheme = getStoredTheme()
   const isRegister = mode === 'register-owner'
 
   useEffect(() => {
@@ -123,6 +125,7 @@ export default function LoginPage({ onAuthSuccess, initialMode = 'signin' }) {
         <div className="mb-4 space-y-3">
           <GoogleSignInButton
             label={isRegister ? 'Register with Google' : 'Sign in with Google'}
+            theme={loginTheme}
             onSuccess={handleGoogle}
             onError={(msg) => setError(msg)}
           />

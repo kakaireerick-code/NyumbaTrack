@@ -1,58 +1,34 @@
-# Master verify loop — F1–F18
+# Master verify loop — F1–F31
 
 Run every turn:
 
 ```bash
-npm run verify:features   # F1–F18 local checks
-npm test && npm run build
+npm run verify:features   # F1–F31 local checks
+npm test
+npm run test:api-smoke
+npm run build
 npm run ops:guardrail     # production (default: nyumbatracker.vercel.app)
 ```
 
-## Feature checklist
+## Feature checklist (summary)
 
-| ID | Feature | CHECK |
-|----|---------|-------|
-| F1 | Uganda branding | `index.html` + `manifest.json` mention Uganda |
-| F2 | Welcome back login | `LoginPage.jsx` has "Welcome back" |
-| F3 | Simple sidebar (8) | `navigation.ts` + Sidebar shows 8 primary only |
-| F4 | Settings → More tools | `SettingsPage` links to advanced pages |
-| F5 | Subscription pending | No instant `status: 'active'` in subscribe flow |
-| F6 | Billing UI complete | `YEARLY_BILLING_OFFER` + plan features in `subscriptionPlans.js` |
-| F7 | API health | `api/health.ts` exists |
-| F8 | API subscription | `api/subscription.ts` + `subscriptionCloud.ts` |
-| F9 | Demo / live mode | `appMode.ts` present |
-| F10 | File import | `fileImport.ts` + `DataImportPage` |
-| F11 | Guided workflows | `GuidedWorkflowOverlay.jsx` |
-| F12 | RBAC isolation | `permissions.ts` blocks tenant/caretaker leaks |
-| F13 | MoMo ref validation | `momoVerification.ts` |
-| F14 | Guardrail script | `scripts/ops-guardrail.mjs` + npm script |
-| F15 | Billing admin panel | `BillingAdminPage.jsx` + PATCH `/api/subscription` |
-| F16 | Cloud tenant invites | `api/invite.ts` + cross-device join |
-| F17 | Web push notifications | `sw.js` + push APIs + cross-browser bell |
-| F18 | VAPID setup tooling | `SETUP-VAPID.ps1` + `npm run setup:vapid` |
+| Range | Theme |
+|-------|--------|
+| F1–F14 | Uganda branding, login, sidebar, billing, API, demo mode, import, RBAC, guardrail |
+| F15–F18 | Billing admin, cloud invites, push, VAPID |
+| F20–F25 | Uptime probes, About/Referrals, boot splash, stable invites, partner rewards, quick add |
+| F26 | Tenant messaging + layout + **per-landlord payment numbers** |
+| F27 | Tenant behavioral dashboard |
+| F28–F29 | Smart spreadsheet + bulk agreement import |
+| F30 | Demo write guards (read-only training) |
+| F31 | Demo/live separation (import, limits, messages, purge, dark login) |
 
-## F17 — Web push (browsers)
+Full automated checks: `scripts/verify-features.mjs`
 
-Chrome, Firefox, Edge, Safari — tab-hidden alerts work without VAPID. Closed-app push needs VAPID + PWA (iPhone: Add to Home Screen).
+## PR #49 stack
 
-See `docs/PUSH-NOTIFICATIONS.md`.
-
-## F18 — VAPID keys (owner PC)
-
-```powershell
-.\SETUP-VAPID.ps1
-# or: $env:VERCEL_TOKEN="..." ; npm run setup:vapid
-```
-
-Pass: `npm run check:vapid` → `vapid: true`, `push: true`
-
-## F15 — Billing admin (PC operator)
-
-1. Sign in as `VITE_BILLING_ADMIN_EMAIL`
-2. **Settings → More tools → Billing admin**
-3. Paste `BILLING_ADMIN_SECRET` → **Load claims**
-4. Submit test MoMo on **Plans & Billing** → claim appears as `pending_verification`
-5. **Approve MoMo** → claim status `approved` in Redis
+Branch: `cursor/demo-live-separation-5791`  
+Master prompt: **`docs/MASTER-PROMPT-PR49.md`**
 
 ## Loop per feature
 
@@ -63,7 +39,16 @@ Log: CONFIRMED F# at <commit-sha>
 
 ## Done when
 
-- All F1–F18 CONFIRMED locally
-- `npm run ops:guardrail` → 4/4 PASS on production
-- Bundle ≠ `index-B0iUFD94.js`
+- All F1–F31 CONFIRMED locally
+- **159/159** tests pass
+- `npm run ops:guardrail` → PASS on production
+- Bundle ≠ stale `index-B0iUFD94.js`
 - `/api/health` returns JSON
+
+## Ship
+
+```powershell
+.\PUSH-DEMO-LIVE-SEPARATION.ps1
+gh pr ready 49
+.\SHIP-TO-PRODUCTION.ps1 -Branch cursor/demo-live-separation-5791
+```

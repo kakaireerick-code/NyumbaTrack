@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
+import { getStoredTheme } from '../lib/theme'
 
 function decodeGoogleJwt(credential) {
   const payload = credential.split('.')[1]
@@ -7,7 +8,7 @@ function decodeGoogleJwt(credential) {
   return JSON.parse(json)
 }
 
-function DemoGoogleSignIn({ onSuccess, label = 'Sign in with Google' }) {
+function DemoGoogleSignIn({ onSuccess, label = 'Sign in with Google', dark = false }) {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
@@ -29,7 +30,11 @@ function DemoGoogleSignIn({ onSuccess, label = 'Sign in with Google' }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full flex items-center justify-center gap-2 py-2.5 border rounded-lg bg-white hover:bg-gray-50 text-sm font-medium"
+        className={`w-full flex items-center justify-center gap-2 py-2.5 border rounded-lg text-sm font-medium ${
+          dark
+            ? 'bg-gray-800 hover:bg-gray-700 text-gray-100 border-gray-600'
+            : 'bg-white hover:bg-gray-50'
+        }`}
       >
         <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
@@ -44,8 +49,8 @@ function DemoGoogleSignIn({ onSuccess, label = 'Sign in with Google' }) {
   }
 
   return (
-    <form onSubmit={submit} className="p-3 border rounded-lg bg-gray-50 space-y-2 text-sm">
-      <p className="text-xs text-gray-500">Demo Google sign-in — use your Gmail. Set VITE_GOOGLE_CLIENT_ID for real OAuth.</p>
+    <form onSubmit={submit} className={`p-3 border rounded-lg space-y-2 text-sm ${dark ? 'bg-gray-800 border-gray-600' : 'bg-gray-50'}`}>
+      <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Demo Google sign-in — use your Gmail. Set VITE_GOOGLE_CLIENT_ID for real OAuth.</p>
       <input className="w-full border rounded px-2 py-1.5" placeholder="your@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
       <input className="w-full border rounded px-2 py-1.5" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
       <div className="flex gap-2">
@@ -56,11 +61,17 @@ function DemoGoogleSignIn({ onSuccess, label = 'Sign in with Google' }) {
   )
 }
 
-export default function GoogleSignInButton({ onSuccess, onError, label = 'Sign in with Google' }) {
+export default function GoogleSignInButton({
+  onSuccess,
+  onError,
+  label = 'Sign in with Google',
+  theme = 'light',
+}) {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+  const dark = theme === 'dark'
 
   if (!clientId) {
-    return <DemoGoogleSignIn onSuccess={onSuccess} label={label} />
+    return <DemoGoogleSignIn onSuccess={onSuccess} label={label} dark={dark} />
   }
 
   return (
@@ -84,7 +95,7 @@ export default function GoogleSignInButton({ onSuccess, onError, label = 'Sign i
           }
         }}
         onError={() => onError?.('Google sign-in was cancelled or failed')}
-        theme="outline"
+        theme={dark ? 'filled_black' : 'outline'}
         size="large"
         text="continue_with"
         shape="rectangular"

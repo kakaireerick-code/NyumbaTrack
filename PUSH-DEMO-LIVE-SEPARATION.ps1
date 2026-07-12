@@ -1,5 +1,5 @@
-# Ship demo/live separation + payment stack (read-only Demo training mode)
-# PR: https://github.com/kakaireerick-code/NyumbaTrack/pull/49
+# Ship PR #49 — demo/live separation + payment stack
+# https://github.com/kakaireerick-code/NyumbaTrack/pull/49
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
@@ -10,10 +10,9 @@ git fetch origin main $Branch 2>$null
 git checkout $Branch 2>$null
 if ($LASTEXITCODE -ne 0) { git checkout -b $Branch }
 
-# If your PC branch is AHEAD of GitHub (consolidated stack), skip pull — push wins.
-# Only pull when you need to reconcile with remote:
-#   git pull --rebase origin $Branch
+# If your PC branch is AHEAD of GitHub (e.g. d5d6e4c), do NOT pull — push wins.
 
+Write-Host "Running tests..." -ForegroundColor Cyan
 npm test
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -29,21 +28,27 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 git add -A
 $st = git status --porcelain
 if ($st) {
-  git commit -m "Demo/live separation: read-only training, guarded writes, live-only import"
+  git commit -m "Demo/live separation: read-only training, per-landlord MoMo, unified rent flow"
 }
 
+Write-Host "Pushing $Branch..." -ForegroundColor Cyan
 git push -u origin $Branch --force-with-lease
 if ($LASTEXITCODE -ne 0) {
-  Write-Host "Push failed (403?) — run from your PC with your GitHub credentials:" -ForegroundColor Yellow
-  Write-Host "  git push -u origin $Branch --force-with-lease" -ForegroundColor Yellow
-  exit $LASTEXITCODE
+  Write-Host "force-with-lease failed — trying --force (your PC stack should win)..." -ForegroundColor Yellow
+  git push -u origin $Branch --force
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "Push failed — run from your PC with GitHub credentials:" -ForegroundColor Red
+    Write-Host "  git push -u origin $Branch --force-with-lease" -ForegroundColor Yellow
+    exit $LASTEXITCODE
+  }
 }
 
-Write-Host "Pushed $Branch" -ForegroundColor Green
 Write-Host ""
-Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "  1. Mark PR ready:  gh pr ready $PrNumber" -ForegroundColor DarkGray
-Write-Host "  2. Ship to prod:   .\SHIP-TO-PRODUCTION.ps1 -Branch $Branch" -ForegroundColor DarkGray
-Write-Host "     (or merge PR #$PrNumber in GitHub UI)" -ForegroundColor DarkGray
+Write-Host "Pushed $Branch successfully." -ForegroundColor Green
 Write-Host ""
-Write-Host "Includes: demo/live separation (F30-F31), per-landlord payment numbers, unified rent flow." -ForegroundColor DarkGray
+Write-Host "Next steps (owner credentials required):" -ForegroundColor Cyan
+Write-Host "  gh pr ready $PrNumber" -ForegroundColor White
+Write-Host "  .\SHIP-TO-PRODUCTION.ps1 -Branch $Branch" -ForegroundColor White
+Write-Host ""
+Write-Host "Stack: demo/live F30-F31, per-landlord payment numbers, unified rent flow, dark login." -ForegroundColor DarkGray
+Write-Host "Expect: 159 tests, F1-F31, build OK." -ForegroundColor DarkGray

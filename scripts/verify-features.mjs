@@ -318,6 +318,9 @@ confirm(
     tenantData.includes('ownerId || unit.ownerId') &&
     adminPages.includes('Rent payment numbers') &&
     adminPages.includes('bankAccount') &&
+    exists('src/lib/ownerSettings.ts') &&
+    read('src/lib/ownerSettings.ts').includes('rt_payment_settings_by_owner') &&
+    read('src/App.jsx').includes('paymentSettingsByOwner') &&
     navTs.includes('PRIMARY_CARETAKER_PAGES') &&
     navTs.includes("'maintenance',\n  'units'"),
   'Tenants can message + nav/layout + MoMo settings prominent',
@@ -399,6 +402,8 @@ confirm(
     appJsx.includes('ownerBuildings') &&
     appJsx.includes('units={ownerUnits}') &&
     appJsx.includes('excludePractice={!showDemoData}') &&
+    appJsx.includes('setOwnerSettings') &&
+    read('src/pages/LoginPage.jsx').includes('theme={loginTheme}') &&
     messagesPage.includes('excludeDemo') &&
     read('src/lib/demoPractice.ts').includes('if (!opts?.demoMode) return false') &&
     adminPages.includes('Demo training numbers'),
