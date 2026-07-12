@@ -55,14 +55,29 @@ npm run build
 
 Log: `CONFIRMED F# at <sha>` when fixing.
 
-## Ship (owner PC — cloud bot often 403)
+## Push after every work session (mandatory)
+
+After **any** code change on this branch, the agent must:
+
+```bash
+npm test && npm run test:api-smoke && npm run verify:features && npm run build
+git add -A && git commit -m "<clear message>"   # if changes exist
+git push -u origin cursor/demo-live-separation-5791 --force-with-lease
+# if lease fails: git push -u origin cursor/demo-live-separation-5791 --force
+```
+
+On owner PC, the same flow is wrapped in `.\PUSH-DEMO-LIVE-SEPARATION.ps1`.
+
+**Never end a session with unpushed commits.** Hand off HEAD sha + push result to the next agent.
+
+## Ship
 
 ```powershell
 git fetch origin
 git checkout cursor/demo-live-separation-5791
-# Do NOT pull if already at d5d6e4c or ahead
-.\PUSH-DEMO-LIVE-SEPARATION.ps1
-gh pr ready 49
+git reset --hard origin/cursor/demo-live-separation-5791   # sync to cloud if behind
+.\PUSH-DEMO-LIVE-SEPARATION.ps1                            # if you made local edits
+gh pr ready 49                                             # once only (already done at 86f5513)
 .\SHIP-TO-PRODUCTION.ps1 -Branch cursor/demo-live-separation-5791
 ```
 
@@ -88,8 +103,9 @@ Reply with:
 
 ## Done when
 
-- [ ] 159 tests pass
-- [ ] F1–F31 CONFIRMED
-- [ ] Build OK
+- [x] 159 tests pass (`86f5513`)
+- [x] F1–F31 CONFIRMED
+- [x] Build OK
+- [x] PR #49 marked ready for review
 - [ ] PR #49 merged to `main`
 - [ ] `npm run ops:guardrail` green on production

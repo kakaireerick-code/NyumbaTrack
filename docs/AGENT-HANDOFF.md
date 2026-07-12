@@ -2,7 +2,7 @@
 
 **Repo:** `kakaireerick-code/NyumbaTrack`  
 **Branch:** `cursor/demo-live-separation-5791`  
-**PR:** [#49](https://github.com/kakaireerick-code/NyumbaTrack/pull/49) (draft until owner marks ready)  
+**PR #49** ([#49](https://github.com/kakaireerick-code/NyumbaTrack/pull/49)) — **ready for review** at `86f5513` (was draft; marked ready by cloud agent)  
 **Do not touch:** Land-Tax-Tracker / ULTT
 
 ## Start here
