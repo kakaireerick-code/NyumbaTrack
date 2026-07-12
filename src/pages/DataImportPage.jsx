@@ -196,6 +196,50 @@ export default function DataImportPage({
 
       <GuidancePanel guidance={guidance} />
 
+      <div className="card p-4 border-2 border-blue-200 bg-blue-50 dark:bg-blue-900/20 space-y-2">
+        <p className="font-semibold text-blue-900 dark:text-blue-100">Can&apos;t import your file?</p>
+        <p className="text-sm text-blue-800 dark:text-blue-200">
+          If a spreadsheet, PDF, or Word document won&apos;t upload or map correctly, improvise and carry on — you
+          don&apos;t need import to use NyumbaTrack.
+        </p>
+        <ul className="text-sm text-blue-800 dark:text-blue-200 list-disc pl-5 space-y-1">
+          <li>
+            <strong>Properties & units</strong> — add them from Buildings and Units
+          </li>
+          <li>
+            <strong>Tenants</strong> — use Quick add on any unit, or share an invite link
+          </li>
+          <li>
+            <strong>Agreements</strong> — attach PDFs later from a tenant profile or Documents
+          </li>
+        </ul>
+        {setCurrentPage && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setCurrentPage('buildings')}
+              className="text-sm text-brand underline tap-target"
+            >
+              Buildings →
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentPage('units')}
+              className="text-sm text-brand underline tap-target"
+            >
+              Units →
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentPage('tenants')}
+              className="text-sm text-brand underline tap-target"
+            >
+              Tenants →
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
         <button
           type="button"

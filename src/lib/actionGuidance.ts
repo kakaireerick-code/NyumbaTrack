@@ -39,8 +39,13 @@ export const getPageGuidance = (
       return {
         variant: 'info',
         headline: 'ULTT-style spreadsheet import',
-        detail: 'Upload Excel .xlsx, CSV, or Word saved as Plain Text. Map columns, preview rows, then confirm. PDF/.docx lists: copy to Excel or save as .txt.',
-        nextSteps: ['Download the expanded template', 'Upload and adjust column mapping', 'Review preview before confirming'],
+        detail:
+          'Upload Excel .xlsx, CSV, or Word saved as Plain Text. Map columns, preview rows, then confirm. If import fails, add buildings, units, and tenants manually — you can keep working without a spreadsheet.',
+        nextSteps: [
+          'Download the expanded template',
+          'Upload and adjust column mapping',
+          'If import fails: Quick add tenant on a unit, or add buildings/units by hand',
+        ],
       }
     }
     if (pageId === 'tenants') {

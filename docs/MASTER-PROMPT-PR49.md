@@ -100,6 +100,17 @@ Reply with:
 | Tenant sees wrong MoMo | `mergeOwnerSettings(settings, tenant.ownerId)` in portal |
 | Google button invisible on login | `theme={loginTheme}` + `filled_black` |
 | Practice threads after Demo OFF | `purgeDemoPracticeData` on toggle |
+| Import file won&apos;t work | Tell landlord: add buildings/units/tenants manually (Quick add, invite) — see Data Import fallback banner |
+
+## Landlord message — import fallback
+
+If a landlord **cannot import** a spreadsheet, PDF, or Word file, they should **improvise and carry on** with manual entry:
+
+- **Buildings & units** — Buildings and Units menus
+- **Tenants** — Quick add on a unit, or tenant invite code
+- **Agreements** — attach PDFs later from tenant profile or Documents
+
+This is shown on **Data Import** and in page guidance. Import is optional, not a blocker.
 
 ## Done when
 
