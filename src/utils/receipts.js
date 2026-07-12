@@ -1,10 +1,31 @@
 import { fmtUGX, fmtDate } from './helpers'
-import { saveReceiptSnapshot } from '../lib/receiptStore'
+import { getReceipts, saveReceiptSnapshot } from '../lib/receiptStore'
+import {
+  buildReadOnlyWordDocument,
+  openReadOnlyWordDocument,
+  downloadReadOnlyWordDocument,
+} from './readOnlyDocuments'
 
 export const generateReceiptNo = (payments) => {
   const year = new Date().getFullYear()
-  const count = payments.filter((p) => p.receiptNo?.startsWith(`RCT-${year}`)).length + 1
-  return `RCT-${year}-${String(count).padStart(3, '0')}`
+  const prefix = `RCT-${year}-`
+  const existing = [
+    ...payments.filter((p) => p.receiptNo?.startsWith(prefix)).map((p) => p.receiptNo),
+    ...getReceipts().filter((r) => r.receiptNo?.startsWith(prefix)).map((r) => r.receiptNo),
+  ]
+  const nums = existing
+    .map((no) => parseInt(String(no).slice(prefix.length), 10))
+    .filter((n) => !Number.isNaN(n))
+  const max = nums.length ? Math.max(...nums) : 0
+  return `${prefix}${String(max + 1).padStart(3, '0')}`
+}
+
+export const generateUniqueReceiptId = (receiptNo) => {
+  const suffix =
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID().slice(0, 8)
+      : Date.now().toString(36)
+  return `${receiptNo}-${suffix}`
 }
 
 const TYPE_LABELS = {
@@ -19,9 +40,14 @@ export const buildReceiptData = (payment, tenant, unit, building, settings, bala
   const propertyName = settings?.companyName || building?.name || 'Nyumba-track'
   const bal = Number(balance) || 0
 
+  const receiptNo = payment?.receiptNo || 'PENDING'
+  const receiptId =
+    payment?.receiptId ||
+    (receiptNo !== 'PENDING' ? generateUniqueReceiptId(receiptNo) : generateUniqueReceiptId(`RCT-${Date.now()}`))
+
   return {
-    receiptId: payment?.receiptId || payment?.receiptNo || `RCT-${Date.now()}`,
-    receiptNo: payment?.receiptNo || 'PENDING',
+    receiptId,
+    receiptNo,
     issuedAt: payment?.date || new Date().toISOString().split('T')[0],
     companyName: propertyName,
     propertyName: building?.name || propertyName,
@@ -192,7 +218,50 @@ export const buildReceiptHtmlDocument = (data) => `<!DOCTYPE html>
 </body>
 </html>`
 
+export const buildReceiptWordDocument = (data) =>
+  buildReadOnlyWordDocument({
+    title: 'Payment Receipt',
+    documentNo: data.receiptNo,
+    bodyText: `OFFICIAL RENT RECEIPT
+${data.companyName}
+${data.propertyAddress}
+
+Receipt No: ${data.receiptNo}
+Receipt ID: ${data.receiptId}
+Date: ${fmtDate(data.issuedAt)}
+
+Received from: ${data.tenantName}
+Unit: ${data.unitNumber}
+Period: ${data.period}
+
+Payment: ${data.paymentTypeLabel}
+Amount: ${data.amountFormatted}
+Method: ${data.method}
+Reference: ${data.reference}
+${data.notes ? `Notes: ${data.notes}` : ''}
+
+Balance remaining: ${data.balanceFormatted}
+${data.isPaidInFull ? 'Status: FULLY PAID' : `Status: ${data.status}`}
+
+Issued by: ${data.issuedBy}`,
+    meta: [
+      { label: 'Receipt ID', value: data.receiptId },
+      { label: 'Date', value: fmtDate(data.issuedAt) },
+      { label: 'Received from', value: data.tenantName },
+      { label: 'Amount', value: data.amountFormatted },
+      { label: 'Status', value: data.status },
+    ],
+    footer: `Official payment receipt ${data.receiptNo} — read only, not editable. Issued by ${data.issuedBy}. Nyumba-track`,
+  })
+
 export const openReceiptDocument = (data) => {
+  const html = buildReceiptWordDocument(data)
+  const ok = openReadOnlyWordDocument(html, `receipt-${data.receiptNo}.doc`)
+  if (!ok) downloadReceiptDocument(data)
+  return ok
+}
+
+export const openReceiptHtmlDocument = (data) => {
   const html = buildReceiptHtmlDocument(data)
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
   const url = URL.createObjectURL(blob)
@@ -206,12 +275,6 @@ export const openReceiptDocument = (data) => {
 }
 
 export const downloadReceiptDocument = (data) => {
-  const html = buildReceiptHtmlDocument(data)
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `receipt-${data.receiptNo}.html`
-  a.click()
-  URL.revokeObjectURL(url)
+  const html = buildReceiptWordDocument(data)
+  downloadReadOnlyWordDocument(html, `receipt-${data.receiptNo}.doc`)
 }

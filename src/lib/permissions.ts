@@ -37,7 +37,9 @@ export type PageId =
   | 'my-payments'
   | 'my-lease'
   | 'my-receipts'
+  | 'my-notices'
   | 'receipt-view'
+  | 'notice-view'
   | 'about'
   | 'referrals'
 
@@ -54,6 +56,8 @@ export type FieldKey =
   | 'payment.amount'
   | 'receipt.amount'
   | 'receipt.list'
+  | 'notice.body'
+  | 'notice.list'
   | 'subscription.billing'
   | 'owner.revenue'
 
@@ -91,7 +95,7 @@ const OWNER_PAGES: PageId[] = [
   'payments', 'balance-tracker', 'deposits', 'utilities', 'reminders',
   'maintenance', 'reports', 'documents', 'legal-notices', 'settings',
   'subscription', 'billing-admin', 'blacklist', 'defaulter-list', 'help', 'guided', 'assistant',
-  'data-import', 'messages', 'receipt-view', 'about', 'referrals',
+  'data-import', 'messages', 'receipt-view', 'notice-view', 'about', 'referrals',
 ]
 
 const CARETAKER_PAGES: PageId[] = [
@@ -99,8 +103,8 @@ const CARETAKER_PAGES: PageId[] = [
 ]
 
 const TENANT_PAGES: PageId[] = [
-  'my-dashboard', 'my-balance', 'my-payments', 'my-lease', 'my-receipts', 'my-messages',
-  'help', 'guided', 'assistant', 'receipt-view', 'about',
+  'my-dashboard', 'my-balance', 'my-payments', 'my-lease', 'my-receipts', 'my-notices', 'my-messages',
+  'help', 'guided', 'assistant', 'receipt-view', 'notice-view', 'about',
 ]
 
 const ROLE_PAGE_MAP: Record<Role, PageId[]> = {
@@ -127,7 +131,7 @@ export const canAccessPage = (role: string, pageId: string): boolean => {
   if (r === 'tenant' && (TENANT_BLOCKED_PAGES.includes(pageId) || isBillingPage(pageId))) {
     return false
   }
-  if (r === 'caretaker' && (pageId === 'receipt-view' || pageId === 'my-receipts')) {
+  if (r === 'caretaker' && (pageId === 'receipt-view' || pageId === 'my-receipts' || pageId === 'notice-view' || pageId === 'my-notices')) {
     return false
   }
   return pagesForRole(role).includes(pageId as PageId)
@@ -145,6 +149,7 @@ export const canViewField = (role: string, fieldKey: FieldKey): boolean => {
   if (r === 'tenant') {
     if (fieldKey === 'tenant.rentAmount' || fieldKey === 'tenant.balance') return true
     if (fieldKey === 'receipt.amount' || fieldKey === 'receipt.list') return true
+    if (fieldKey === 'notice.body' || fieldKey === 'notice.list') return true
     if (fieldKey === 'subscription.billing' || fieldKey === 'owner.revenue') return false
     if (fieldKey.startsWith('unit.') && fieldKey !== 'unit.monthlyRent') return false
     return false
@@ -152,6 +157,7 @@ export const canViewField = (role: string, fieldKey: FieldKey): boolean => {
 
   if (r === 'caretaker') {
     if (fieldKey === 'receipt.list' || fieldKey === 'receipt.amount') return false
+    if (fieldKey === 'notice.list' || fieldKey === 'notice.body') return false
     return !FINANCIAL_FIELDS.includes(fieldKey) && !OWNER_ONLY_FIELDS.includes(fieldKey)
   }
 

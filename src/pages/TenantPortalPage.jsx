@@ -4,6 +4,7 @@ import { computeArrears, formatCurrency } from '../lib/rentLedger'
 import { getTenantSafeBuilding, getTenantSafeUnit, getTenantSafeTenantRecord } from '../lib/propertyViews'
 import { Badge, EmptyState, LoadingButton } from '../components/UI'
 import { buildReceiptData } from '../utils/receipts'
+import { noticesForTenant } from '../lib/noticeStore'
 import ReceiptViewerModal from '../components/ReceiptViewerModal'
 import GuidancePanel from '../components/GuidancePanel'
 import ProductHighlights from '../components/ProductHighlights'
@@ -30,8 +31,13 @@ export default function TenantPortalPage({
   onDismissOnboarding,
   setPageSafe,
   onOpenReceipt,
+  onOpenNotice,
   authUser,
 }) {
+  const tenantNotices = useMemo(
+    () => (tenant?.id ? noticesForTenant(tenant.id) : []),
+    [tenant?.id],
+  )
   const [payForm, setPayForm] = useState({ amount: '', method: 'MTN MoMo', reference: '' })
   const [payLoading, setPayLoading] = useState(false)
   const [messageText, setMessageText] = useState('')
@@ -450,6 +456,26 @@ export default function TenantPortalPage({
           <h2 className="font-semibold mb-2">House rules</h2>
           <p className="text-sm whitespace-pre-wrap">{settings.houseRulesText}</p>
         </div>
+        <div className="card p-4">
+          <h2 className="font-semibold mb-2">Legal notices</h2>
+          {tenantNotices.length === 0 ? (
+            <p className="text-sm text-gray-500">No notices served yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {tenantNotices.map((n) => (
+                <div key={n.noticeId} className="flex justify-between items-center gap-2 text-sm border-b dark:border-gray-700 pb-2">
+                  <span>{n.noticeNo} — {n.type} — {formatDate(n.servedAt)}</span>
+                  {onOpenNotice ? (
+                    <button type="button" className="text-brand underline min-h-[44px] px-2" onClick={() => onOpenNotice(n.noticeId)}>
+                      View notice
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-gray-400 mt-2">Official notices open in Word — read only, not editable.</p>
+        </div>
       </div>
       {receiptModal}
       </>
@@ -475,6 +501,29 @@ export default function TenantPortalPage({
       </div>
       {receiptModal}
       </>
+    )
+  }
+
+  if (currentPage === 'my-notices') {
+    return (
+      <div className="space-y-4 pb-24 max-w-2xl mx-auto w-full">
+        <h1 className="text-xl font-bold">My Notices</h1>
+        {tenantNotices.length === 0 ? <EmptyState message="No notices yet." /> : (
+          <div className="grid gap-3">
+            {tenantNotices.map((n) => (
+              <div key={n.noticeId} className="card p-3 flex justify-between items-center flex-wrap gap-2">
+                <span className="text-sm">{n.noticeNo} — {n.type} — {formatDate(n.servedAt)}</span>
+                {onOpenNotice && (
+                  <button type="button" className="px-3 py-2 bg-brand text-white rounded text-sm min-h-[44px]" onClick={() => onOpenNotice(n.noticeId)}>
+                    View notice
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-gray-500">Notices are official records — read only, not editable.</p>
+      </div>
     )
   }
 

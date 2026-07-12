@@ -10,6 +10,7 @@ import ReceiptModal from './components/ReceiptModal'
 import TenantDetailPanel from './components/TenantDetailPanel'
 import LoginPage from './pages/LoginPage'
 import ReceiptPage from './pages/ReceiptPage'
+import NoticePage from './pages/NoticePage'
 import JoinPage from './pages/JoinPage'
 import StaffJoinPage from './pages/StaffJoinPage'
 import DashboardPage from './pages/DashboardPage'
@@ -73,7 +74,7 @@ import {
 import { getOwnerIdForUser, filterByOwner, DEMO_OWNER_ID } from './lib/scope'
 import { syncInvitesFromUnits, releaseUnitInvite, pushInviteToCloud } from './lib/invites'
 import { processReferrerCreditOnFirstLogin, recordReferralSignup } from './lib/partnerRewards'
-import { parseEntryPath, getTenantJoinPath, getCaretakerJoinPath, getReceiptPath, getBillingAdminPath } from './lib/routing'
+import { parseEntryPath, getTenantJoinPath, getCaretakerJoinPath, getReceiptPath, getNoticePath, getBillingAdminPath } from './lib/routing'
 import { getCaretakerSafeBuilding, getCaretakerSafeUnit, getCaretakerSafeTenant } from './lib/propertyViews'
 import NotificationInbox from './components/NotificationInbox'
 import { addNotification } from './lib/notifications'
@@ -113,6 +114,9 @@ function AppContent() {
   const [entryPath] = useState(() => parseEntryPath())
   const [receiptViewId, setReceiptViewId] = useState(() =>
     entryPath.kind === 'receipt' ? entryPath.receiptId : '',
+  )
+  const [noticeViewId, setNoticeViewId] = useState(() =>
+    entryPath.kind === 'notice' ? entryPath.noticeId : '',
   )
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authUser, setAuthUser] = useState(null)
@@ -233,6 +237,13 @@ function AppContent() {
   }, [isLoggedIn, entryPath.kind, entryPath.receiptId])
 
   useEffect(() => {
+    if (entryPath.kind === 'notice' && entryPath.noticeId && isLoggedIn) {
+      setNoticeViewId(entryPath.noticeId)
+      setCurrentPage('notice-view')
+    }
+  }, [isLoggedIn, entryPath.kind, entryPath.noticeId])
+
+  useEffect(() => {
     if (!isLoggedIn || entryPath.kind !== 'billing-admin') return
     if (isBillingAdminEmail(authUser?.email)) {
       setCurrentPage('billing-admin')
@@ -249,6 +260,13 @@ function AppContent() {
     window.history.pushState({}, '', getReceiptPath(receiptId))
     setReceiptViewId(receiptId)
     setCurrentPage('receipt-view')
+  }, [])
+
+  const openNoticeRoute = useCallback((noticeId) => {
+    if (!noticeId) return
+    window.history.pushState({}, '', getNoticePath(noticeId))
+    setNoticeViewId(noticeId)
+    setCurrentPage('notice-view')
   }, [])
 
   useEffect(() => {
@@ -631,6 +649,18 @@ function AppContent() {
     }
     const bal = getTenantBalance(tenant?.id, tenants, payments)
     const receiptData = issueReceipt(payment, tenant, unit, building, ownerSettings, bal.balance, activeOwnerId)
+    setPayments((prev) =>
+      prev.map((p) =>
+        p.id === payment.id
+          ? {
+              ...p,
+              receiptId: receiptData.receiptId,
+              receiptNo: receiptData.receiptNo,
+              receiptSent: true,
+            }
+          : p,
+      ),
+    )
     const text = buildReceiptText(payment, tenant, unit, building, ownerSettings, bal.balance)
     const wa = tenant?.whatsapp
       ? `https://wa.me/${tenant.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(text.slice(0, 500))}`
@@ -657,7 +687,7 @@ function AppContent() {
         })
       }
     }
-  }, [tenants, payments, ownerSettings, activeOwnerId, showToast])
+  }, [tenants, payments, ownerSettings, activeOwnerId, showToast, setPayments])
 
   const handleToggleDemoMode = useCallback(() => {
     setDemoMode((wasOn) => {
@@ -708,6 +738,7 @@ function AppContent() {
     setPageSafe,
     showToast,
     showReceipt,
+    onOpenNotice: openNoticeRoute,
     paymentFormOpen,
     setPaymentFormOpen,
     subscription,
@@ -741,6 +772,21 @@ function AppContent() {
           authUser={authUser}
           onClose={() => {
             setReceiptViewId('')
+            window.history.replaceState({}, '', '/')
+            setPageSafe(defaultPageForRole(roleKey))
+          }}
+        />
+      )
+    }
+
+    if (currentPage === 'notice-view' && noticeViewId) {
+      return (
+        <NoticePage
+          noticeId={noticeViewId}
+          currentRole={currentRole}
+          authUser={authUser}
+          onClose={() => {
+            setNoticeViewId('')
             window.history.replaceState({}, '', '/')
             setPageSafe(defaultPageForRole(roleKey))
           }}
@@ -804,6 +850,7 @@ function AppContent() {
         authUser,
         setPageSafe,
         onOpenReceipt: openReceiptRoute,
+        onOpenNotice: openNoticeRoute,
         onSubmitPayment: (payload) => {
           if (!t) return
           setPayments((prev) => [
@@ -1023,6 +1070,15 @@ function AppContent() {
       return (
         <ReceiptPage
           receiptId={entryPath.receiptId}
+          currentRole="tenant"
+          authUser={null}
+        />
+      )
+    }
+    if (entryPath.kind === 'notice') {
+      return (
+        <NoticePage
+          noticeId={entryPath.noticeId}
           currentRole="tenant"
           authUser={null}
         />

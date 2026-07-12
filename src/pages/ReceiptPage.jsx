@@ -1,7 +1,7 @@
 import React from 'react'
 import PaymentReceipt from '../components/PaymentReceipt'
 import { getReceiptById } from '../lib/receiptStore'
-import { buildReceiptHtmlDocument, downloadReceiptDocument } from '../utils/receipts'
+import { buildReceiptHtmlDocument, downloadReceiptDocument, openReceiptDocument } from '../utils/receipts'
 import { canViewField, normalizeRole, canAccessPage } from '../lib/permissions'
 
 export default function ReceiptPage({ receiptId, currentRole, authUser, onClose }) {
@@ -59,12 +59,19 @@ export default function ReceiptPage({ receiptId, currentRole, authUser, onClose 
       <div className="max-w-lg mx-auto">
         <PaymentReceipt data={snapshot} />
         <p className="text-xs text-center text-gray-500 mt-4">
-          Official payment record · Read only · Not editable
+          Official payment record · Read only · Opens in Word · Not editable
         </p>
         <div className="flex flex-wrap gap-2 justify-center mt-4 no-print">
           <button
             type="button"
             className="px-4 py-2.5 bg-[#2d6a4f] text-white rounded-lg text-sm"
+            onClick={() => openReceiptDocument(snapshot)}
+          >
+            Open in Word
+          </button>
+          <button
+            type="button"
+            className="px-4 py-2.5 border rounded-lg text-sm"
             onClick={printReceipt}
           >
             Print / PDF
