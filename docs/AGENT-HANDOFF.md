@@ -8,8 +8,9 @@
 ## Start here
 
 1. Read **`docs/MASTER-PROMPT-PR49.md`** (master prompt + push protocol)
-2. Read **`docs/MASTER-VERIFY-LOOP.md`** (F1–F31)
-3. `git fetch origin && git checkout main && git pull origin main`
+2. Read **`docs/MASTER-VERIFY-LOOP.md`** (F1–F32)
+3. Demo/live bell alerts: **`docs/AGENT-HANDOFF-DEMO-NOTIFICATIONS.md`**
+4. `git fetch origin && git checkout main && git pull origin main`
 4. `npm test && npm run verify:features && npm run build`
 
 ## On main today

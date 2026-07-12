@@ -316,6 +316,20 @@ function AppContent() {
     () => filterOwnerMaintenance(maintenance, ownerBuildingIds, ownerUnitIds),
     [maintenance, ownerBuildingIds, ownerUnitIds],
   )
+
+  const liveNotificationCtx = useMemo(
+    () => ({
+      buildings: ownerBuildings,
+      units: ownerUnits,
+      tenants: ownerTenants,
+      payments: ownerPayments,
+      maintenance: ownerMaintenance,
+      unreadMessages: activeOwnerId
+        ? countUnreadForOwner(activeOwnerId, { excludeDemo: true })
+        : 0,
+    }),
+    [ownerBuildings, ownerUnits, ownerTenants, ownerPayments, ownerMaintenance, activeOwnerId],
+  )
   const ownerUtilities = useMemo(
     () => filterOwnerUtilities(utilities, ownerBuildingIds),
     [utilities, ownerBuildingIds],
@@ -402,9 +416,9 @@ function AppContent() {
     if (showDemoData) {
       ensureDemoPracticeData(activeOwnerId, { demoMode: true })
     } else {
-      purgeDemoPracticeData(activeOwnerId)
+      purgeDemoPracticeData(activeOwnerId, liveNotificationCtx)
     }
-  }, [isLoggedIn, activeOwnerId, showDemoData])
+  }, [isLoggedIn, activeOwnerId, showDemoData, liveNotificationCtx])
 
   useEffect(() => {
     if (!isLoggedIn || !authUser) return
@@ -416,18 +430,20 @@ function AppContent() {
       : null
     const unreadMessages = isTenantRole(roleKey) && tenantRecord
       ? countUnreadForTenant(String(tenantRecord.id), String(tenantRecord.unitId || ''))
-      : countUnreadForOwner(ownerId)
+      : showDemoData
+        ? 0
+        : countUnreadForOwner(ownerId, { excludeDemo: true })
 
     const run = () => {
       runAutoNotifications({
         role: roleKey,
         ownerId,
         userId: authUser.id,
-        buildings: portalBuildings,
-        units: portalUnits,
-        tenants: portalTenants,
+        buildings: isCaretaker ? portalBuildings : ownerBuildings,
+        units: isCaretaker ? portalUnits : ownerUnits,
+        tenants: isCaretaker ? portalTenants : ownerTenants,
         payments: ownerPayments,
-        maintenance,
+        maintenance: isCaretaker ? maintenance : ownerMaintenance,
         subscription,
         settings: ownerSettings,
         demoMode: showDemoData,
@@ -446,11 +462,16 @@ function AppContent() {
     portalBuildings,
     portalUnits,
     portalTenants,
+    ownerBuildings,
+    ownerUnits,
+    ownerTenants,
+    ownerMaintenance,
     ownerPayments,
     maintenance,
     subscription,
     ownerSettings,
     showDemoData,
+    isCaretaker,
     tenants,
     unreadRefresh,
   ])
@@ -692,10 +713,10 @@ function AppContent() {
   const handleToggleDemoMode = useCallback(() => {
     setDemoMode((wasOn) => {
       const next = !wasOn
-      if (wasOn && activeOwnerId) purgeDemoPracticeData(activeOwnerId)
+      if (wasOn && activeOwnerId) purgeDemoPracticeData(activeOwnerId, liveNotificationCtx)
       return next
     })
-  }, [activeOwnerId, setDemoMode])
+  }, [activeOwnerId, setDemoMode, liveNotificationCtx])
 
   const sharedProps = {
     buildings: portalBuildings,
