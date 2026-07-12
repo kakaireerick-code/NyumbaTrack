@@ -318,6 +318,9 @@ confirm(
     tenantData.includes('ownerId || unit.ownerId') &&
     adminPages.includes('Rent payment numbers') &&
     adminPages.includes('bankAccount') &&
+    exists('src/lib/ownerSettings.ts') &&
+    read('src/lib/ownerSettings.ts').includes('rt_payment_settings_by_owner') &&
+    read('src/App.jsx').includes('paymentSettingsByOwner') &&
     navTs.includes('PRIMARY_CARETAKER_PAGES') &&
     navTs.includes("'maintenance',\n  'units'"),
   'Tenants can message + nav/layout + MoMo settings prominent',
@@ -374,6 +377,39 @@ confirm(
   'Bulk PDF/docx scan + attach + single-tenant parser',
 )
 
+// F30 Demo write guards while Demo mode is on
+const demoSeparation = exists('src/lib/demoLiveSeparation.ts') ? read('src/lib/demoLiveSeparation.ts') : ''
+const appJsx = exists('src/App.jsx') ? read('src/App.jsx') : ''
+confirm(
+  'F30',
+  'Demo write guards block persisted changes touching demo IDs',
+  demoSeparation.includes('createGuardedSetter') &&
+    demoSeparation.includes('introducesDemoTouch') &&
+    appJsx.includes('guardedSetBuildings') &&
+    appJsx.includes('guardedSetPayments') &&
+    appJsx.includes('paymentTouchesDemo'),
+  'setBuildings/Units/Tenants/Payments guarded + demo receipts blocked',
+)
+
+// F31 Demo/live separation (import, subscription, messages, purge)
+const messagesPage = exists('src/pages/MessagesPage.jsx') ? read('src/pages/MessagesPage.jsx') : ''
+confirm(
+  'F31',
+  'Demo/live separation across import, limits, messages, and cleanup',
+  demoSeparation.includes('filterOwnerMaintenance') &&
+    demoSeparation.includes('DEMO_TRAINING_PAYMENT_NUMBERS') &&
+    appJsx.includes('purgeDemoPracticeData') &&
+    appJsx.includes('ownerBuildings') &&
+    appJsx.includes('units={ownerUnits}') &&
+    appJsx.includes('excludePractice={!showDemoData}') &&
+    appJsx.includes('setOwnerSettings') &&
+    read('src/pages/LoginPage.jsx').includes('theme={loginTheme}') &&
+    messagesPage.includes('excludeDemo') &&
+    read('src/lib/demoPractice.ts').includes('if (!opts?.demoMode) return false') &&
+    adminPages.includes('Demo training numbers'),
+  'Live-only import, owner unit limits, practice purge, scoped maintenance',
+)
+
 const failed = checks.filter((c) => !c.ok)
 const sha = (() => {
   try {
@@ -385,6 +421,6 @@ const sha = (() => {
 
 console.log(`\n${failed.length ? 'FAIL' : 'PASS'} — ${checks.length - failed.length}/${checks.length} features`)
 if (!failed.length) {
-  console.log(`\nAll F1–F29 CONFIRMED at ${sha}`)
+  console.log(`\nAll F1–F31 CONFIRMED at ${sha}`)
 }
 process.exit(failed.length ? 1 : 0)

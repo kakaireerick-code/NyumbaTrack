@@ -1,5 +1,6 @@
 import { safeGet, safeSet } from './storage'
 import { addNotification } from './notifications'
+import { isDemoId } from './demoLiveSeparation'
 
 export type UnitMessage = {
   id: string
@@ -28,14 +29,30 @@ export const getThread = (unitId: string, tenantId: string): UnitMessage[] =>
     .filter((m) => idStr(m.unitId) === idStr(unitId) && idStr(m.tenantId) === idStr(tenantId))
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 
-export const getOwnerInbox = (ownerId: string): UnitMessage[] =>
+export const getOwnerInbox = (
+  ownerId: string,
+  opts?: { excludeDemo?: boolean },
+): UnitMessage[] =>
   getMessages()
-    .filter((m) => idStr(m.ownerId) === idStr(ownerId))
+    .filter((m) => {
+      if (idStr(m.ownerId) !== idStr(ownerId)) return false
+      if (opts?.excludeDemo) {
+        const demoThread =
+          String(m.id || '').startsWith('demo-msg-') ||
+          isDemoId(m.unitId) ||
+          isDemoId(m.tenantId)
+        if (demoThread) return false
+      }
+      return true
+    })
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
-export const countUnreadForOwner = (ownerId: string): number =>
-  getMessages().filter(
-    (m) => idStr(m.ownerId) === idStr(ownerId) && m.fromRole === 'tenant' && !m.readByOwner,
+export const countUnreadForOwner = (
+  ownerId: string,
+  opts?: { excludeDemo?: boolean },
+): number =>
+  getOwnerInbox(ownerId, opts).filter(
+    (m) => m.fromRole === 'tenant' && !m.readByOwner,
   ).length
 
 export const countUnreadForTenant = (tenantId: string, unitId: string): number =>
@@ -51,6 +68,9 @@ export const postMessage = (payload: Omit<UnitMessage, 'id' | 'createdAt' | 'rea
   const ownerId = idStr(payload.ownerId)
   if (!ownerId) {
     throw new Error('postMessage requires ownerId')
+  }
+  if (isDemoId(payload.unitId) || isDemoId(payload.tenantId)) {
+    throw new Error('Cannot post messages to demo practice threads')
   }
   const msg: UnitMessage = {
     ...payload,

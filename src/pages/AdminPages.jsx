@@ -12,6 +12,7 @@ import {
 import InviteStaffPanel from '../components/InviteStaffPanel'
 import InviteTenantPanel from '../components/InviteTenantPanel'
 import { canManagePortfolio } from '../lib/permissions'
+import { DEMO_TRAINING_PAYMENT_NUMBERS } from '../lib/demoLiveSeparation'
 import { MORE_TOOLS_LINKS, MORE_TOOLS_GROUPS } from '../lib/navigation'
 import { resetTour } from '../lib/rolePrompts'
 import { isBillingAdminEmail } from '../lib/billingAdmin'
@@ -670,11 +671,24 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour, 
   )
   const visibleIds = new Set(visibleMoreTools.map((t) => t.id))
 
-  const paymentConfigured = !!(settings.mtnMomo?.trim() || settings.airtelMoney?.trim() || settings.bankAccount?.trim())
+  const paymentConfigured = demoMode
+    ? true
+    : !!(settings.mtnMomo?.trim() || settings.airtelMoney?.trim() || settings.bankAccount?.trim())
+
+  const paymentFields = demoMode ? DEMO_TRAINING_PAYMENT_NUMBERS : settings
 
   return (
     <div className="p-4 space-y-6 max-w-3xl">
       <h1 className="text-2xl font-bold">Settings</h1>
+
+      {demoMode && canManagePortfolio(currentRole || '') && (
+        <div className="card p-4 border-2 border-blue-300 bg-blue-50 dark:bg-blue-900/20 space-y-1">
+          <p className="font-semibold text-blue-900 dark:text-blue-100">Demo training numbers</p>
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            Sample MoMo numbers are shown for training only. They are not saved to your account — turn Demo OFF to edit your real payment numbers.
+          </p>
+        </div>
+      )}
 
       {canManagePortfolio(currentRole || '') && !paymentConfigured && (
         <div className="card p-4 border-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 space-y-2">
@@ -696,8 +710,9 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour, 
             <input
               className={inputCls}
               placeholder="e.g. +256 770 123 456"
-              value={settings.mtnMomo || ''}
-              onChange={(e) => setSettings((s) => ({ ...s, mtnMomo: e.target.value }))}
+              value={paymentFields.mtnMomo || ''}
+              readOnly={demoMode}
+              onChange={demoMode ? undefined : (e) => setSettings((s) => ({ ...s, mtnMomo: e.target.value }))}
             />
           </div>
           <div>
@@ -705,8 +720,9 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour, 
             <input
               className={inputCls}
               placeholder="e.g. +256 750 987 654"
-              value={settings.airtelMoney || ''}
-              onChange={(e) => setSettings((s) => ({ ...s, airtelMoney: e.target.value }))}
+              value={paymentFields.airtelMoney || ''}
+              readOnly={demoMode}
+              onChange={demoMode ? undefined : (e) => setSettings((s) => ({ ...s, airtelMoney: e.target.value }))}
             />
           </div>
           <div>
@@ -714,11 +730,16 @@ export function SettingsPage({ settings, setSettings, showToast, onRestartTour, 
             <input
               className={inputCls}
               placeholder="e.g. Stanbic — 1234567890 — John Okello"
-              value={settings.bankAccount || ''}
-              onChange={(e) => setSettings((s) => ({ ...s, bankAccount: e.target.value }))}
+              value={paymentFields.bankAccount || ''}
+              readOnly={demoMode}
+              onChange={demoMode ? undefined : (e) => setSettings((s) => ({ ...s, bankAccount: e.target.value }))}
             />
           </div>
-          <p className="text-xs text-gray-500">Used in tenant portal, reminders, and subscription billing messages.</p>
+          <p className="text-xs text-gray-500">
+            {demoMode
+              ? 'Training preview only — not stored while Demo is on.'
+              : 'Used in tenant portal, reminders, and subscription billing messages.'}
+          </p>
         </div>
       )}
 

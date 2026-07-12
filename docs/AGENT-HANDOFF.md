@@ -1,49 +1,50 @@
-# Agent handoff — coordination → NyumbaTrack
+# Agent handoff — PR #49 demo/live + payments
 
 **Repo:** `kakaireerick-code/NyumbaTrack`  
-**Branch:** `cursor/integrate-patch-features-5791`  
+**Branch:** `cursor/demo-live-separation-5791`  
+**PR #49** ([#49](https://github.com/kakaireerick-code/NyumbaTrack/pull/49)) — **ready for review** at `86f5513` (was draft; marked ready by cloud agent)  
 **Do not touch:** Land-Tax-Tracker / ULTT
 
 ## Start here
 
-1. Read **`docs/OPERATOR-PROMPT.md`**
-2. Read GitHub issue **#17** (latest)
-3. Merge integrate branch → `main`
-4. Fix Vercel deploy → `npm run ops:guardrail` until green
+1. Read **`docs/MASTER-PROMPT-PR49.md`** (master prompt for this stack)
+2. Read **`docs/MASTER-VERIFY-LOOP.md`** (F1–F31)
+3. `git checkout cursor/demo-live-separation-5791`
+4. `npm test && npm run verify:features && npm run build`
 
-## Integrate branch includes
+## This branch includes
 
 | Area | Key files |
 |------|-----------|
-| Subscription verification | `api/subscription.ts`, `src/lib/subscriptionCloud.ts`, `SubscriptionPage.jsx` |
-| Full billing UI | `subscriptionPlans.js`, `SubscriptionPage.jsx` |
-| Demo vs live | `src/lib/appMode.ts` |
-| Import | `src/lib/fileImport.ts`, `DataImportPage.jsx` |
-| Guided workflows | `GuidedWorkflowOverlay.jsx` |
-| Uganda branding | `index.html`, `public/manifest.json` |
-| Health API | `api/health.ts` |
-| Production guardrail | `scripts/ops-guardrail.mjs` |
+| Demo/live separation | `demoLiveSeparation.ts`, `demoPractice.ts`, guarded setters in `App.jsx` |
+| Per-landlord MoMo | `ownerSettings.ts`, `rt_payment_settings_by_owner` |
+| Unified rent flow | `TenantPortalPage.jsx` (`my-payments`), `TenantBottomNav.jsx` |
+| Dark login fix | `GoogleSignInButton.jsx`, `LoginPage.jsx` |
+| Smart import | `spreadsheetImport.ts`, `agreementScan.ts` (from main ancestry) |
+| Ship script | `PUSH-DEMO-LIVE-SEPARATION.ps1` |
 
-## Stale remote / bundle recovery
+## Cloud agent limits
 
-If `origin/cursor/integrate-patch-features-5791` is behind:
+- `git push` may return **403** — owner runs `PUSH-DEMO-LIVE-SEPARATION.ps1` on PC
+- `gh pr ready` / merge need owner credentials
 
-```bash
-git fetch /path/to/nyumbatrack-integrate-614ba58.bundle cursor/integrate-patch-features-5791:cursor/integrate-patch-features-5791
-git checkout cursor/integrate-patch-features-5791
+## Owner PC ship (final step)
+
+```powershell
+git fetch origin
+git checkout cursor/demo-live-separation-5791
+.\PUSH-DEMO-LIVE-SEPARATION.ps1
+gh pr ready 49
+.\SHIP-TO-PRODUCTION.ps1 -Branch cursor/demo-live-separation-5791
 ```
 
-## Vercel checklist
-
-**GitHub secrets:** `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`  
-**Vercel env:** `UPSTASH_REDIS_*`, `BILLING_ADMIN_SECRET`, `VITE_BILLING_ADMIN_EMAIL`
-
-Full steps: **`docs/VERCEL-SECRETS-CHECKLIST.md`** (issue #24)
+**Do not pull** if local HEAD is already at consolidated stack (`d5d6e4c` or ahead).
 
 ## Acknowledgment
 
-Comment on issue #17 with:
+Comment on PR #49 with:
 
-- PR link
-- Production bundle hash (not `index-B0iUFD94.js`)
-- `npm run ops:guardrail` output
+- HEAD sha
+- Test count (159/159)
+- `verify:features` PASS (F1–F31)
+- Guardrail output after merge

@@ -1,8 +1,8 @@
 import { safeGet, safeSet } from './storage'
 import { DEMO_TENANTS, DEMO_UNITS, DEMO_BUILDINGS } from './demoData'
 import { saveMessages, getMessages, type UnitMessage } from './messages'
-import { addNotification, getNotifications } from './notifications'
-import { isDeployedApp } from './environment'
+import { addNotification, getNotifications, saveNotifications } from './notifications'
+import { isDemoMessage, isPracticeNotification } from './demoLiveSeparation'
 
 const MARKER_PREFIX = 'rt_demo_practice_seeded_v1'
 
@@ -120,12 +120,26 @@ export const ensureDemoPracticeData = (
   opts?: { force?: boolean; demoMode?: boolean },
 ): boolean => {
   if (!ownerId) return false
-  const shouldSeed = opts?.demoMode || !isDeployedApp()
-  if (!shouldSeed) return false
+  if (!opts?.demoMode) return false
   if (!opts?.force && isDemoPracticeSeeded(ownerId)) return false
 
   seedMessages(ownerId)
   seedNotifications(ownerId)
   safeSet(`${MARKER_PREFIX}_${ownerId}`, true)
   return true
+}
+
+/** Remove practice inbox messages and bell alerts when Demo is turned off. */
+export const purgeDemoPracticeData = (ownerId: string): void => {
+  if (!ownerId) return
+  const ownerKey = String(ownerId)
+  saveMessages(
+    getMessages().filter((m) => !(String(m.ownerId) === ownerKey && isDemoMessage(m))),
+  )
+  saveNotifications(
+    getNotifications().filter(
+      (n) => !(String(n.ownerId) === ownerKey && isPracticeNotification(n)),
+    ),
+  )
+  safeSet(`${MARKER_PREFIX}_${ownerId}`, false)
 }
