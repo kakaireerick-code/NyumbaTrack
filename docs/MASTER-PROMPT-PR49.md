@@ -106,6 +106,5 @@ Reply with:
 - [x] 159 tests pass (`86f5513`)
 - [x] F1–F31 CONFIRMED
 - [x] Build OK
-- [x] PR #49 marked ready for review
-- [ ] PR #49 merged to `main`
+- [x] PR #49 merged to `main` (`6e96542`)
 - [ ] `npm run ops:guardrail` green on production
